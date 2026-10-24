@@ -1,0 +1,26 @@
+{
+  "name": "gestao-classes-desbravadores",
+  "version": "1.0.0",
+  "description": "Sistema Web de Organização, Planejamento Anual por Demanda e Controle de Cartões de Classes dos Desbravadores",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node src/server/index.js",
+    "build": "vite build",
+    "start": "NODE_ENV=production node src/server/index.js",
+    "seed:cards": "python3 scripts/build_cards_json.py"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.6",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.6",
+    "vite": "^6.1.0"
+  }
+}
