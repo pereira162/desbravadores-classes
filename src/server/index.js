@@ -11,6 +11,14 @@ const {
   verifyToken,
   checkProgressPermission,
 } = require('./auth');
+const {
+  getSmtpConfig,
+  sendVerificationEmail,
+  sendLeaderInviteEmail,
+  sendPasswordResetEmail,
+  sendTestSmtpEmail,
+  verifyGoogleIdToken,
+} = require('./mailer');
 
 initDatabase();
 
@@ -21,6 +29,10 @@ app.use(express.json({ limit: '5mb' }));
 // Static files for official logos and downloaded PDFs
 const DATA_DIR = path.resolve(__dirname, '../../data');
 app.use('/data', express.static(DATA_DIR));
+
+function generateSixDigitCode() {
+  return String(crypto.randomInt(100000, 999999));
+}
 
 // Helper to format user row
 function formatUser(row) {
@@ -39,6 +51,10 @@ function formatUser(row) {
     unit_id: row.unit_id,
     assigned_classes: assignedClasses,
     active: Boolean(row.active),
+    is_demo: Boolean(row.is_demo),
+    email_verified: row.email_verified === undefined ? true : Boolean(row.email_verified),
+    invite_status: row.invite_status || 'ACTIVE',
+    avatar_url: row.avatar_url || null,
     last_login_at: row.last_login_at,
     created_at: row.created_at,
   };
@@ -61,26 +77,42 @@ function requireAuth(req, res, next) {
 }
 
 // ============================================================================
-// 1. AUTHENTICATION ROUTES
+// 1. AUTHENTICATION, ONBOARDING, GOOGLE SIGN-IN & EMAIL RECOVERY ROUTES
 // ============================================================================
 app.get('/api/auth/demo-accounts', (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT u.id, u.name, u.email, u.role, u.unit_id, u.assigned_classes_json, un.name as unit_name
-       FROM users u
-       LEFT JOIN units un ON un.id = u.unit_id
-       WHERE u.active = 1
-       ORDER BY CASE u.role
-         WHEN 'ADMIN' THEN 1
-         WHEN 'DIRETOR' THEN 2
-         WHEN 'SECRETARIO' THEN 3
-         WHEN 'INSTRUTOR' THEN 4
-         WHEN 'CONSELHEIRO' THEN 5
-         ELSE 6 END, u.name ASC`
-    )
-    .all();
+  const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+  const demoEnabled = settings.demo_mode_enabled === undefined ? true : Boolean(settings.demo_mode_enabled);
+
+  const rows = demoEnabled
+    ? db
+        .prepare(
+          `SELECT u.id, u.name, u.email, u.role, u.unit_id, u.assigned_classes_json, u.is_demo, un.name as unit_name
+           FROM users u
+           LEFT JOIN units un ON un.id = u.unit_id
+           WHERE u.active = 1 AND u.is_demo = 1
+           ORDER BY CASE u.role
+             WHEN 'ADMIN' THEN 1
+             WHEN 'DIRETOR' THEN 2
+             WHEN 'SECRETARIO' THEN 3
+             WHEN 'INSTRUTOR' THEN 4
+             WHEN 'CONSELHEIRO' THEN 5
+             ELSE 6 END, u.name ASC`
+        )
+        .all()
+    : [];
+
+  const realDirectorsCount = db
+    .prepare("SELECT COUNT(*) as c FROM users WHERE is_demo = 0 AND role IN ('DIRETOR', 'ADMIN') AND active = 1")
+    .get().c;
+
+  const smtpCfg = getSmtpConfig(settings);
 
   res.json({
+    club_name: settings.club_name || 'Clube de Desbravadores',
+    setup_completed: Boolean(settings.setup_completed || realDirectorsCount > 0),
+    demo_mode_enabled: demoEnabled,
+    smtp_configured: smtpCfg.isConfigured,
+    google_client_id: settings.google_client_id || process.env.GOOGLE_CLIENT_ID || '',
     accounts: rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -116,6 +148,392 @@ app.post('/api/auth/login', (req, res) => {
   const token = createToken({ id: user.id, email: user.email, role: user.role });
 
   res.json({ token, user });
+});
+
+// Login ou Ativação de Convite com Conta Google (Google Identity Services)
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential, invite_token } = req.body || {};
+    const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    const expectedClientId = settings.google_client_id || process.env.GOOGLE_CLIENT_ID || '';
+
+    const googleUser = await verifyGoogleIdToken(credential, expectedClientId);
+    const now = new Date().toISOString();
+
+    let row = null;
+    if (invite_token) {
+      row = db.prepare('SELECT * FROM users WHERE invite_token = ?').get(String(invite_token).trim());
+    }
+    if (!row) {
+      row = db
+        .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)')
+        .get(googleUser.email);
+    }
+
+    if (!row) {
+      return res.status(403).json({
+        error: `O e-mail Google (${googleUser.email}) ainda não foi convidado pela Diretoria do Clube. Peça um convite ao Diretor ou use o Primeiro Acesso do Diretor.`,
+      });
+    }
+    if (!row.active) {
+      return res.status(403).json({ error: 'Esta conta de líder está desativada.' });
+    }
+
+    db.prepare(`
+      UPDATE users
+      SET google_sub = ?, avatar_url = ?, email_verified = 1, invite_status = 'ACTIVE', invite_token = NULL, last_login_at = ?
+      WHERE id = ?
+    `).run(googleUser.googleSub, googleUser.picture, now, row.id);
+
+    const updatedRow = db.prepare('SELECT * FROM users WHERE id = ?').get(row.id);
+    const user = formatUser(updatedRow);
+    const token = createToken({ id: user.id, email: user.email, role: user.role });
+
+    res.json({ token, user });
+  } catch (err) {
+    res.status(401).json({ error: err.message || 'Falha na autenticação com o Google.' });
+  }
+});
+
+// Primeiro Acesso: Criação da Conta Oficial do Diretor do Clube + Configuração Opcional de Gmail SMTP
+app.post('/api/auth/setup-director', async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      club_name,
+      club_region,
+      smtp_user,
+      smtp_pass,
+      google_client_id,
+      disable_demo_accounts = false,
+    } = req.body || {};
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Informe seu nome completo, e-mail real e senha.' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const existing = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+    const now = new Date().toISOString();
+    const verificationCode = generateSixDigitCode();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    const prevSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    const finalClubName = club_name ? String(club_name).trim() : prevSettings.club_name;
+    const finalClubRegion = club_region ? String(club_region).trim() : prevSettings.club_region;
+    const finalSmtpUser = smtp_user !== undefined ? String(smtp_user).trim() : prevSettings.smtp_user;
+    const finalSmtpPass =
+      smtp_pass !== undefined ? String(smtp_pass).replace(/\s+/g, '') : prevSettings.smtp_pass;
+    const finalGoogleClientId =
+      google_client_id !== undefined ? String(google_client_id).trim() : prevSettings.google_client_id;
+
+    let userId = existing ? existing.id : `usr-dir-${Date.now().toString(36)}`;
+    const pwdHash = hashPassword(String(password));
+
+    db.exec('BEGIN');
+    try {
+      db.prepare(`
+        UPDATE club_settings
+        SET club_name = ?, club_region = ?, smtp_user = ?, smtp_pass = ?, smtp_from_name = ?,
+            google_client_id = ?, demo_mode_enabled = ?, setup_completed = 1, updated_at = ?
+        WHERE id = 1
+      `).run(
+        finalClubName,
+        finalClubRegion,
+        finalSmtpUser,
+        finalSmtpPass,
+        finalClubName,
+        finalGoogleClientId,
+        disable_demo_accounts ? 0 : 1,
+        now
+      );
+
+      if (disable_demo_accounts) {
+        db.prepare('UPDATE users SET active = 0 WHERE is_demo = 1').run();
+      }
+
+      if (existing) {
+        db.prepare(`
+          UPDATE users
+          SET name = ?, password_hash = ?, role = 'DIRETOR', assigned_classes_json = '["*"]',
+              active = 1, is_demo = 0, verification_code = ?, verification_expires_at = ?, last_login_at = ?
+          WHERE id = ?
+        `).run(String(name).trim(), pwdHash, verificationCode, expiresAt, now, userId);
+      } else {
+        db.prepare(`
+          INSERT INTO users (
+            id, name, email, password_hash, role, unit_id, assigned_classes_json,
+            active, is_demo, email_verified, invite_status, verification_code, verification_expires_at,
+            last_login_at, created_at
+          ) VALUES (?, ?, ?, ?, 'DIRETOR', NULL, '["*"]', 1, 0, 0, 'PENDING_VERIFICATION', ?, ?, ?, ?)
+        `).run(userId, String(name).trim(), cleanEmail, pwdHash, verificationCode, expiresAt, now, now);
+      }
+
+      recordAudit({
+        user: { id: userId, name: String(name).trim(), role: 'DIRETOR' },
+        action: 'DIRECTOR_INITIAL_SETUP',
+        entityType: 'USER',
+        entityId: userId,
+        summary: `Diretor(a) "${name}" (${cleanEmail}) configurou o acesso oficial do clube "${finalClubName}".`,
+        newState: { email: cleanEmail, club_name: finalClubName, disable_demo_accounts },
+        createdAt: now,
+      });
+
+      db.exec('COMMIT');
+    } catch (txErr) {
+      db.exec('ROLLBACK');
+      throw txErr;
+    }
+
+    const updatedSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get();
+    let emailResult = { sent: false, reason: 'SMTP_NOT_CONFIGURED' };
+    try {
+      emailResult = await sendVerificationEmail({
+        clubSettings: updatedSettings,
+        toEmail: cleanEmail,
+        toName: String(name).trim(),
+        verificationCode,
+      });
+    } catch (mailErr) {
+      emailResult = { sent: false, reason: mailErr.message };
+    }
+
+    // Se o SMTP ainda não foi configurado, marca como verificado automaticamente para não bloquear o Diretor
+    if (!emailResult.sent) {
+      db.prepare("UPDATE users SET email_verified = 1, invite_status = 'ACTIVE' WHERE id = ?").run(userId);
+    }
+
+    const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    const user = formatUser(userRow);
+    const token = createToken({ id: user.id, email: user.email, role: user.role });
+
+    res.json({
+      success: true,
+      token,
+      user,
+      email_sent: emailResult.sent,
+      email_notice: emailResult.sent
+        ? `Enviamos um código de confirmação de 6 dígitos para ${cleanEmail}.`
+        : 'Sua conta de Diretor foi criada e ativada! Configure o Gmail + Senha de App na aba "Líderes & Clube" para disparar e-mails reais.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Erro ao configurar conta do Diretor.' });
+  }
+});
+
+// Confirmação de E-mail com Código de 6 dígitos
+app.post('/api/auth/verify-email', (req, res) => {
+  const { email, code } = req.body || {};
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Informe o e-mail e o código de 6 dígitos.' });
+  }
+  const row = db
+    .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)')
+    .get(String(email).trim());
+
+  if (!row) {
+    return res.status(404).json({ error: 'Conta não encontrada.' });
+  }
+  if (String(row.verification_code || '').trim() !== String(code).trim()) {
+    return res.status(400).json({ error: 'Código de verificação inválido.' });
+  }
+
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE users
+    SET email_verified = 1, invite_status = 'ACTIVE', verification_code = NULL, last_login_at = ?
+    WHERE id = ?
+  `).run(now, row.id);
+
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(row.id);
+  const user = formatUser(updated);
+  const token = createToken({ id: user.id, email: user.email, role: user.role });
+
+  res.json({ success: true, token, user });
+});
+
+// Consulta pública de Token de Convite (?invite=TOKEN)
+app.get('/api/auth/invite-info', (req, res) => {
+  const token = String(req.query.token || '').trim();
+  if (!token) {
+    return res.status(400).json({ error: 'Token de convite não informado.' });
+  }
+  const row = db
+    .prepare(
+      `SELECT u.*, un.name as unit_name
+       FROM users u
+       LEFT JOIN units un ON un.id = u.unit_id
+       WHERE u.invite_token = ?`
+    )
+    .get(token);
+
+  if (!row) {
+    return res.status(404).json({ error: 'Convite inválido, já utilizado ou expirado.' });
+  }
+
+  const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+  res.json({
+    invite: {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      unit_name: row.unit_name || null,
+      assigned_classes: JSON.parse(row.assigned_classes_json || '[]'),
+      club_name: settings.club_name || 'Clube de Desbravadores',
+    },
+  });
+});
+
+// Aceitar Convite e Definir Senha Pessoal
+app.post('/api/auth/accept-invite', (req, res) => {
+  const { token, password, name } = req.body || {};
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Informe o token de convite e sua nova senha.' });
+  }
+  if (String(password).length < 6) {
+    return res.status(400).json({ error: 'Sua senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  const row = db
+    .prepare('SELECT * FROM users WHERE invite_token = ?')
+    .get(String(token).trim());
+
+  if (!row) {
+    return res.status(404).json({ error: 'Convite não encontrado ou já ativado.' });
+  }
+
+  const now = new Date().toISOString();
+  const pwdHash = hashPassword(String(password));
+  const finalName = name ? String(name).trim() : row.name;
+
+  db.prepare(`
+    UPDATE users
+    SET name = ?, password_hash = ?, active = 1, email_verified = 1,
+        invite_status = 'ACTIVE', invite_token = NULL, last_login_at = ?
+    WHERE id = ?
+  `).run(finalName, pwdHash, now, row.id);
+
+  recordAudit({
+    user: { id: row.id, name: finalName, role: row.role },
+    action: 'LEADER_INVITE_ACCEPTED',
+    entityType: 'USER',
+    entityId: row.id,
+    summary: `Líder "${finalName}" (${row.email}) aceitou o convite e ativou sua conta (${row.role}).`,
+    createdAt: now,
+  });
+
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(row.id);
+  const user = formatUser(updated);
+  const jwtToken = createToken({ id: user.id, email: user.email, role: user.role });
+
+  res.json({ success: true, token: jwtToken, user });
+});
+
+// Solicitar Recuperação de Senha por E-mail ("Esqueci minha senha")
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ error: 'Informe seu endereço de e-mail.' });
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+    const row = db
+      .prepare('SELECT * FROM users WHERE LOWER(email) = ? AND active = 1')
+      .get(cleanEmail);
+
+    if (!row) {
+      return res.status(404).json({
+        error: 'Não encontramos nenhum líder ativo cadastrado com este endereço de e-mail.',
+      });
+    }
+
+    const resetCode = generateSixDigitCode();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    db.prepare(`
+      UPDATE users
+      SET reset_code = ?, reset_expires_at = ?
+      WHERE id = ?
+    `).run(resetCode, expiresAt, row.id);
+
+    const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    const mailRes = await sendPasswordResetEmail({
+      clubSettings: settings,
+      toEmail: row.email,
+      toName: row.name,
+      resetCode,
+    });
+
+    if (!mailRes.sent) {
+      return res.status(400).json({
+        error:
+          'O servidor de envio de e-mail (SMTP Gmail) ainda não foi configurado pelo Diretor do Clube. Peça ao Diretor para redefinir sua senha ou configurar o SMTP.',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Enviamos um código de 6 dígitos para ${row.email}. Verifique sua caixa de entrada!`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Erro ao enviar e-mail de recuperação.' });
+  }
+});
+
+// Redefinir Senha usando o Código de 6 dígitos recebido por E-mail
+app.post('/api/auth/reset-password', (req, res) => {
+  const { email, code, new_password } = req.body || {};
+  if (!email || !code || !new_password) {
+    return res.status(400).json({ error: 'Informe seu e-mail, o código de 6 dígitos e a nova senha.' });
+  }
+  if (String(new_password).length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  const row = db
+    .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)')
+    .get(String(email).trim());
+
+  if (!row || !row.reset_code) {
+    return res.status(400).json({ error: 'Solicitação de recuperação inválida ou expirada.' });
+  }
+  if (String(row.reset_code).trim() !== String(code).trim()) {
+    return res.status(400).json({ error: 'Código de recuperação incorreto.' });
+  }
+  if (row.reset_expires_at && new Date(row.reset_expires_at) < new Date()) {
+    return res.status(400).json({ error: 'Este código expirou. Solicite um novo código.' });
+  }
+
+  const now = new Date().toISOString();
+  const pwdHash = hashPassword(String(new_password));
+
+  db.prepare(`
+    UPDATE users
+    SET password_hash = ?, reset_code = NULL, reset_expires_at = NULL, email_verified = 1,
+        invite_status = 'ACTIVE', last_login_at = ?
+    WHERE id = ?
+  `).run(pwdHash, now, row.id);
+
+  recordAudit({
+    user: { id: row.id, name: row.name, role: row.role },
+    action: 'PASSWORD_RESET',
+    entityType: 'USER',
+    entityId: row.id,
+    summary: `Líder "${row.name}" (${row.email}) redefiniu sua senha via código de e-mail.`,
+    createdAt: now,
+  });
+
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(row.id);
+  const user = formatUser(updated);
+  const token = createToken({ id: user.id, email: user.email, role: user.role });
+
+  res.json({ success: true, token, user });
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
@@ -226,12 +644,17 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
       `SELECT u.*, un.name as unit_name
        FROM users u
        LEFT JOIN units un ON un.id = u.unit_id
-       ORDER BY u.name ASC`
+       ORDER BY u.is_demo ASC, u.name ASC`
     )
     .all();
+
+  const smtpCfg = getSmtpConfig(clubSettings);
   const leaders = rawLeaders.map((l) => ({
     ...formatUser(l),
     unit_name: l.unit_name || null,
+    invite_url: l.invite_token
+      ? `${smtpCfg.frontendUrl}/?invite=${encodeURIComponent(l.invite_token)}`
+      : null,
   }));
 
   const recentLogs = db
@@ -247,7 +670,14 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
   res.json({
     clubSettings: {
       ...clubSettings,
+      smtp_pass: '', // never expose raw secret in bootstrap
+      smtp_configured: smtpCfg.isConfigured,
+      smtp_pass_configured: Boolean(clubSettings.smtp_pass),
       allow_counselor_direct_approval: Boolean(clubSettings.allow_counselor_direct_approval),
+      demo_mode_enabled:
+        clubSettings.demo_mode_enabled === undefined
+          ? true
+          : Boolean(clubSettings.demo_mode_enabled),
     },
     catalog: {
       categories: cardsMeta.categories,
@@ -1008,62 +1438,180 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 8. LEADERS (USERS & RBAC) MANAGEMENT
+// 8. LEADERS (USERS, RBAC & EMAIL INVITATIONS) MANAGEMENT
 // ============================================================================
-app.post('/api/leaders', requireAuth, (req, res) => {
+const ROLE_LABELS_PT = {
+  ADMIN: 'Administrador',
+  DIRETOR: 'Diretor(a) do Clube',
+  SECRETARIO: 'Secretário(a) do Clube',
+  INSTRUTOR: 'Instrutor(a) de Classe',
+  CONSELHEIRO: 'Conselheiro(a) de Unidade',
+};
+
+app.post('/api/leaders', requireAuth, async (req, res) => {
   if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode cadastrar novos líderes.' });
   }
 
-  const {
-    name,
-    email,
-    password = '123456',
-    role = 'INSTRUTOR',
-    unit_id = null,
-    assigned_classes = [],
-  } = req.body || {};
+  try {
+    const {
+      name,
+      email,
+      password,
+      role = 'INSTRUTOR',
+      unit_id = null,
+      assigned_classes = [],
+      send_invite = true,
+    } = req.body || {};
 
-  if (!name || !email) {
-    return res.status(400).json({ error: 'Nome e e-mail do líder são obrigatórios.' });
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Nome e e-mail do líder são obrigatórios.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const exists = db
+      .prepare('SELECT id FROM users WHERE LOWER(email) = ?')
+      .get(cleanEmail);
+    if (exists) {
+      return res.status(400).json({ error: 'Já existe um líder cadastrado com este e-mail.' });
+    }
+
+    const id = `usr-${Date.now().toString(36)}`;
+    const now = new Date().toISOString();
+    const initialPass = password && String(password).trim() ? String(password).trim() : crypto.randomBytes(12).toString('hex');
+    const pwdHash = hashPassword(initialPass);
+    const inviteToken = `inv-${crypto.randomUUID()}`;
+    const inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const inviteStatus = send_invite ? 'PENDING_INVITE' : 'ACTIVE';
+
+    db.prepare(`
+      INSERT INTO users (
+        id, name, email, password_hash, role, unit_id, assigned_classes_json,
+        active, is_demo, email_verified, invite_status, invite_token, invite_expires_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      String(name).trim(),
+      cleanEmail,
+      pwdHash,
+      role,
+      unit_id || null,
+      JSON.stringify(assigned_classes || []),
+      send_invite ? 0 : 1,
+      inviteStatus,
+      inviteToken,
+      inviteExpires,
+      now
+    );
+
+    const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    let unitName = null;
+    if (unit_id) {
+      const uRow = db.prepare('SELECT name FROM units WHERE id = ?').get(unit_id);
+      if (uRow) unitName = uRow.name;
+    }
+
+    const scopeDescription =
+      role === 'CONSELHEIRO'
+        ? `Unidade: ${unitName || 'Geral'}`
+        : role === 'INSTRUTOR'
+        ? `Classes: ${(assigned_classes || []).join(', ') || 'Todas'}`
+        : 'Acesso Geral do Clube';
+
+    let mailResult = { sent: false, inviteUrl: `${getSmtpConfig(clubSettings).frontendUrl}/?invite=${inviteToken}` };
+    if (send_invite) {
+      try {
+        mailResult = await sendLeaderInviteEmail({
+          clubSettings,
+          toEmail: cleanEmail,
+          toName: String(name).trim(),
+          roleLabel: ROLE_LABELS_PT[role] || role,
+          scopeDescription,
+          invitedByName: req.user.name,
+          inviteToken,
+        });
+      } catch (mailErr) {
+        mailResult.error = mailErr.message;
+      }
+    }
+
+    recordAudit({
+      user: req.user,
+      action: 'LEADER_CREATE',
+      entityType: 'USER',
+      entityId: id,
+      summary: `${req.user.name} cadastrou/convidou o líder "${name}" (${cleanEmail} — ${role}). E-mail enviado: ${mailResult.sent ? 'Sim' : 'Link gerado'}.`,
+      newState: { id, name, email: cleanEmail, role, unit_id, assigned_classes },
+      createdAt: now,
+    });
+
+    res.json({
+      success: true,
+      id,
+      email_sent: mailResult.sent,
+      invite_url: mailResult.inviteUrl,
+      email_error: mailResult.error || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Erro ao cadastrar líder.' });
+  }
+});
+
+// Disparar ou Reenviar Convite por E-mail para um Líder
+app.post('/api/leaders/:id/send-invite', requireAuth, async (req, res) => {
+  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode enviar convites.' });
   }
 
-  const exists = db
-    .prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)')
-    .get(String(email).trim());
-  if (exists) {
-    return res.status(400).json({ error: 'Já existe um líder cadastrado com este e-mail.' });
+  try {
+    const targetId = req.params.id;
+    const row = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId);
+    if (!row) return res.status(404).json({ error: 'Líder não encontrado.' });
+
+    const inviteToken = row.invite_token || `inv-${crypto.randomUUID()}`;
+    const inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    db.prepare(`
+      UPDATE users
+      SET invite_token = ?, invite_expires_at = ?, invite_status = CASE WHEN invite_status = 'ACTIVE' THEN 'ACTIVE' ELSE 'PENDING_INVITE' END
+      WHERE id = ?
+    `).run(inviteToken, inviteExpires, targetId);
+
+    const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    let unitName = null;
+    if (row.unit_id) {
+      const uRow = db.prepare('SELECT name FROM units WHERE id = ?').get(row.unit_id);
+      if (uRow) unitName = uRow.name;
+    }
+    const classesList = JSON.parse(row.assigned_classes_json || '[]');
+    const scopeDescription =
+      row.role === 'CONSELHEIRO'
+        ? `Unidade: ${unitName || 'Geral'}`
+        : row.role === 'INSTRUTOR'
+        ? `Classes: ${classesList.join(', ') || 'Todas'}`
+        : 'Acesso Geral do Clube';
+
+    const mailResult = await sendLeaderInviteEmail({
+      clubSettings,
+      toEmail: row.email,
+      toName: row.name,
+      roleLabel: ROLE_LABELS_PT[row.role] || row.role,
+      scopeDescription,
+      invitedByName: req.user.name,
+      inviteToken,
+    });
+
+    res.json({
+      success: true,
+      email_sent: mailResult.sent,
+      invite_url: mailResult.inviteUrl,
+      message: mailResult.sent
+        ? `Convite enviado por e-mail para ${row.email}!`
+        : `Link de convite gerado! (Configure o Gmail SMTP nas Configurações do Clube para envio direto por e-mail).`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Falha ao enviar convite.' });
   }
-
-  const id = `usr-${Date.now().toString(36)}`;
-  const now = new Date().toISOString();
-  const pwdHash = hashPassword(String(password));
-
-  db.prepare(`
-    INSERT INTO users (id, name, email, password_hash, role, unit_id, assigned_classes_json, active, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
-  `).run(
-    id,
-    String(name).trim(),
-    String(email).trim().toLowerCase(),
-    pwdHash,
-    role,
-    unit_id || null,
-    JSON.stringify(assigned_classes || []),
-    now
-  );
-
-  recordAudit({
-    user: req.user,
-    action: 'LEADER_CREATE',
-    entityType: 'USER',
-    entityId: id,
-    summary: `${req.user.name} cadastrou o líder "${name}" (${role}).`,
-    newState: { id, name, email, role, unit_id, assigned_classes },
-    createdAt: now,
-  });
-
-  res.json({ success: true, id });
 });
 
 app.put('/api/leaders/:id', requireAuth, (req, res) => {
@@ -1121,7 +1669,7 @@ app.put('/api/leaders/:id', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 9. CLUB SETTINGS
+// 9. CLUB SETTINGS, GMAIL SMTP & GOOGLE OAUTH CONFIGURATION
 // ============================================================================
 app.put('/api/settings', requireAuth, (req, res) => {
   if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
@@ -1135,12 +1683,29 @@ app.put('/api/settings', requireAuth, (req, res) => {
     current_year = prev.current_year,
     investiture_date = prev.investiture_date,
     allow_counselor_direct_approval = Boolean(prev.allow_counselor_direct_approval),
+    demo_mode_enabled = prev.demo_mode_enabled === undefined ? true : Boolean(prev.demo_mode_enabled),
+    smtp_host = prev.smtp_host || 'smtp.gmail.com',
+    smtp_port = prev.smtp_port || 465,
+    smtp_user = prev.smtp_user || '',
+    smtp_pass,
+    smtp_from_name = prev.smtp_from_name || club_name,
+    google_client_id = prev.google_client_id || '',
+    frontend_url = prev.frontend_url || 'https://pereira162.github.io/desbravadores-classes',
   } = req.body || {};
+
+  // Preserva a senha de app anterior se o campo vier em branco
+  const finalSmtpPass =
+    smtp_pass !== undefined && String(smtp_pass).trim() !== ''
+      ? String(smtp_pass).replace(/\s+/g, '')
+      : prev.smtp_pass || '';
 
   const now = new Date().toISOString();
   db.prepare(`
     UPDATE club_settings
-    SET club_name = ?, club_region = ?, current_year = ?, investiture_date = ?, allow_counselor_direct_approval = ?, updated_at = ?
+    SET club_name = ?, club_region = ?, current_year = ?, investiture_date = ?,
+        allow_counselor_direct_approval = ?, demo_mode_enabled = ?,
+        smtp_host = ?, smtp_port = ?, smtp_secure = ?, smtp_user = ?, smtp_pass = ?,
+        smtp_from_name = ?, google_client_id = ?, frontend_url = ?, updated_at = ?
     WHERE id = 1
   `).run(
     club_name,
@@ -1148,6 +1713,15 @@ app.put('/api/settings', requireAuth, (req, res) => {
     Number(current_year),
     investiture_date,
     allow_counselor_direct_approval ? 1 : 0,
+    demo_mode_enabled ? 1 : 0,
+    String(smtp_host).trim(),
+    Number(smtp_port || 465),
+    Number(smtp_port || 465) === 465 ? 1 : 0,
+    String(smtp_user).trim(),
+    finalSmtpPass,
+    String(smtp_from_name || club_name).trim(),
+    String(google_client_id).trim(),
+    String(frontend_url).trim(),
     now
   );
 
@@ -1156,13 +1730,80 @@ app.put('/api/settings', requireAuth, (req, res) => {
     action: 'SETTINGS_UPDATE',
     entityType: 'CLUB_SETTINGS',
     entityId: '1',
-    summary: `${req.user.name} atualizou as configurações gerais do clube (Aprovação direta por conselheiro: ${allow_counselor_direct_approval ? 'Sim' : 'Não'}).`,
-    previousState: prev,
-    newState: { club_name, club_region, current_year, investiture_date, allow_counselor_direct_approval },
+    summary: `${req.user.name} atualizou as configurações do clube (SMTP: ${smtp_user || 'não definido'}, Modo Demo: ${demo_mode_enabled ? 'Ativo' : 'Oculto'}).`,
+    previousState: { ...prev, smtp_pass: '***' },
+    newState: {
+      club_name,
+      club_region,
+      current_year,
+      investiture_date,
+      allow_counselor_direct_approval,
+      demo_mode_enabled,
+      smtp_user,
+      google_client_id,
+    },
     createdAt: now,
   });
 
   res.json({ success: true });
+});
+
+app.post('/api/settings/test-smtp', requireAuth, async (req, res) => {
+  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Diretor pode testar o servidor de e-mail.' });
+  }
+  try {
+    const prev = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    const {
+      smtp_host = prev.smtp_host || 'smtp.gmail.com',
+      smtp_port = prev.smtp_port || 465,
+      smtp_user = prev.smtp_user || '',
+      smtp_pass,
+      to_email = req.user.email,
+    } = req.body || {};
+
+    const finalPass =
+      smtp_pass && String(smtp_pass).trim() !== ''
+        ? String(smtp_pass).replace(/\s+/g, '')
+        : prev.smtp_pass || '';
+
+    const tempSettings = {
+      ...prev,
+      smtp_host: String(smtp_host).trim(),
+      smtp_port: Number(smtp_port || 465),
+      smtp_secure: Number(smtp_port || 465) === 465,
+      smtp_user: String(smtp_user).trim(),
+      smtp_pass: finalPass,
+    };
+
+    await sendTestSmtpEmail({
+      clubSettings: tempSettings,
+      toEmail: String(to_email || smtp_user).trim(),
+    });
+
+    // Se funcionou, já salva as credenciais no banco!
+    db.prepare(`
+      UPDATE club_settings
+      SET smtp_host = ?, smtp_port = ?, smtp_secure = ?, smtp_user = ?, smtp_pass = ?, updated_at = ?
+      WHERE id = 1
+    `).run(
+      tempSettings.smtp_host,
+      tempSettings.smtp_port,
+      tempSettings.smtp_secure ? 1 : 0,
+      tempSettings.smtp_user,
+      tempSettings.smtp_pass,
+      new Date().toISOString()
+    );
+
+    res.json({
+      success: true,
+      message: `E-mail de teste enviado com sucesso para ${to_email || smtp_user}! Credenciais SMTP salvas.`,
+    });
+  } catch (err) {
+    res.status(400).json({
+      error: `Falha no envio SMTP: ${err.message}. Verifique se o e-mail Gmail está correto e se você usou uma Senha de App de 16 caracteres do Google.`,
+    });
+  }
 });
 
 // ============================================================================

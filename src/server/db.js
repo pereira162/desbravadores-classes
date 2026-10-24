@@ -199,6 +199,48 @@ function initDatabase() {
 
   syncOfficialCatalog();
   seedInitialClubDataIfEmpty();
+  ensureAuthAndEmailColumns();
+}
+
+function addColumnIfNotExists(table, colName, colDef) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === colName)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${colName} ${colDef}`);
+  }
+}
+
+function ensureAuthAndEmailColumns() {
+  // Club Settings columns for Setup, Demo Mode, SMTP, and Google OAuth
+  addColumnIfNotExists('club_settings', 'setup_completed', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfNotExists('club_settings', 'demo_mode_enabled', 'INTEGER NOT NULL DEFAULT 1');
+  addColumnIfNotExists('club_settings', 'smtp_host', "TEXT NOT NULL DEFAULT 'smtp.gmail.com'");
+  addColumnIfNotExists('club_settings', 'smtp_port', 'INTEGER NOT NULL DEFAULT 465');
+  addColumnIfNotExists('club_settings', 'smtp_secure', 'INTEGER NOT NULL DEFAULT 1');
+  addColumnIfNotExists('club_settings', 'smtp_user', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfNotExists('club_settings', 'smtp_pass', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfNotExists('club_settings', 'smtp_from_name', "TEXT NOT NULL DEFAULT 'Clube de Desbravadores'");
+  addColumnIfNotExists('club_settings', 'google_client_id', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfNotExists(
+    'club_settings',
+    'frontend_url',
+    "TEXT NOT NULL DEFAULT 'https://pereira162.github.io/desbravadores-classes'"
+  );
+
+  // Users columns for real email verification, invitations, password reset, and Google login
+  addColumnIfNotExists('users', 'is_demo', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfNotExists('users', 'email_verified', 'INTEGER NOT NULL DEFAULT 1');
+  addColumnIfNotExists('users', 'invite_status', "TEXT NOT NULL DEFAULT 'ACTIVE'");
+  addColumnIfNotExists('users', 'invite_token', 'TEXT');
+  addColumnIfNotExists('users', 'invite_expires_at', 'TEXT');
+  addColumnIfNotExists('users', 'verification_code', 'TEXT');
+  addColumnIfNotExists('users', 'verification_expires_at', 'TEXT');
+  addColumnIfNotExists('users', 'reset_code', 'TEXT');
+  addColumnIfNotExists('users', 'reset_expires_at', 'TEXT');
+  addColumnIfNotExists('users', 'google_sub', 'TEXT');
+  addColumnIfNotExists('users', 'avatar_url', 'TEXT');
+
+  // Mark default @clube.org seeded users as is_demo = 1
+  db.prepare("UPDATE users SET is_demo = 1 WHERE email LIKE '%@clube.org'").run();
 }
 
 function syncOfficialCatalog() {

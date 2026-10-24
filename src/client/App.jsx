@@ -406,8 +406,9 @@ export default function App() {
   // Salvar Líder
   const handleSaveLeader = async (payload, leaderId) => {
     try {
+      let res = null;
       if (leaderId) {
-        await apiRequest(`/api/leaders/${leaderId}`, {
+        res = await apiRequest(`/api/leaders/${leaderId}`, {
           method: 'PUT',
           body: JSON.stringify({
             ...payload,
@@ -416,20 +417,54 @@ export default function App() {
         });
         showToast('Permissões do líder atualizadas com sucesso!');
       } else {
-        await apiRequest('/api/leaders', {
+        res = await apiRequest('/api/leaders', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        showToast('Novo líder cadastrado com sucesso!');
+        if (res.email_sent) {
+          showToast(
+            `Líder cadastrado e e-mail de convite enviado para ${payload.email}!`
+          );
+        } else if (res.invite_url) {
+          showToast(
+            'Líder cadastrado! Link de convite gerado na lista abaixo (configure o Gmail SMTP para envio automático).'
+          );
+        } else {
+          showToast('Novo líder cadastrado com sucesso!');
+        }
       }
       await fetchBootstrapData();
+      return res;
     } catch (err) {
       showToast(err.message || 'Erro ao salvar líder.', 'error');
       throw err;
     }
   };
 
-  // Salvar Configurações do Clube
+  // Enviar ou Reenviar Convite por E-mail para um Líder
+  const handleSendLeaderInvite = async (leaderId) => {
+    try {
+      const res = await apiRequest(`/api/leaders/${leaderId}/send-invite`, {
+        method: 'POST',
+      });
+      if (res.email_sent) {
+        showToast('E-mail de convite enviado com sucesso para o líder!');
+      } else {
+        showToast(
+          res.email_reason ||
+            'Link de convite gerado! Copie o link abaixo ou configure o Gmail SMTP.',
+          'info'
+        );
+      }
+      await fetchBootstrapData();
+      return res;
+    } catch (err) {
+      showToast(err.message || 'Erro ao gerar/enviar convite.', 'error');
+      throw err;
+    }
+  };
+
+  // Salvar Configurações do Clube + Gmail SMTP + Google OAuth
   const handleSaveSettings = async (payload) => {
     try {
       await apiRequest('/api/settings', {
@@ -441,12 +476,31 @@ export default function App() {
           investiture_date: payload.investiture_date,
           allow_counselor_direct_approval:
             payload.allow_counselor_direct_approval === 'true',
+          demo_mode_enabled: payload.demo_mode_enabled,
+          smtp_user: payload.smtp_user,
+          smtp_pass: payload.smtp_pass,
+          smtp_from_name: payload.smtp_from_name,
+          google_client_id: payload.google_client_id,
         }),
       });
       await fetchBootstrapData();
-      showToast('Configurações do clube salvas e auditadas!');
+      showToast('Configurações do clube e de e-mail salvas com sucesso!');
     } catch (err) {
       showToast(err.message || 'Erro ao salvar configurações.', 'error');
+      throw err;
+    }
+  };
+
+  // Testar Envio de E-mail Gmail SMTP
+  const handleTestSmtp = async (toEmail) => {
+    try {
+      const res = await apiRequest('/api/settings/test-smtp', {
+        method: 'POST',
+        body: JSON.stringify({ to_email: toEmail }),
+      });
+      showToast(res.message || 'E-mail de teste enviado com sucesso!');
+    } catch (err) {
+      showToast(err.message || 'Falha ao enviar e-mail de teste.', 'error');
     }
   };
 
@@ -705,7 +759,9 @@ export default function App() {
             settings={normalizedData.settings}
             currentUser={user}
             onSaveLeader={handleSaveLeader}
+            onSendLeaderInvite={handleSendLeaderInvite}
             onSaveSettings={handleSaveSettings}
+            onTestSmtp={handleTestSmtp}
           />
         )}
 
