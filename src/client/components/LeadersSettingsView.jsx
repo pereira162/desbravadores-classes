@@ -23,6 +23,7 @@ export default function LeadersSettingsView({
   settings,
   currentUser,
   onSaveLeader,
+  onDeleteLeader,
   onSendLeaderInvite,
   onSaveSettings,
   onTestSmtp,
@@ -37,9 +38,7 @@ export default function LeadersSettingsView({
   const [allowCounselorDirect, setAllowCounselorDirect] = useState(
     settings?.allow_counselor_direct_approval === 'true'
   );
-  const [demoModeEnabled, setDemoModeEnabled] = useState(
-    settings?.demo_mode_enabled !== false && settings?.demo_mode_enabled !== 0
-  );
+  const [demoModeEnabled, setDemoModeEnabled] = useState(false);
 
   // Estado de E-mail (Gmail SMTP) e Google Sign-In
   const [smtpUser, setSmtpUser] = useState(settings?.smtp_user || '');
@@ -62,9 +61,7 @@ export default function LeadersSettingsView({
     setClubYear(settings.club_year || '2026');
     setInvestitureDate(settings.investiture_date || '2026-11-28');
     setAllowCounselorDirect(settings.allow_counselor_direct_approval === 'true');
-    setDemoModeEnabled(
-      settings.demo_mode_enabled !== false && settings.demo_mode_enabled !== 0
-    );
+    setDemoModeEnabled(false);
     setSmtpUser(settings.smtp_user || '');
     setSmtpFromName(
       settings.smtp_from_name || settings.club_name || 'SGC Classes Desbravadores'
@@ -97,7 +94,7 @@ export default function LeadersSettingsView({
     setSendInvite(true);
     setRole('INSTRUTOR');
     setUnitId('');
-    setAssignedClasses(['amigo', 'amigo_natureza']);
+    setAssignedClasses(['amigo', 'amigo-avancado']);
     setActive(true);
     setLeaderModalOpen(true);
   };
@@ -446,25 +443,6 @@ export default function LeadersSettingsView({
                 </p>
               </div>
 
-              {/* Exibir ou Ocultar Contas de Demonstração no Login */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    disabled={!canManageLeaders}
-                    checked={demoModeEnabled}
-                    onChange={(e) => setDemoModeEnabled(e.target.checked)}
-                    className="mt-0.5 rounded text-indigo-600"
-                  />
-                  <span className="text-xs font-bold text-slate-800">
-                    Exibir botões de Acesso Rápido (Demo) na tela de login
-                  </span>
-                </label>
-                <p className="text-[11px] text-slate-500">
-                  Desmarque quando o clube estiver em uso real para que apenas logins com senha ou Google apareçam.
-                </p>
-              </div>
-
               {/* Seção Gmail SMTP */}
               <div className="pt-3 border-t border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -627,7 +605,7 @@ export default function LeadersSettingsView({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Instrutor Marcos Paulo"
+                  placeholder="Digite o nome completo do líder"
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                 />
               </div>
@@ -642,7 +620,7 @@ export default function LeadersSettingsView({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="marcos@gmail.com"
+                    placeholder="email@gmail.com"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                   />
                 </div>
@@ -764,27 +742,52 @@ export default function LeadersSettingsView({
                 Conta Ativa (pode fazer login no sistema)
               </label>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setLeaderModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingLeader}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
-                >
-                  {savingLeader
-                    ? 'Salvando...'
-                    : editingLeader
-                    ? 'Salvar Alterações'
-                    : sendInvite
-                    ? 'Cadastrar & Gerar Convite'
-                    : 'Salvar Líder'}
-                </button>
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
+                {editingLeader &&
+                onDeleteLeader &&
+                editingLeader.id !== currentUser?.id ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          `Tem certeza que deseja excluir a conta do líder "${editingLeader.name}"?`
+                        )
+                      ) {
+                        await onDeleteLeader(editingLeader.id);
+                        setLeaderModalOpen(false);
+                      }
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer"
+                  >
+                    Excluir Conta
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLeaderModalOpen(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingLeader}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
+                  >
+                    {savingLeader
+                      ? 'Salvando...'
+                      : editingLeader
+                      ? 'Salvar Alterações'
+                      : sendInvite
+                      ? 'Cadastrar & Gerar Convite'
+                      : 'Salvar Líder'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

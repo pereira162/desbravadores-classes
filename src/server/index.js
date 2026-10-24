@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { db, initDatabase, loadCardsMetadata, recordAudit } = require('./db');
+const { db, dbContextMiddleware, initDatabase, loadCardsMetadata, recordAudit } = require('./db');
 const {
   hashPassword,
   verifyPassword,
@@ -25,6 +25,7 @@ initDatabase();
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+app.use(dbContextMiddleware);
 
 // Static files for official logos and downloaded PDFs
 const DATA_DIR = path.resolve(__dirname, '../../data');
@@ -1161,6 +1162,33 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
   }
 });
 
+app.delete('/api/pathfinders/:id', requireAuth, (req, res) => {
+  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+    return res
+      .status(403)
+      .json({ error: 'Apenas Diretor, Admin ou Secretário(a) podem excluir desbravadores.' });
+  }
+  const pfId = req.params.id;
+  const existing = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pfId);
+  if (!existing) {
+    return res.status(404).json({ error: 'Desbravador não encontrado.' });
+  }
+
+  db.prepare('DELETE FROM pathfinders WHERE id = ?').run(pfId);
+
+  recordAudit({
+    user: req.user,
+    action: 'PATHFINDER_DELETE',
+    entityType: 'PATHFINDER',
+    entityId: pfId,
+    summary: `${req.user.name} excluiu o cadastro do(a) desbravador(a) "${existing.name}".`,
+    previousState: existing,
+    newState: null,
+  });
+
+  res.json({ success: true });
+});
+
 // ============================================================================
 // 6. UNITS MANAGEMENT
 // ============================================================================
@@ -1190,6 +1218,63 @@ app.post('/api/units', requireAuth, (req, res) => {
   });
 
   res.json({ success: true, id });
+});
+
+app.put('/api/units/:id', requireAuth, (req, res) => {
+  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para editar unidades.' });
+  }
+  const unitId = req.params.id;
+  const existing = db.prepare('SELECT * FROM units WHERE id = ?').get(unitId);
+  if (!existing) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+  const {
+    name = existing.name,
+    gender = existing.gender,
+    counselor_description = existing.counselor_description,
+    color_hex = existing.color_hex,
+  } = req.body || {};
+
+  db.prepare(`
+    UPDATE units
+    SET name = ?, gender = ?, counselor_description = ?, color_hex = ?
+    WHERE id = ?
+  `).run(String(name).trim(), gender, counselor_description, color_hex, unitId);
+
+  recordAudit({
+    user: req.user,
+    action: 'UNIT_UPDATE',
+    entityType: 'UNIT',
+    entityId: unitId,
+    summary: `${req.user.name} atualizou a unidade "${name}".`,
+    previousState: existing,
+    newState: { name, gender, counselor_description, color_hex },
+  });
+
+  res.json({ success: true });
+});
+
+app.delete('/api/units/:id', requireAuth, (req, res) => {
+  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para excluir unidades.' });
+  }
+  const unitId = req.params.id;
+  const existing = db.prepare('SELECT * FROM units WHERE id = ?').get(unitId);
+  if (!existing) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+  db.prepare('DELETE FROM units WHERE id = ?').run(unitId);
+
+  recordAudit({
+    user: req.user,
+    action: 'UNIT_DELETE',
+    entityType: 'UNIT',
+    entityId: unitId,
+    summary: `${req.user.name} excluiu a unidade "${existing.name}".`,
+    previousState: existing,
+    newState: null,
+  });
+
+  res.json({ success: true });
 });
 
 // ============================================================================
@@ -1437,6 +1522,29 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
   }
 });
 
+app.delete('/api/events/:id', requireAuth, (req, res) => {
+  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para excluir eventos.' });
+  }
+  const eventId = req.params.id;
+  const existing = db.prepare('SELECT * FROM activity_events WHERE id = ?').get(eventId);
+  if (!existing) return res.status(404).json({ error: 'Evento não encontrado.' });
+
+  db.prepare('DELETE FROM activity_events WHERE id = ?').run(eventId);
+
+  recordAudit({
+    user: req.user,
+    action: 'EVENT_DELETE',
+    entityType: 'ACTIVITY_EVENT',
+    entityId: eventId,
+    summary: `${req.user.name} excluiu o evento "${existing.title}".`,
+    previousState: existing,
+    newState: null,
+  });
+
+  res.json({ success: true });
+});
+
 // ============================================================================
 // 8. LEADERS (USERS, RBAC & EMAIL INVITATIONS) MANAGEMENT
 // ============================================================================
@@ -1663,6 +1771,32 @@ app.put('/api/leaders/:id', requireAuth, (req, res) => {
     previousState: formatUser(existing),
     newState: { name, email, role, unit_id, assigned_classes: finalClasses, active },
     createdAt: now,
+  });
+
+  res.json({ success: true });
+});
+
+app.delete('/api/leaders/:id', requireAuth, (req, res) => {
+  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode excluir contas de líderes.' });
+  }
+  const targetId = req.params.id;
+  if (targetId === req.user.id) {
+    return res.status(400).json({ error: 'Você não pode excluir sua própria conta logada.' });
+  }
+  const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId);
+  if (!existing) return res.status(404).json({ error: 'Líder não encontrado.' });
+
+  db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+
+  recordAudit({
+    user: req.user,
+    action: 'LEADER_DELETE',
+    entityType: 'USER',
+    entityId: targetId,
+    summary: `${req.user.name} removeu a conta do líder "${existing.name}" (${existing.email}).`,
+    previousState: formatUser(existing),
+    newState: null,
   });
 
   res.json({ success: true });

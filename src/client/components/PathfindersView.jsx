@@ -33,7 +33,9 @@ export default function PathfindersView({
   onSelectPathfinderId,
   currentUser,
   onSavePathfinder,
+  onDeletePathfinder,
   onCreateUnit,
+  onDeleteUnit,
   onOpenRequirementDetail,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,14 +52,14 @@ export default function PathfindersView({
   const [pfUnitId, setPfUnitId] = useState('');
   const [pfNotes, setPfNotes] = useState('');
   const [pfActive, setPfActive] = useState(true);
-  const [pfClassSlugs, setPfClassSlugs] = useState(['amigo', 'amigo_natureza']);
+  const [pfClassSlugs, setPfClassSlugs] = useState(['amigo', 'amigo-avancado']);
   const [pfIsGrouped, setPfIsGrouped] = useState(false);
   const [savingPf, setSavingPf] = useState(false);
 
   // Estado do Modal de Nova Unidade
   const [unitModalOpen, setUnitModalOpen] = useState(false);
   const [unitName, setUnitName] = useState('');
-  const [unitGender, setUnitGender] = useState('M');
+  const [unitGender, setUnitGender] = useState('MASCULINO');
   const [savingUnit, setSavingUnit] = useState(false);
 
   const canManageRegistry = ['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(
@@ -176,7 +178,7 @@ export default function PathfindersView({
     setPfUnitId(units[0]?.id || '');
     setPfNotes('');
     setPfActive(true);
-    setPfClassSlugs(['amigo', 'amigo_natureza']);
+    setPfClassSlugs(['amigo', 'amigo-avancado']);
     setPfIsGrouped(false);
     setPfModalOpen(true);
   };
@@ -707,7 +709,7 @@ export default function PathfindersView({
                     required
                     value={pfName}
                     onChange={(e) => setPfName(e.target.value)}
-                    placeholder="Ex: Lucas Gabriel Almeida"
+                    placeholder="Digite o nome completo do desbravador"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -817,33 +819,56 @@ export default function PathfindersView({
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setPfModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingPf || pfClassSlugs.length === 0}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
-                >
-                  {savingPf ? 'Salvando...' : 'Salvar Desbravador'}
-                </button>
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
+                {editingPf && onDeletePathfinder ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          `Tem certeza que deseja excluir o cadastro de "${editingPf.name}"?`
+                        )
+                      ) {
+                        await onDeletePathfinder(editingPf.id);
+                        setPfModalOpen(false);
+                      }
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer"
+                  >
+                    Excluir Desbravador
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPfModalOpen(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingPf || pfClassSlugs.length === 0}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
+                  >
+                    {savingPf ? 'Salvando...' : 'Salvar Desbravador'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Modal Nova Unidade */}
+      {/* Modal Criar / Gerenciar Unidades */}
       {unitModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="text-base font-extrabold">Criar Nova Unidade</h3>
+              <h3 className="text-base font-extrabold">Unidades do Clube</h3>
               <button
                 onClick={() => setUnitModalOpen(false)}
                 className="text-slate-400 hover:text-white cursor-pointer"
@@ -851,51 +876,93 @@ export default function PathfindersView({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateUnitSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nome da Unidade *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={unitName}
-                  onChange={(e) => setUnitName(e.target.value)}
-                  placeholder="Ex: Unidade Falcão Peregrino"
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Gênero da Unidade
-                </label>
-                <select
-                  value={unitGender}
-                  onChange={(e) => setUnitGender(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
-                >
-                  <option value="M">Masculina</option>
-                  <option value="F">Feminina</option>
-                  <option value="X">Mista</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setUnitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingUnit}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
-                >
-                  {savingUnit ? 'Criando...' : 'Criar Unidade'}
-                </button>
-              </div>
-            </form>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <form onSubmit={handleCreateUnitSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nome da Nova Unidade *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={unitName}
+                    onChange={(e) => setUnitName(e.target.value)}
+                    placeholder="Digite o nome da unidade"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Gênero da Unidade
+                  </label>
+                  <select
+                    value={unitGender}
+                    onChange={(e) => setUnitGender(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
+                  >
+                    <option value="MASCULINO">Masculina</option>
+                    <option value="FEMININO">Feminina</option>
+                    <option value="MISTA">Mista</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setUnitModalOpen(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingUnit}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
+                  >
+                    {savingUnit ? 'Criando...' : 'Criar Unidade'}
+                  </button>
+                </div>
+              </form>
+
+              {units.length > 0 && (
+                <div className="pt-4 border-t border-slate-200 space-y-2">
+                  <div className="text-xs font-extrabold text-slate-700">
+                    Unidades Cadastradas ({units.length})
+                  </div>
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl">
+                    {units.map((u) => (
+                      <div
+                        key={u.id}
+                        className="px-3 py-2 flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-900">{u.name}</span>
+                          <span className="ml-2 text-[10px] text-slate-500">
+                            ({u.gender})
+                          </span>
+                        </div>
+                        {onDeleteUnit && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (
+                                window.confirm(
+                                  `Tem certeza que deseja excluir a unidade "${u.name}"?`
+                                )
+                              ) {
+                                await onDeleteUnit(u.id);
+                              }
+                            }}
+                            className="text-rose-600 hover:underline font-bold cursor-pointer"
+                          >
+                            Excluir
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

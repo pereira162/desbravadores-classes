@@ -32,6 +32,7 @@ export default function EventsBatchView({
   pendingEventDraft,
   onClearEventDraft,
   onCreateEvent,
+  onDeleteEvent,
   onExecuteEvent,
 }) {
   // Modal Criar Evento
@@ -174,117 +175,145 @@ export default function EventsBatchView({
       </div>
 
       {/* Cards de Eventos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {events.map((ev) => {
-          const typeObj =
-            EVENT_TYPES.find((t) => t.id === ev.event_type) || EVENT_TYPES[0];
-          const linkedReqs = (ev.requirement_ids || [])
-            .map((id) => requirementsMap[id])
-            .filter(Boolean);
+      {events.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center space-y-3">
+          <Tent className="w-10 h-10 text-slate-300 mx-auto" />
+          <h3 className="text-base font-extrabold text-slate-800">
+            Nenhum evento agendado ainda
+          </h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Agende acampamentos, caminhadas ou projetos comunitários do seu clube para assinar os requisitos de vários desbravadores de uma só vez.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {events.map((ev) => {
+            const typeObj =
+              EVENT_TYPES.find((t) => t.id === ev.event_type) || EVENT_TYPES[0];
+            const linkedReqs = (ev.requirement_ids || [])
+              .map((id) => requirementsMap[id])
+              .filter(Boolean);
 
-          // Desbravadores matriculados nas classes dos requisitos deste evento
-          const reqSlugs = new Set(linkedReqs.map((r) => r.class_slug));
-          const eligiblePfs = activePathfinders.filter((pf) =>
-            pf.enrollments?.some((enr) => reqSlugs.has(enr.class_slug))
-          );
+            // Desbravadores matriculados nas classes dos requisitos deste evento
+            const reqSlugs = new Set(linkedReqs.map((r) => r.class_slug));
+            const eligiblePfs = activePathfinders.filter((pf) =>
+              pf.enrollments?.some((enr) => reqSlugs.has(enr.class_slug))
+            );
 
-          return (
-            <div
-              key={ev.id}
-              className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between"
-            >
-              <div className="p-5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${typeObj.badge}`}
-                  >
-                    {typeObj.label}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      {formatDateBR(ev.event_date)}
-                    </span>
+            return (
+              <div
+                key={ev.id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between"
+              >
+                <div className="p-5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                        ev.status === 'REALIZADO'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${typeObj.badge}`}
                     >
-                      {ev.status === 'REALIZADO' ? 'REALIZADO' : 'PLANEJADO'}
+                      {typeObj.label}
                     </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        {formatDateBR(ev.event_date)}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                          ev.status === 'REALIZADO'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {ev.status === 'REALIZADO' ? 'REALIZADO' : 'PLANEJADO'}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <h2 className="text-lg font-extrabold text-slate-900">
-                    {ev.title}
-                  </h2>
-                  {ev.description && (
-                    <p className="text-xs text-slate-600 mt-1">
-                      {ev.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Lista de Requisitos Cobertos pelo Evento */}
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                    <span>
-                      Requisitos Cobertos Simultaneamente ({linkedReqs.length})
-                    </span>
-                    <span className="text-indigo-700">
-                      {eligiblePfs.length} desbravadores elegíveis
-                    </span>
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">
+                      {ev.title}
+                    </h2>
+                    {ev.description && (
+                      <p className="text-xs text-slate-600 mt-1">
+                        {ev.description}
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                    {linkedReqs.map((r) => {
-                      const cls = classesMap[r.class_slug];
-                      return (
-                        <div
-                          key={r.id}
-                          className="text-xs bg-white p-2 rounded-lg border border-slate-200 flex items-start gap-2"
-                        >
-                          <span
-                            className="px-1.5 py-0.5 rounded text-[10px] font-extrabold text-white shrink-0 mt-0.5"
-                            style={{ backgroundColor: cls?.color || '#334155' }}
+
+                  {/* Lista de Requisitos Cobertos pelo Evento */}
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span>
+                        Requisitos Cobertos Simultaneamente ({linkedReqs.length})
+                      </span>
+                      <span className="text-indigo-700">
+                        {eligiblePfs.length} desbravadores elegíveis
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                      {linkedReqs.map((r) => {
+                        const cls = classesMap[r.class_slug];
+                        return (
+                          <div
+                            key={r.id}
+                            className="text-xs bg-white p-2 rounded-lg border border-slate-200 flex items-start gap-2"
                           >
-                            {r.code}
-                          </span>
-                          <div className="min-w-0">
-                            <span className="font-bold text-slate-800">
-                              {cls?.name}:{' '}
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[10px] font-extrabold text-white shrink-0 mt-0.5"
+                              style={{ backgroundColor: cls?.color || '#334155' }}
+                            >
+                              {r.code}
                             </span>
-                            <span className="text-slate-600">
-                              {r.marker} {r.title}
-                            </span>
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-800">
+                                {cls?.name}:{' '}
+                              </span>
+                              <span className="text-slate-600">
+                                {r.marker} {r.title}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                <span className="text-xs text-slate-500">
-                  {ev.status === 'REALIZADO'
-                    ? 'Você pode lançar presença complementar a qualquer momento.'
-                    : 'Pronto para lançamento de presença e assinatura em lote.'}
-                </span>
-                <button
-                  onClick={() => openExecuteModal(ev)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <CheckSquare className="w-4 h-4 text-emerald-400" />
-                  Lançar Presença & Assinar Lote
-                </button>
+                <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+                  {onDeleteEvent ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (
+                          window.confirm(
+                            `Tem certeza que deseja excluir o evento "${ev.title}"?`
+                          )
+                        ) {
+                          await onDeleteEvent(ev.id);
+                        }
+                      }}
+                      className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Excluir Evento
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-500">
+                      Pronto para lançamento em lote
+                    </span>
+                  )}
+                  <button
+                    onClick={() => openExecuteModal(ev)}
+                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CheckSquare className="w-4 h-4 text-emerald-400" />
+                    Lançar Presença & Assinar Lote
+                  </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal Criar Evento */}
       {createOpen && (

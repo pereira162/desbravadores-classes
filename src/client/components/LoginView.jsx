@@ -15,10 +15,11 @@ import {
   ExternalLink,
   HelpCircle,
 } from 'lucide-react';
-import { apiRequest, getAssetUrl } from '../api';
+import { apiRequest, getAssetUrl, isTestMode, getTestModeUrl } from '../api';
 import { ROLE_CONFIG } from '../constants';
 
 export default function LoginView({ onLoginSuccess }) {
+  const testMode = isTestMode();
   // MODES: LOGIN | SETUP_DIRECTOR | VERIFY_EMAIL | FORGOT_PASSWORD | RESET_PASSWORD | ACCEPT_INVITE
   const [mode, setMode] = useState('LOGIN');
 
@@ -31,20 +32,20 @@ export default function LoginView({ onLoginSuccess }) {
 
   // Public config & demo accounts
   const [demoAccounts, setDemoAccounts] = useState([]);
-  const [demoEnabled, setDemoEnabled] = useState(true);
-  const [setupCompleted, setSetupCompleted] = useState(false);
+  const [demoEnabled, setDemoEnabled] = useState(false);
+  const [setupCompleted, setSetupCompleted] = useState(true);
   const [clubName, setClubName] = useState('Clube de Desbravadores');
   const [googleClientId, setGoogleClientId] = useState('');
 
-  // Setup Director state
+  // Setup Director state (100% em branco para o Diretor preencher os dados reais)
   const [dirName, setDirName] = useState('');
   const [dirEmail, setDirEmail] = useState('');
   const [dirPassword, setDirPassword] = useState('');
-  const [dirClubName, setDirClubName] = useState('Clube Pioneiros da Colina');
-  const [dirClubRegion, setDirClubRegion] = useState('Associação / DSA');
+  const [dirClubName, setDirClubName] = useState('');
+  const [dirClubRegion, setDirClubRegion] = useState('');
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
-  const [disableDemo, setDisableDemo] = useState(false);
+  const [disableDemo, setDisableDemo] = useState(true);
   const [showGmailHelp, setShowGmailHelp] = useState(false);
 
   // Email verification & Reset Password state
@@ -70,18 +71,24 @@ export default function LoginView({ onLoginSuccess }) {
 
     apiRequest('/api/auth/demo-accounts')
       .then((res) => {
-        setDemoAccounts(res.accounts || []);
-        setDemoEnabled(res.demo_mode_enabled !== false);
+        setDemoAccounts(testMode ? res.accounts || [] : []);
+        setDemoEnabled(testMode && res.demo_mode_enabled !== false);
         setSetupCompleted(Boolean(res.setup_completed));
         if (res.club_name) {
           setClubName(res.club_name);
-          setDirClubName(res.club_name);
+          if (res.club_name !== 'Clube de Desbravadores') {
+            setDirClubName(res.club_name);
+          }
         }
         if (res.google_client_id) {
           setGoogleClientId(res.google_client_id);
         }
-        // Only pre-fill demo credentials if no real director was set up yet
-        if (!res.setup_completed && !invToken && !resetEmailParam && !verifyEmailParam) {
+        // No sistema real de produção, se ainda não houver Diretor cadastrado, abre direto o cadastro oficial do Diretor!
+        if (!testMode && !res.setup_completed && !invToken && !resetEmailParam && !verifyEmailParam) {
+          setMode('SETUP_DIRECTOR');
+        }
+        // Na página temporária de teste (?teste=1), preenche o login de teste
+        if (testMode && !invToken && !resetEmailParam && !verifyEmailParam) {
           setEmail('diretor@clube.org');
           setPassword('123456');
         }
@@ -108,7 +115,7 @@ export default function LoginView({ onLoginSuccess }) {
       if (resetCodeParam) setVerificationCode(resetCodeParam);
       setMode('VERIFY_EMAIL');
     }
-  }, []);
+  }, [testMode]);
 
   // Load Google Identity Services button if googleClientId is configured
   useEffect(() => {
@@ -487,19 +494,53 @@ export default function LoginView({ onLoginSuccess }) {
             {mode === 'SETUP_DIRECTOR' && (
               <form onSubmit={handleSetupDirectorSubmit} className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-extrabold text-slate-900">
-                    Configurar Conta Oficial do Diretor
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setMode('LOGIN')}
-                    className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" /> Voltar
-                  </button>
+                  <div>
+                    <h2 className="text-base font-extrabold text-slate-900">
+                      Primeiro Acesso — Configurar Clube & Diretor
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Preencha os dados reais do seu clube e crie sua conta de Diretor(a).
+                    </p>
+                  </div>
+                  {setupCompleted && (
+                    <button
+                      type="button"
+                      onClick={() => setMode('LOGIN')}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer shrink-0"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" /> Login
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nome Oficial do Seu Clube *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={dirClubName}
+                      onChange={(e) => setDirClubName(e.target.value)}
+                      placeholder="Digite o nome do seu clube"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Região / Associação / Campo
+                    </label>
+                    <input
+                      type="text"
+                      value={dirClubRegion}
+                      onChange={(e) => setDirClubRegion(e.target.value)}
+                      placeholder="Ex: 1ª Região — Associação"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
+                    />
+                  </div>
+
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Seu Nome Completo (Diretor/Diretora) *
@@ -509,7 +550,7 @@ export default function LoginView({ onLoginSuccess }) {
                       required
                       value={dirName}
                       onChange={(e) => setDirName(e.target.value)}
-                      placeholder="Ex: Lucas Pereira de Campos"
+                      placeholder="Digite seu nome completo"
                       className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
                     />
                   </div>
@@ -544,31 +585,6 @@ export default function LoginView({ onLoginSuccess }) {
                       value={dirPassword}
                       onChange={(e) => setDirPassword(e.target.value)}
                       placeholder="Mínimo 6 caracteres"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Nome Oficial do Seu Clube *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={dirClubName}
-                      onChange={(e) => setDirClubName(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Região / Associação / Campo
-                    </label>
-                    <input
-                      type="text"
-                      value={dirClubRegion}
-                      onChange={(e) => setDirClubRegion(e.target.value)}
                       className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
                     />
                   </div>
@@ -642,16 +658,6 @@ export default function LoginView({ onLoginSuccess }) {
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={disableDemo}
-                    onChange={(e) => setDisableDemo(e.target.checked)}
-                    className="rounded text-indigo-600"
-                  />
-                  Ocultar/desativar as contas fictícias de demonstração na tela de login
-                </label>
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -662,6 +668,16 @@ export default function LoginView({ onLoginSuccess }) {
                     ? 'Criando Conta Oficial...'
                     : 'Criar Conta Oficial de Diretor & Entrar'}
                 </button>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setMode('LOGIN')}
+                    className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                  >
+                    Já possui conta cadastrada? Fazer Login
+                  </button>
+                </div>
               </form>
             )}
 
@@ -876,29 +892,51 @@ export default function LoginView({ onLoginSuccess }) {
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Catálogo Oficial DSA (212 Requisitos)</span>
-            <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Auditoria & E-mail Real
-            </span>
+          <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
+            <span>Catálogo Oficial DSA (12 Classes • 212 Requisitos)</span>
+            {testMode ? (
+              <a
+                href={getTestModeUrl(false)}
+                className="text-amber-700 hover:text-amber-900 font-extrabold underline"
+              >
+                ← Voltar ao Sistema Principal Oficial
+              </a>
+            ) : (
+              <a
+                href={getTestModeUrl(true)}
+                className="text-slate-400 hover:text-indigo-600 font-semibold underline"
+              >
+                Abrir Página Temporária de Teste (Visualização)
+              </a>
+            )}
           </div>
         </div>
 
-        {/* Painel Direito: Contas de Demonstração (Exibido enquanto o Modo Demo estiver ativo) */}
-        {demoEnabled && demoAccounts.length > 0 && (
-          <div className="lg:col-span-6 bg-slate-50 p-6 sm:p-8 border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col justify-between">
+        {/* Painel Direito: Exibido SOMENTE na Página Temporária de Teste (?teste=1) */}
+        {testMode && demoEnabled && demoAccounts.length > 0 && (
+          <div className="lg:col-span-6 bg-amber-50/60 p-6 sm:p-8 border-t lg:border-t-0 lg:border-l border-amber-200 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 p-3 rounded-xl bg-amber-500 text-slate-950 text-xs font-extrabold flex items-center justify-between gap-2">
+                <span>PÁGINA TEMPORÁRIA DE TESTE (ISOLADA)</span>
+                <a
+                  href={getTestModeUrl(false)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-950 text-white text-[11px] font-bold"
+                >
+                  Ir para Site Oficial
+                </a>
+              </div>
+
+              <div className="flex items-center justify-between mb-2">
                 <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-2">
                   <UserCheck className="w-4 h-4 text-amber-600" />
-                  Perfis de Demonstração (Troca Rápida)
+                  Contas de Teste (Ambiente Simulado)
                 </h2>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">
                   Senha: 123456
                 </span>
               </div>
               <p className="text-xs text-slate-600 mb-4">
-                Clique em qualquer líder abaixo para testar imediatamente as permissões. Você pode desativar este painel ao configurar sua conta real de Diretor:
+                Esta página usa um banco de dados separado apenas para você visualizar o sistema preenchido sem misturar com o seu clube real:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[380px] overflow-y-auto pr-1">
@@ -924,34 +962,9 @@ export default function LoginView({ onLoginSuccess }) {
                       <div className="text-[11px] text-slate-500 font-mono truncate">
                         {acct.email}
                       </div>
-                      <div className="mt-1.5 text-[11px] text-slate-600 truncate">
-                        {acct.role === 'DIRETOR' || acct.role === 'SECRETARIO' ? (
-                          <span className="text-slate-700 font-medium">
-                            Escopo: Todas as Classes e Unidades
-                          </span>
-                        ) : acct.role === 'INSTRUTOR' ? (
-                          <span>
-                            Classes: <strong>{acct.assigned_classes.join(', ')}</strong>
-                          </span>
-                        ) : (
-                          <span>
-                            Unidade: <strong>{acct.unit_name || 'Geral'}</strong>
-                          </span>
-                        )}
-                      </div>
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            <div className="mt-5 p-3.5 rounded-xl bg-slate-900 text-slate-200 text-xs flex items-start gap-3">
-              <Shield className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-white block mb-0.5">
-                  Como funciona o Convite de Líderes Reais?
-                </strong>
-                O Diretor cadastra os e-mails reais da Diretoria, Instrutores e Conselheiros na aba <strong>Líderes & Clube</strong>. O sistema envia o convite por e-mail para cada um criar sua própria senha ou entrar com o Google!
               </div>
             </div>
           </div>

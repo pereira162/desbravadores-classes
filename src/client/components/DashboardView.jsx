@@ -260,7 +260,7 @@ export default function DashboardView({
             Ano Eclesiástico {settings?.club_year || '2026'} • {settings?.club_region || 'DSA'}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            {settings?.club_name || 'Clube de Desbravadores Pioneiros da Colina'}
+            {settings?.club_name || 'Clube de Desbravadores'}
           </h1>
           <p className="text-sm text-slate-300 mt-1">
             Painel estratégico de classes regulares, classes avançadas e planejamento anual de investidura.
@@ -288,6 +288,38 @@ export default function DashboardView({
           </button>
         </div>
       </div>
+
+      {/* Guia Rápido de Primeiros Passos quando o Clube está iniciando do zero */}
+      {(units.length === 0 || activePathfinders.length === 0) && (
+        <div className="bg-indigo-50/90 border-2 border-indigo-200 rounded-2xl p-5 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" />
+              Bem-vindo ao Sistema Oficial do seu Clube!
+            </div>
+            <h2 className="text-base font-extrabold text-slate-900">
+              Seu banco de dados está 100% limpo e pronto para os dados reais do seu clube
+            </h2>
+            <p className="text-xs text-slate-600">
+              Todo o catálogo oficial da DSA (12 Classes e 212 Requisitos) já está carregado. Comece criando as unidades do seu clube, cadastrando os desbravadores e convidando sua diretoria:
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => onNavigate('PATHFINDERS')}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+            >
+              1. Criar Unidades & Cadastrar Desbravadores
+            </button>
+            <button
+              onClick={() => onNavigate('LEADERS')}
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold cursor-pointer"
+            >
+              2. Convidar Diretoria / Instrutores
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 4 KPIs Principais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -13,7 +13,14 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
-import { apiRequest, getStoredToken, setStoredToken, getAssetUrl } from './api';
+import {
+  apiRequest,
+  getStoredToken,
+  setStoredToken,
+  getAssetUrl,
+  isTestMode,
+  getTestModeUrl,
+} from './api';
 import { ROLE_CONFIG, STATUS_CONFIG } from './constants';
 import LoginView from './components/LoginView';
 import DashboardView from './components/DashboardView';
@@ -346,6 +353,18 @@ export default function App() {
     }
   };
 
+  // Excluir Desbravador
+  const handleDeletePathfinder = async (pfId) => {
+    try {
+      await apiRequest(`/api/pathfinders/${pfId}`, { method: 'DELETE' });
+      if (selectedPathfinderId === pfId) setSelectedPathfinderId(null);
+      await fetchBootstrapData();
+      showToast('Desbravador removido com sucesso.');
+    } catch (err) {
+      showToast(err.message || 'Erro ao excluir desbravador.', 'error');
+    }
+  };
+
   // Criar Unidade
   const handleCreateUnit = async (payload) => {
     try {
@@ -358,6 +377,17 @@ export default function App() {
     } catch (err) {
       showToast(err.message || 'Erro ao criar unidade.', 'error');
       throw err;
+    }
+  };
+
+  // Excluir Unidade
+  const handleDeleteUnit = async (unitId) => {
+    try {
+      await apiRequest(`/api/units/${unitId}`, { method: 'DELETE' });
+      await fetchBootstrapData();
+      showToast('Unidade removida com sucesso.');
+    } catch (err) {
+      showToast(err.message || 'Erro ao excluir unidade.', 'error');
     }
   };
 
@@ -379,6 +409,17 @@ export default function App() {
     } catch (err) {
       showToast(err.message || 'Erro ao criar evento.', 'error');
       throw err;
+    }
+  };
+
+  // Excluir Evento
+  const handleDeleteEvent = async (eventId) => {
+    try {
+      await apiRequest(`/api/events/${eventId}`, { method: 'DELETE' });
+      await fetchBootstrapData();
+      showToast('Evento removido com sucesso.');
+    } catch (err) {
+      showToast(err.message || 'Erro ao excluir evento.', 'error');
     }
   };
 
@@ -438,6 +479,17 @@ export default function App() {
     } catch (err) {
       showToast(err.message || 'Erro ao salvar líder.', 'error');
       throw err;
+    }
+  };
+
+  // Excluir Líder
+  const handleDeleteLeader = async (leaderId) => {
+    try {
+      await apiRequest(`/api/leaders/${leaderId}`, { method: 'DELETE' });
+      await fetchBootstrapData();
+      showToast('Líder removido do clube.');
+    } catch (err) {
+      showToast(err.message || 'Erro ao remover líder.', 'error');
     }
   };
 
@@ -545,6 +597,21 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
+      {/* Aviso de Página Temporária de Teste (?teste=1) */}
+      {isTestMode() && (
+        <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-extrabold flex flex-wrap items-center justify-between gap-2 border-b border-amber-500 no-print">
+          <span>
+            ⚠️ PÁGINA TEMPORÁRIA DE TESTE E VISUALIZAÇÃO (?teste=1) — Os dados fictícios desta página são isolados e NÃO afetam o banco oficial do seu clube.
+          </span>
+          <a
+            href={getTestModeUrl(false)}
+            className="px-3 py-1 rounded-lg bg-slate-950 text-white hover:bg-slate-800 transition shrink-0"
+          >
+            Ir para o Site Oficial de Produção →
+          </a>
+        </div>
+      )}
+
       {/* Toast Flutuante */}
       {toast && (
         <div className="fixed bottom-5 right-5 z-50 max-w-md animate-fade-in no-print">
@@ -584,7 +651,7 @@ export default function App() {
                 </span>
               </div>
               <div className="text-[11px] text-slate-400 hidden sm:block">
-                {normalizedData.settings?.club_name || 'Clube Pioneiros da Colina'}
+                {normalizedData.settings?.club_name || 'Clube de Desbravadores'}
               </div>
             </div>
           </div>
@@ -689,7 +756,7 @@ export default function App() {
                 title: draft.title,
                 description: draft.description,
                 event_type: 'ACAMPAMENTO',
-                event_date: '2026-07-19',
+                event_date: new Date().toISOString().slice(0, 10),
                 requirement_ids: (draft.requirements || []).map((r) => r.id),
               });
               setActiveTab('EVENTS');
@@ -731,7 +798,9 @@ export default function App() {
             onSelectPathfinderId={setSelectedPathfinderId}
             currentUser={user}
             onSavePathfinder={handleSavePathfinder}
+            onDeletePathfinder={handleDeletePathfinder}
             onCreateUnit={handleCreateUnit}
+            onDeleteUnit={handleDeleteUnit}
             onOpenRequirementDetail={handleOpenRequirementDetail}
           />
         )}
@@ -747,6 +816,7 @@ export default function App() {
             pendingEventDraft={pendingEventDraft}
             onClearEventDraft={() => setPendingEventDraft(null)}
             onCreateEvent={handleCreateEvent}
+            onDeleteEvent={handleDeleteEvent}
             onExecuteEvent={handleExecuteEvent}
           />
         )}
@@ -759,6 +829,7 @@ export default function App() {
             settings={normalizedData.settings}
             currentUser={user}
             onSaveLeader={handleSaveLeader}
+            onDeleteLeader={handleDeleteLeader}
             onSendLeaderInvite={handleSendLeaderInvite}
             onSaveSettings={handleSaveSettings}
             onTestSmtp={handleTestSmtp}
