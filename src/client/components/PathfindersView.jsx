@@ -8,13 +8,19 @@ import {
   CheckCircle2,
   Clock,
   Edit3,
+  Trash2,
   Printer,
   Sparkles,
   X,
-  Filter,
   ChevronRight,
   Layers,
-  Shield,
+  Link2,
+  Copy,
+  Send,
+  Paperclip,
+  MessageSquare,
+  Camera,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   STATUS_CONFIG,
@@ -34,8 +40,9 @@ export default function PathfindersView({
   currentUser,
   onSavePathfinder,
   onDeletePathfinder,
-  onCreateUnit,
+  onSaveUnit,
   onDeleteUnit,
+  onInvitePathfinder,
   onOpenRequirementDetail,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +55,7 @@ export default function PathfindersView({
   const [pfModalOpen, setPfModalOpen] = useState(false);
   const [editingPf, setEditingPf] = useState(null);
   const [pfName, setPfName] = useState('');
+  const [pfEmail, setPfEmail] = useState('');
   const [pfBirthDate, setPfBirthDate] = useState('2015-05-10');
   const [pfUnitId, setPfUnitId] = useState('');
   const [pfNotes, setPfNotes] = useState('');
@@ -56,13 +64,24 @@ export default function PathfindersView({
   const [pfIsGrouped, setPfIsGrouped] = useState(false);
   const [savingPf, setSavingPf] = useState(false);
 
-  // Estado do Modal de Nova Unidade
+  // Estado do Modal de Gerenciar / Criar / Editar Unidades
   const [unitModalOpen, setUnitModalOpen] = useState(false);
+  const [editingUnit, setEditingUnit] = useState(null);
   const [unitName, setUnitName] = useState('');
   const [unitGender, setUnitGender] = useState('MASCULINO');
+  const [unitAgeRange, setUnitAgeRange] = useState('');
+  const [unitColorHex, setUnitColorHex] = useState('#1d4ed8');
   const [savingUnit, setSavingUnit] = useState(false);
 
-  const canManageRegistry = ['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(
+  // Estado do Modal de Convite Individual do Desbravador
+  const [inviteModalPf, setInviteModalPf] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [loadingInvite, setLoadingInvite] = useState(false);
+  const [sendingInviteEmail, setSendingInviteEmail] = useState(false);
+
+  const isPathfinderUser = currentUser?.role === 'DESBRAVADOR';
+  const canManageRegistry = ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(
     currentUser?.role
   );
 
@@ -118,6 +137,9 @@ export default function PathfindersView({
   }, [pathfinders, catalog.requirements, progressMap, classesMap]);
 
   const filteredPathfinders = useMemo(() => {
+    if (isPathfinderUser && currentUser?.pathfinder_id) {
+      return enrichedPathfinders.filter((pf) => pf.id === currentUser.pathfinder_id);
+    }
     const q = searchQuery.trim().toLowerCase();
     return enrichedPathfinders.filter((pf) => {
       if (unitFilter !== 'ALL' && pf.unit_id !== unitFilter) return false;
@@ -133,15 +155,35 @@ export default function PathfindersView({
       }
       return true;
     });
-  }, [enrichedPathfinders, unitFilter, classFilter, searchQuery]);
+  }, [
+    enrichedPathfinders,
+    unitFilter,
+    classFilter,
+    searchQuery,
+    isPathfinderUser,
+    currentUser?.pathfinder_id,
+  ]);
 
   const activePf = useMemo(() => {
+    if (isPathfinderUser && currentUser?.pathfinder_id) {
+      return (
+        enrichedPathfinders.find((p) => p.id === currentUser.pathfinder_id) ||
+        enrichedPathfinders[0] ||
+        null
+      );
+    }
     if (selectedPathfinderId) {
       const found = enrichedPathfinders.find((p) => p.id === selectedPathfinderId);
       if (found) return found;
     }
     return filteredPathfinders[0] || enrichedPathfinders[0] || null;
-  }, [selectedPathfinderId, enrichedPathfinders, filteredPathfinders]);
+  }, [
+    selectedPathfinderId,
+    enrichedPathfinders,
+    filteredPathfinders,
+    isPathfinderUser,
+    currentUser?.pathfinder_id,
+  ]);
 
   // Requisitos do Cartão Virtual do Desbravador selecionado
   const activePfRequirementsByClass = useMemo(() => {
@@ -174,6 +216,7 @@ export default function PathfindersView({
   const openCreatePfModal = () => {
     setEditingPf(null);
     setPfName('');
+    setPfEmail('');
     setPfBirthDate('2015-04-15');
     setPfUnitId(units[0]?.id || '');
     setPfNotes('');
@@ -186,6 +229,7 @@ export default function PathfindersView({
   const openEditPfModal = (pf) => {
     setEditingPf(pf);
     setPfName(pf.name);
+    setPfEmail(pf.email || '');
     setPfBirthDate(pf.birth_date || '2015-01-01');
     setPfUnitId(pf.unit_id || '');
     setPfNotes(pf.notes || '');
@@ -213,7 +257,6 @@ export default function PathfindersView({
       setPfClassSlugs(matched);
       setPfIsGrouped(false);
     } else {
-      // Classes Agrupadas: seleciona todas as classes regulares até a idade atual do desbravador
       const targetAge = Math.min(15, Math.max(10, age));
       const matched = allClasses
         .filter((c) => c.min_age <= targetAge && c.type === 'REGULAR')
@@ -231,6 +274,7 @@ export default function PathfindersView({
       await onSavePathfinder(
         {
           name: pfName.trim(),
+          email: pfEmail.trim(),
           birth_date: pfBirthDate,
           unit_id: pfUnitId || null,
           notes: pfNotes,
@@ -246,176 +290,357 @@ export default function PathfindersView({
     }
   };
 
-  const handleCreateUnitSubmit = async (e) => {
+  // Abrir Modal de Unidades (para criar ou editar uma unidade específica)
+  const openUnitManagerModal = (unitToEdit = null) => {
+    if (unitToEdit) {
+      setEditingUnit(unitToEdit);
+      setUnitName(unitToEdit.name || '');
+      setUnitGender(unitToEdit.gender || 'MASCULINO');
+      setUnitAgeRange(unitToEdit.age_range || unitToEdit.counselor_description || '');
+      setUnitColorHex(unitToEdit.color_hex || '#1d4ed8');
+    } else {
+      setEditingUnit(null);
+      setUnitName('');
+      setUnitGender('MASCULINO');
+      setUnitAgeRange('');
+      setUnitColorHex('#1d4ed8');
+    }
+    setUnitModalOpen(true);
+  };
+
+  const handleSaveUnitSubmit = async (e) => {
     e.preventDefault();
-    if (!unitName.trim()) return;
+    if (!unitName.trim() || !onSaveUnit) return;
     setSavingUnit(true);
     try {
-      await onCreateUnit({ name: unitName.trim(), gender: unitGender });
+      await onSaveUnit(
+        {
+          name: unitName.trim(),
+          gender: unitGender,
+          age_range: unitAgeRange.trim(),
+          counselor_description: unitAgeRange.trim(),
+          color_hex: unitColorHex,
+        },
+        editingUnit?.id || null
+      );
+      setEditingUnit(null);
       setUnitName('');
-      setUnitModalOpen(false);
+      setUnitAgeRange('');
     } finally {
       setSavingUnit(false);
     }
   };
 
+  // Abrir Modal de Link de Conta / Convite Individual do Desbravador
+  const openPathfinderInviteModal = async (pf) => {
+    setInviteModalPf(pf);
+    setInviteEmail(pf.email || '');
+    setInviteUrl(pf.invite_url || '');
+    if (!pf.invite_url && onInvitePathfinder) {
+      setLoadingInvite(true);
+      try {
+        const res = await onInvitePathfinder(pf.id, {
+          email: pf.email || '',
+          send_email: false,
+        });
+        if (res?.invite_url) {
+          setInviteUrl(res.invite_url);
+        }
+      } finally {
+        setLoadingInvite(false);
+      }
+    }
+  };
+
+  const handleSendPathfinderInviteEmail = async (e) => {
+    e.preventDefault();
+    if (!inviteModalPf || !onInvitePathfinder) return;
+    setSendingInviteEmail(true);
+    try {
+      const res = await onInvitePathfinder(inviteModalPf.id, {
+        email: inviteEmail.trim(),
+        send_email: Boolean(inviteEmail.trim()),
+      });
+      if (res?.invite_url) {
+        setInviteUrl(res.invite_url);
+      }
+    } finally {
+      setSendingInviteEmail(false);
+    }
+  };
+
+  const handleCopyLink = (url) => {
+    if (!url) return;
+    navigator.clipboard?.writeText(url);
+    alert(`Link individual copiado com sucesso!\n\nEnvie para o desbravador:\n${url}`);
+  };
+
   return (
     <div className="space-y-5">
-      {/* Cabeçalho e Botões de Cadastro */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Users className="w-6 h-6 text-indigo-600" />
-            Desbravadores, Unidades & Cartão Virtual Individual
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Consulte o Cartão Virtual de cada desbravador, filtre o que falta para a investidura e gerencie matrículas (incluindo Classes Agrupadas).
-          </p>
-        </div>
-
-        {canManageRegistry && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setUnitModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
-            >
-              <FolderPlus className="w-4 h-4 text-slate-500" />
-              Nova Unidade
-            </button>
-            <button
-              onClick={openCreatePfModal}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              Cadastrar Desbravador
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Layout Mestre-Detalhe: Lista de Desbravadores (Esquerda) + Cartão Virtual (Direita) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Coluna Esquerda: Lista e Filtros de Desbravadores */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden no-print">
-          <div className="p-4 border-b border-slate-200 space-y-2.5 bg-slate-50/60">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar desbravador..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+      {/* Banner exclusivo quando logado como DESBRAVADOR */}
+      {isPathfinderUser ? (
+        <div className="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-teal-700/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4 no-print">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              Portal Individual do Desbravador
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={unitFilter}
-                onChange={(e) => setUnitFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700"
-              >
-                <option value="ALL">Todas Unidades</option>
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700"
-              >
-                <option value="ALL">Todas Classes</option>
-                {(catalog.classes || []).map((c) => (
-                  <option key={c.slug} value={c.slug}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <h1 className="text-2xl font-extrabold">
+              Olá, {activePf?.name || currentUser?.name}!
+            </h1>
+            <p className="text-xs sm:text-sm text-teal-100 max-w-2xl">
+              Aqui você acompanha tudo o que já conquistou e o que falta para sua Investidura.{' '}
+              <strong>Clique em qualquer requisito abaixo</strong> para marcar o que já fez, contar como e quando realizou a atividade e anexar fotos!
+            </p>
           </div>
-
-          <div className="divide-y divide-slate-100 max-h-[680px] overflow-y-auto">
-            {filteredPathfinders.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-500">
-                Nenhum desbravador encontrado.
+          {activePf && (
+            <div className="bg-black/30 border border-white/15 rounded-2xl px-5 py-3 text-center shrink-0">
+              <div className="text-[11px] uppercase tracking-wider text-teal-200 font-bold">
+                Seu Progresso Geral
               </div>
+              <div className="text-3xl font-extrabold text-amber-300 mt-0.5">
+                {activePf.pct}%
+              </div>
+              <div className="text-[11px] text-slate-300">
+                {activePf.approvedReqs} aprovados • Faltam {activePf.remainingReqs}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Cabeçalho Padrão da Diretoria / Líderes */
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4 no-print">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <Users className="w-6 h-6 text-indigo-600" />
+                Desbravadores, Unidades & Cartão Virtual Individual
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Gerencie as unidades do clube, cadastre desbravadores, gere links individuais de conta e acompanhe o Cartão Virtual completo.
+              </p>
+            </div>
+
+            {canManageRegistry && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => openUnitManagerModal(null)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FolderPlus className="w-4 h-4 text-indigo-600" />
+                  Gerenciar Unidades ({units.length})
+                </button>
+                <button
+                  onClick={openCreatePfModal}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Cadastrar Desbravador
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Barra Rápida de Unidades (com botões diretos de Editar e Excluir cada unidade) */}
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mr-1">
+              Unidades do Clube:
+            </span>
+            {units.length === 0 ? (
+              <span className="text-xs text-slate-500 italic">
+                Nenhuma unidade criada ainda. Clique em &ldquo;Gerenciar Unidades&rdquo; para criar.
+              </span>
             ) : (
-              filteredPathfinders.map((pf) => {
-                const isSelected = activePf?.id === pf.id;
+              units.map((u) => {
+                const count = pathfinders.filter((p) => p.unit_id === u.id).length;
                 return (
                   <div
-                    key={pf.id}
-                    onClick={() => {
-                      onSelectPathfinderId(pf.id);
-                      setCardSelectedClassSlug('ALL');
-                    }}
-                    className={`p-3.5 transition cursor-pointer flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-indigo-50/90 border-l-4 border-l-indigo-600'
-                        : 'hover:bg-slate-50'
-                    }`}
+                    key={u.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-slate-200 bg-slate-50 text-xs"
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold text-slate-900 truncate">
-                          {pf.name}
-                        </span>
-                        {pf.age && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
-                            {pf.age}a
-                          </span>
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: u.color_hex || '#1d4ed8' }}
+                    />
+                    <span className="font-bold text-slate-800">{u.name}</span>
+                    <span className="text-[10px] text-slate-500">
+                      ({count} {count === 1 ? 'membro' : 'membros'})
+                    </span>
+                    {canManageRegistry && (
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => openUnitManagerModal(u)}
+                          title={`Editar unidade ${u.name}`}
+                          className="p-1 rounded hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </button>
+                        {onDeleteUnit && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (
+                                window.confirm(
+                                  `Tem certeza que deseja excluir a unidade "${u.name}"?\nOs desbravadores vinculados ficarão "Sem Unidade" (não serão apagados).`
+                                )
+                              ) {
+                                await onDeleteUnit(u.id);
+                              }
+                            }}
+                            title={`Excluir unidade ${u.name}`}
+                            className="p-1 rounded hover:bg-rose-100 text-slate-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500 truncate mt-0.5">
-                        {pf.unit_name || 'Sem Unidade'}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {pf.byClass.map((bc) => (
-                          <span
-                            key={bc.slug}
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
-                            style={{
-                              backgroundColor: bc.classInfo?.color || '#475569',
-                            }}
-                          >
-                            {bc.classInfo?.name}: {bc.pct}%
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="text-right">
-                        <div
-                          className={`text-sm font-extrabold ${
-                            pf.pct >= 85
-                              ? 'text-emerald-700'
-                              : pf.pct >= 50
-                              ? 'text-amber-700'
-                              : 'text-rose-700'
-                          }`}
-                        >
-                          {pf.pct}%
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          Faltam {pf.remainingReqs}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </div>
+                    )}
                   </div>
                 );
               })
             )}
           </div>
         </div>
+      )}
+
+      {/* Layout Mestre-Detalhe: Lista de Desbravadores (Esquerda) + Cartão Virtual (Direita) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Coluna Esquerda: Lista e Filtros de Desbravadores (Oculta quando logado como Desbravador) */}
+        {!isPathfinderUser && (
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden no-print">
+            <div className="p-4 border-b border-slate-200 space-y-2.5 bg-slate-50/60">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar desbravador..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={unitFilter}
+                  onChange={(e) => setUnitFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700"
+                >
+                  <option value="ALL">Todas Unidades</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700"
+                >
+                  <option value="ALL">Todas Classes</option>
+                  {(catalog.classes || []).map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100 max-h-[680px] overflow-y-auto">
+              {filteredPathfinders.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-500">
+                  Nenhum desbravador encontrado.
+                </div>
+              ) : (
+                filteredPathfinders.map((pf) => {
+                  const isSelected = activePf?.id === pf.id;
+                  return (
+                    <div
+                      key={pf.id}
+                      onClick={() => {
+                        onSelectPathfinderId(pf.id);
+                        setCardSelectedClassSlug('ALL');
+                      }}
+                      className={`p-3.5 transition cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-indigo-50/90 border-l-4 border-l-indigo-600'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-sm font-bold text-slate-900 truncate">
+                            {pf.name}
+                          </span>
+                          {pf.age && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                              {pf.age}a
+                            </span>
+                          )}
+                          {pf.has_account && (
+                            <span
+                              title="Este desbravador já ativou a conta individual"
+                              className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-300"
+                            >
+                              CONTA ATIVA
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate mt-0.5">
+                          {pf.unit_name || 'Sem Unidade'}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {pf.byClass.map((bc) => (
+                            <span
+                              key={bc.slug}
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                              style={{
+                                backgroundColor: bc.classInfo?.color || '#475569',
+                              }}
+                            >
+                              {bc.classInfo?.name}: {bc.pct}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <div
+                            className={`text-sm font-extrabold ${
+                              pf.pct >= 85
+                                ? 'text-emerald-700'
+                                : pf.pct >= 50
+                                ? 'text-amber-700'
+                                : 'text-rose-700'
+                            }`}
+                          >
+                            {pf.pct}%
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Faltam {pf.remainingReqs}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Coluna Direita: Cartão Virtual Individual do Desbravador */}
-        <div className="lg:col-span-8 space-y-4">
+        <div
+          className={`${
+            isPathfinderUser ? 'lg:col-span-12' : 'lg:col-span-8'
+          } space-y-4`}
+        >
           {!activePf ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-500">
               Selecione um desbravador na lista ao lado para visualizar seu Cartão Virtual.
@@ -438,6 +663,12 @@ export default function PathfindersView({
                           {activePf.age} anos (Nasc: {formatDateBR(activePf.birth_date)})
                         </span>
                       )}
+                      {activePf.has_account && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Conta do Desbravador Ativa
+                        </span>
+                      )}
                     </div>
                     {activePf.notes && (
                       <p className="text-xs text-slate-500 mt-1">{activePf.notes}</p>
@@ -446,13 +677,25 @@ export default function PathfindersView({
 
                   <div className="flex flex-wrap items-center gap-2 no-print">
                     {canManageRegistry && (
-                      <button
-                        onClick={() => openEditPfModal(activePf)}
-                        className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        Editar Matrícula
-                      </button>
+                      <>
+                        <button
+                          onClick={() => openPathfinderInviteModal(activePf)}
+                          className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-300 text-xs font-bold text-teal-900 flex items-center gap-1.5 cursor-pointer"
+                          title="Gerar ou copiar o link individual para este desbravador criar a conta dele"
+                        >
+                          <Link2 className="w-3.5 h-3.5 text-teal-700" />
+                          {activePf.has_account
+                            ? 'Conta / Link Individual'
+                            : 'Link de Conta Individual'}
+                        </button>
+                        <button
+                          onClick={() => openEditPfModal(activePf)}
+                          className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Editar Matrícula
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => window.print()}
@@ -591,6 +834,9 @@ export default function PathfindersView({
                         const ctxBadge =
                           EXECUTION_CONTEXT_LABELS[req.execution_context];
                         const subCount = req.subitems?.length || 0;
+                        const attachCount = req.progress?.attachments?.length || 0;
+                        const hasSubmissionText = Boolean(req.progress?.submission_text);
+                        const hasReviewNotes = Boolean(req.progress?.review_notes);
 
                         return (
                           <div
@@ -613,6 +859,18 @@ export default function PathfindersView({
                                     className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
                                   >
                                     {ctxBadge.label}
+                                  </span>
+                                )}
+                                {attachCount > 0 && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
+                                    <Paperclip className="w-3 h-3" />
+                                    {attachCount} {attachCount === 1 ? 'anexo/foto' : 'anexos/fotos'}
+                                  </span>
+                                )}
+                                {hasSubmissionText && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex items-center gap-1">
+                                    <MessageSquare className="w-3 h-3" />
+                                    Relato enviado
                                   </span>
                                 )}
                               </div>
@@ -648,6 +906,21 @@ export default function PathfindersView({
                                   })}
                                 </div>
                               )}
+                              {hasSubmissionText && (
+                                <p className="text-[11px] text-teal-800 bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 rounded-lg mt-1">
+                                  <strong>Como fez:</strong> &ldquo;{req.progress.submission_text}&rdquo;
+                                  {req.progress.completed_at && (
+                                    <span className="ml-1.5 text-slate-500">
+                                      (em {formatDateBR(req.progress.completed_at)})
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                              {hasReviewNotes && (
+                                <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg mt-1">
+                                  <strong>Feedback do Líder:</strong> &ldquo;{req.progress.review_notes}&rdquo;
+                                </p>
+                              )}
                               {req.progress?.notes && (
                                 <p className="text-[11px] text-indigo-700 italic">
                                   Obs: &ldquo;{req.progress.notes}&rdquo;
@@ -655,12 +928,20 @@ export default function PathfindersView({
                               )}
                             </div>
 
-                            <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1">
+                            <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
                               <span
                                 className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
                               >
                                 {cfg.label}
                               </span>
+                              {isPathfinderUser && req.status !== 'APROVADO' && (
+                                <span className="text-[10px] font-bold text-teal-700 flex items-center gap-1">
+                                  <Camera className="w-3 h-3" />
+                                  {req.status === 'CONCLUIDO'
+                                    ? 'Editar envio / fotos'
+                                    : 'Marcar & anexar fotos'}
+                                </span>
+                              )}
                               {req.progress?.updated_at && (
                                 <span className="text-[10px] text-slate-400">
                                   {formatDateBR(req.progress.updated_at)}
@@ -746,6 +1027,19 @@ export default function PathfindersView({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    E-mail do Desbravador (Opcional — para enviar o convite individual)
+                  </label>
+                  <input
+                    type="email"
+                    value={pfEmail}
+                    onChange={(e) => setPfEmail(e.target.value)}
+                    placeholder="Opcional: desbravador@gmail.com (ele também poderá escolher no link)"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
 
@@ -863,105 +1157,310 @@ export default function PathfindersView({
         </div>
       )}
 
-      {/* Modal Criar / Gerenciar Unidades */}
+      {/* Modal Completo de Gerenciamento de Unidades (Criar, Editar e Excluir) */}
       {unitModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="text-base font-extrabold">Unidades do Clube</h3>
+              <h3 className="text-base font-extrabold">
+                {editingUnit
+                  ? `Editar Unidade: ${editingUnit.name}`
+                  : 'Gerenciar Unidades do Clube'}
+              </h3>
               <button
-                onClick={() => setUnitModalOpen(false)}
+                onClick={() => {
+                  setEditingUnit(null);
+                  setUnitModalOpen(false);
+                }}
                 className="text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <form onSubmit={handleCreateUnitSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nome da Nova Unidade *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={unitName}
-                    onChange={(e) => setUnitName(e.target.value)}
-                    placeholder="Digite o nome da unidade"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
-                  />
+
+            <div className="p-6 space-y-5 overflow-y-auto">
+              <form
+                onSubmit={handleSaveUnitSubmit}
+                className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700">
+                    {editingUnit ? 'Editando Unidade Selecionada' : 'Adicionar Nova Unidade'}
+                  </span>
+                  {editingUnit && (
+                    <button
+                      type="button"
+                      onClick={() => openUnitManagerModal(null)}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                    >
+                      + Cancelar edição e criar nova
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Gênero da Unidade
-                  </label>
-                  <select
-                    value={unitGender}
-                    onChange={(e) => setUnitGender(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
-                  >
-                    <option value="MASCULINO">Masculina</option>
-                    <option value="FEMININO">Feminina</option>
-                    <option value="MISTA">Mista</option>
-                  </select>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nome da Unidade *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={unitName}
+                      onChange={(e) => setUnitName(e.target.value)}
+                      placeholder="Ex: Águias, Órion, Panteras..."
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Gênero
+                    </label>
+                    <select
+                      value={unitGender}
+                      onChange={(e) => setUnitGender(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm"
+                    >
+                      <option value="MASCULINO">Masculina</option>
+                      <option value="FEMININO">Feminina</option>
+                      <option value="MISTA">Mista</option>
+                    </select>
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Faixa Etária / Descrição (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={unitAgeRange}
+                      onChange={(e) => setUnitAgeRange(e.target.value)}
+                      placeholder="Ex: 10 a 12 anos / Conselheiro Lucas"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Cor da Unidade
+                    </label>
+                    <input
+                      type="color"
+                      value={unitColorHex}
+                      onChange={(e) => setUnitColorHex(e.target.value)}
+                      className="w-full h-9 rounded-xl border border-slate-300 bg-white p-1 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setUnitModalOpen(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
-                  >
-                    Fechar
-                  </button>
                   <button
                     type="submit"
                     disabled={savingUnit}
                     className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
                   >
-                    {savingUnit ? 'Criando...' : 'Criar Unidade'}
+                    {savingUnit
+                      ? 'Salvando...'
+                      : editingUnit
+                      ? 'Salvar Alterações da Unidade'
+                      : 'Criar Unidade'}
                   </button>
                 </div>
               </form>
 
-              {units.length > 0 && (
-                <div className="pt-4 border-t border-slate-200 space-y-2">
-                  <div className="text-xs font-extrabold text-slate-700">
-                    Unidades Cadastradas ({units.length})
-                  </div>
-                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl">
-                    {units.map((u) => (
-                      <div
-                        key={u.id}
-                        className="px-3 py-2 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-900">{u.name}</span>
-                          <span className="ml-2 text-[10px] text-slate-500">
-                            ({u.gender})
-                          </span>
-                        </div>
-                        {onDeleteUnit && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (
-                                window.confirm(
-                                  `Tem certeza que deseja excluir a unidade "${u.name}"?`
-                                )
-                              ) {
-                                await onDeleteUnit(u.id);
-                              }
-                            }}
-                            className="text-rose-600 hover:underline font-bold cursor-pointer"
-                          >
-                            Excluir
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+              {/* Lista de Unidades Cadastradas com Editar e Excluir */}
+              <div className="space-y-2">
+                <div className="text-xs font-extrabold text-slate-700">
+                  Unidades Cadastradas ({units.length})
                 </div>
-              )}
+                {units.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">
+                    Nenhuma unidade cadastrada ainda.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                    {units.map((u) => {
+                      const memberCount = pathfinders.filter(
+                        (p) => p.unit_id === u.id
+                      ).length;
+                      return (
+                        <div
+                          key={u.id}
+                          className={`px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs ${
+                            editingUnit?.id === u.id ? 'bg-indigo-50' : 'bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-3 h-3 rounded-full shrink-0"
+                              style={{ backgroundColor: u.color_hex || '#1d4ed8' }}
+                            />
+                            <div className="truncate">
+                              <span className="font-bold text-slate-900">
+                                {u.name}
+                              </span>
+                              <span className="ml-2 text-[10px] text-slate-500">
+                                ({u.gender} • {memberCount}{' '}
+                                {memberCount === 1 ? 'desbravador' : 'desbravadores'})
+                              </span>
+                              {(u.age_range || u.counselor_description) && (
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  {u.age_range || u.counselor_description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => openUnitManagerModal(u)}
+                              className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              Editar
+                            </button>
+                            {onDeleteUnit && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (
+                                    window.confirm(
+                                      `Tem certeza que deseja excluir a unidade "${u.name}"?\nOs desbravadores vinculados não serão apagados (ficarão Sem Unidade).`
+                                    )
+                                  ) {
+                                    await onDeleteUnit(u.id);
+                                    if (editingUnit?.id === u.id) {
+                                      setEditingUnit(null);
+                                      setUnitName('');
+                                    }
+                                  }
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Excluir
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingUnit(null);
+                    setUnitModalOpen(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer"
+                >
+                  Concluir e Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Link de Conta Individual do Desbravador */}
+      {inviteModalPf && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 bg-teal-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-teal-300" />
+                <h3 className="text-base font-extrabold">
+                  Convite Individual • {inviteModalPf.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setInviteModalPf(null)}
+                className="text-teal-200 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Cada desbravador possui um <strong>link exclusivo de criação de conta</strong>. Ao abrir este link,{' '}
+                <strong>{inviteModalPf.name}</strong> poderá criar a conta como preferir (usando{' '}
+                <strong>Login com Google</strong> ou escolhendo e-mail e senha) para acessar seu Cartão Virtual, marcar requisitos concluídos e anexar fotos.
+              </p>
+
+              <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 space-y-2">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-teal-900">
+                  Link Individual Exclusivo de {inviteModalPf.name}:
+                </label>
+                {loadingInvite ? (
+                  <div className="text-xs text-teal-700 font-semibold py-2">
+                    Gerando link individual...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={inviteUrl}
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-teal-300 text-xs font-mono text-slate-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink(inviteUrl)}
+                      className="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Copiar Link
+                    </button>
+                  </div>
+                )}
+                <p className="text-[11px] text-teal-800">
+                  Você pode copiar o link acima e mandar por <strong>WhatsApp</strong> diretamente para o desbravador ou seus pais!
+                </p>
+              </div>
+
+              <form
+                onSubmit={handleSendPathfinderInviteEmail}
+                className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5"
+              >
+                <label className="block text-xs font-bold text-slate-700">
+                  Ou enviar o convite diretamente por E-mail (Gmail do Clube):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="emaildodesbravador@gmail.com"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                  />
+                  <button
+                    type="submit"
+                    disabled={sendingInviteEmail || !inviteEmail.trim()}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {sendingInviteEmail ? 'Enviando...' : 'Enviar E-mail'}
+                  </button>
+                </div>
+              </form>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setInviteModalPf(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         </div>

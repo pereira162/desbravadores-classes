@@ -47,15 +47,34 @@ function verifyToken(token) {
 }
 
 /**
- * Verifica se o líder tem permissão para alterar o progresso de um desbravador em determinada classe/requisito.
+ * Verifica se o líder ou desbravador tem permissão para alterar o progresso de um desbravador em determinada classe/requisito.
  */
 function checkProgressPermission(user, pathfinder, classSlug, requestedStatus, clubSettings) {
   if (!user || !user.active) {
     return { allowed: false, reason: 'Usuário não autenticado ou inativo.' };
   }
 
-  // Diretor, Admin e Secretário têm permissão global
-  if (['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(user.role)) {
+  // Gestor, Diretor, Admin e Secretário têm permissão global
+  if (['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(user.role)) {
+    return { allowed: true, effectiveStatus: requestedStatus };
+  }
+
+  // Desbravador: pode marcar e enviar evidências/anexos apenas para o seu próprio cartão
+  if (user.role === 'DESBRAVADOR') {
+    if (!user.pathfinder_id || !pathfinder || user.pathfinder_id !== pathfinder.id) {
+      return {
+        allowed: false,
+        reason: 'Como Desbravador(a), você só pode atualizar e enviar atividades do seu próprio Cartão de Classes.',
+      };
+    }
+    if (requestedStatus === 'APROVADO') {
+      return {
+        allowed: true,
+        effectiveStatus: 'CONCLUIDO',
+        downgradedNotice:
+          'Sua atividade e anexos foram enviados para avaliação da Diretoria / Instrutor!',
+      };
+    }
     return { allowed: true, effectiveStatus: requestedStatus };
   }
 

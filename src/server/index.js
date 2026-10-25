@@ -15,6 +15,7 @@ const {
   getSmtpConfig,
   sendVerificationEmail,
   sendLeaderInviteEmail,
+  sendPathfinderInviteEmail,
   sendPasswordResetEmail,
   sendTestSmtpEmail,
   verifyGoogleIdToken,
@@ -24,7 +25,7 @@ initDatabase();
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '15mb' }));
 app.use(dbContextMiddleware);
 
 // Static files for official logos and downloaded PDFs
@@ -33,6 +34,17 @@ app.use('/data', express.static(DATA_DIR));
 
 function generateSixDigitCode() {
   return String(crypto.randomInt(100000, 999999));
+}
+
+// Helper to check if the initial club setup (First Access) has already been completed
+function isClubSetupCompleted() {
+  const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+  const realAdminsCount = db
+    .prepare(
+      "SELECT COUNT(*) as c FROM users WHERE is_demo = 0 AND role IN ('ADMIN', 'GESTOR', 'DIRETOR') AND active = 1"
+    )
+    .get().c;
+  return Boolean(settings.setup_completed && realAdminsCount > 0) || realAdminsCount > 0;
 }
 
 // Helper to format user row
@@ -50,6 +62,7 @@ function formatUser(row) {
     email: row.email,
     role: row.role,
     unit_id: row.unit_id,
+    pathfinder_id: row.pathfinder_id || null,
     assigned_classes: assignedClasses,
     active: Boolean(row.active),
     is_demo: Boolean(row.is_demo),
@@ -93,24 +106,21 @@ app.get('/api/auth/demo-accounts', (req, res) => {
            WHERE u.active = 1 AND u.is_demo = 1
            ORDER BY CASE u.role
              WHEN 'ADMIN' THEN 1
-             WHEN 'DIRETOR' THEN 2
-             WHEN 'SECRETARIO' THEN 3
-             WHEN 'INSTRUTOR' THEN 4
-             WHEN 'CONSELHEIRO' THEN 5
-             ELSE 6 END, u.name ASC`
+             WHEN 'GESTOR' THEN 2
+             WHEN 'DIRETOR' THEN 3
+             WHEN 'SECRETARIO' THEN 4
+             WHEN 'INSTRUTOR' THEN 5
+             WHEN 'CONSELHEIRO' THEN 6
+             ELSE 7 END, u.name ASC`
         )
         .all()
     : [];
-
-  const realDirectorsCount = db
-    .prepare("SELECT COUNT(*) as c FROM users WHERE is_demo = 0 AND role IN ('DIRETOR', 'ADMIN') AND active = 1")
-    .get().c;
 
   const smtpCfg = getSmtpConfig(settings);
 
   res.json({
     club_name: settings.club_name || 'Clube de Desbravadores',
-    setup_completed: Boolean(settings.setup_completed || realDirectorsCount > 0),
+    setup_completed: isClubSetupCompleted(),
     demo_mode_enabled: demoEnabled,
     smtp_configured: smtpCfg.isConfigured,
     google_client_id: settings.google_client_id || process.env.GOOGLE_CLIENT_ID || '',
@@ -139,7 +149,7 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
   }
   if (!row.active) {
-    return res.status(403).json({ error: 'Esta conta de líder está desativada.' });
+    return res.status(403).json({ error: 'Esta conta está desativada.' });
   }
 
   const now = new Date().toISOString();
@@ -151,33 +161,176 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ token, user });
 });
 
-// Login ou Ativação de Convite com Conta Google (Google Identity Services)
+// Login, Primeiro Acesso ou Ativação de Convite (Líder ou Desbravador) com Conta Google
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { credential, invite_token } = req.body || {};
+    const {
+      credential,
+      invite_token,
+      setup_mode = false,
+      club_name,
+      club_region,
+      is_director = false,
+    } = req.body || {};
     const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
     const expectedClientId = settings.google_client_id || process.env.GOOGLE_CLIENT_ID || '';
 
     const googleUser = await verifyGoogleIdToken(credential, expectedClientId);
     const now = new Date().toISOString();
 
+    // CASO 1: Primeiro Acesso do Clube via Google (apenas se o clube ainda não tiver sido configurado)
+    if (setup_mode && !invite_token) {
+      if (isClubSetupCompleted()) {
+        return res.status(403).json({
+          error:
+            'O Primeiro Acesso deste clube já foi realizado anteriormente. Use a tela de Login normal.',
+        });
+      }
+      const finalClubName = club_name && String(club_name).trim()
+        ? String(club_name).trim()
+        : settings.club_name || 'Clube de Desbravadores';
+      const finalClubRegion = club_region !== undefined ? String(club_region).trim() : settings.club_region || '';
+      const initialRole = is_director ? 'DIRETOR' : 'GESTOR';
+      const userId = `usr-init-${Date.now().toString(36)}`;
+      const randomPassHash = hashPassword(crypto.randomBytes(16).toString('hex'));
+
+      db.exec('BEGIN');
+      try {
+        db.prepare(`
+          UPDATE club_settings
+          SET club_name = ?, club_region = ?, setup_completed = 1, demo_mode_enabled = 0, updated_at = ?
+          WHERE id = 1
+        `).run(finalClubName, finalClubRegion, now);
+
+        db.prepare(`
+          INSERT INTO users (
+            id, name, email, password_hash, role, unit_id, assigned_classes_json,
+            active, is_demo, email_verified, invite_status, google_sub, avatar_url,
+            last_login_at, created_at
+          ) VALUES (?, ?, ?, ?, ?, NULL, '["*"]', 1, 0, 1, 'ACTIVE', ?, ?, ?, ?)
+        `).run(
+          userId,
+          googleUser.name,
+          googleUser.email,
+          randomPassHash,
+          initialRole,
+          googleUser.googleSub,
+          googleUser.picture,
+          now,
+          now
+        );
+
+        recordAudit({
+          user: { id: userId, name: googleUser.name, role: initialRole },
+          action: 'INITIAL_SETUP_GOOGLE',
+          entityType: 'USER',
+          entityId: userId,
+          summary: `${initialRole === 'DIRETOR' ? 'Diretor(a)' : 'Gestor(a)'} "${googleUser.name}" (${googleUser.email}) realizou o Primeiro Acesso com Google para o clube "${finalClubName}".`,
+          newState: { email: googleUser.email, role: initialRole, club_name: finalClubName },
+          createdAt: now,
+        });
+
+        db.exec('COMMIT');
+      } catch (txErr) {
+        db.exec('ROLLBACK');
+        throw txErr;
+      }
+
+      const createdRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+      const user = formatUser(createdRow);
+      const token = createToken({ id: user.id, email: user.email, role: user.role });
+      return res.json({ token, user });
+    }
+
+    // CASO 2: Ativação de Convite Individual de DESBRAVADOR via Google
+    if (invite_token) {
+      const pfInvite = db
+        .prepare('SELECT * FROM pathfinders WHERE invite_token = ?')
+        .get(String(invite_token).trim());
+
+      if (pfInvite) {
+        let existingUser = db
+          .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR id = ?')
+          .get(googleUser.email, pfInvite.user_id || '');
+
+        let userId = existingUser ? existingUser.id : `usr-dbv-${Date.now().toString(36)}`;
+        const randomHash = hashPassword(crypto.randomBytes(16).toString('hex'));
+
+        db.exec('BEGIN');
+        try {
+          if (existingUser) {
+            db.prepare(`
+              UPDATE users
+              SET google_sub = ?, avatar_url = ?, email_verified = 1, invite_status = 'ACTIVE',
+                  invite_token = NULL, pathfinder_id = ?, last_login_at = ?
+              WHERE id = ?
+            `).run(googleUser.googleSub, googleUser.picture, pfInvite.id, now, existingUser.id);
+          } else {
+            db.prepare(`
+              INSERT INTO users (
+                id, name, email, password_hash, role, unit_id, pathfinder_id, assigned_classes_json,
+                active, is_demo, email_verified, invite_status, google_sub, avatar_url, last_login_at, created_at
+              ) VALUES (?, ?, ?, ?, 'DESBRAVADOR', ?, ?, '[]', 1, 0, 1, 'ACTIVE', ?, ?, ?, ?)
+            `).run(
+              userId,
+              pfInvite.name,
+              googleUser.email,
+              randomHash,
+              pfInvite.unit_id || null,
+              pfInvite.id,
+              googleUser.googleSub,
+              googleUser.picture,
+              now,
+              now
+            );
+          }
+
+          db.prepare(`
+            UPDATE pathfinders
+            SET user_id = ?, email = ?, invite_status = 'ACTIVE', invite_token = NULL
+            WHERE id = ?
+          `).run(userId, googleUser.email, pfInvite.id);
+
+          recordAudit({
+            user: { id: userId, name: pfInvite.name, role: 'DESBRAVADOR' },
+            action: 'PATHFINDER_INVITE_ACCEPTED_GOOGLE',
+            entityType: 'PATHFINDER',
+            entityId: pfInvite.id,
+            summary: `Desbravador(a) "${pfInvite.name}" ativou sua conta individual com Google (${googleUser.email}).`,
+            createdAt: now,
+          });
+
+          db.exec('COMMIT');
+        } catch (txErr) {
+          db.exec('ROLLBACK');
+          throw txErr;
+        }
+
+        const updatedUserRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+        const user = formatUser(updatedUserRow);
+        const token = createToken({ id: user.id, email: user.email, role: user.role });
+        return res.json({ token, user });
+      }
+    }
+
+    // CASO 3: Ativação de Convite de Líder ou Login Normal com Google
     let row = null;
     if (invite_token) {
       row = db.prepare('SELECT * FROM users WHERE invite_token = ?').get(String(invite_token).trim());
     }
     if (!row) {
       row = db
-        .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)')
-        .get(googleUser.email);
+        .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR google_sub = ?')
+        .get(googleUser.email, googleUser.googleSub);
     }
 
     if (!row) {
       return res.status(403).json({
-        error: `O e-mail Google (${googleUser.email}) ainda não foi convidado pela Diretoria do Clube. Peça um convite ao Diretor ou use o Primeiro Acesso do Diretor.`,
+        error: `O e-mail Google (${googleUser.email}) ainda não está cadastrado no clube. Utilize o link de convite enviado pela Diretoria.`,
       });
     }
     if (!row.active) {
-      return res.status(403).json({ error: 'Esta conta de líder está desativada.' });
+      return res.status(403).json({ error: 'Esta conta está desativada.' });
     }
 
     db.prepare(`
@@ -196,19 +349,28 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// Primeiro Acesso: Criação da Conta Oficial do Diretor do Clube + Configuração Opcional de Gmail SMTP
+// Primeiro Acesso: Criação da Conta Oficial do Gestor (TI) ou Diretor do Clube (Bloqueado após concluído!)
 app.post('/api/auth/setup-director', async (req, res) => {
   try {
+    if (isClubSetupCompleted()) {
+      return res.status(403).json({
+        error:
+          'O Primeiro Acesso deste clube já foi realizado anteriormente. Faça login com sua conta ou solicite um convite ao Gestor/Diretor.',
+      });
+    }
+
     const {
       name,
       email,
       password,
       club_name,
       club_region,
+      is_director = false,
+      role,
       smtp_user,
       smtp_pass,
       google_client_id,
-      disable_demo_accounts = false,
+      disable_demo_accounts = true,
     } = req.body || {};
 
     if (!name || !email || !password) {
@@ -218,6 +380,8 @@ app.post('/api/auth/setup-director', async (req, res) => {
       return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
     }
 
+    const chosenRole =
+      role === 'DIRETOR' || is_director === true ? 'DIRETOR' : 'GESTOR';
     const cleanEmail = String(email).trim().toLowerCase();
     const existing = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail);
     const now = new Date().toISOString();
@@ -227,13 +391,20 @@ app.post('/api/auth/setup-director', async (req, res) => {
     const prevSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
     const finalClubName = club_name ? String(club_name).trim() : prevSettings.club_name;
     const finalClubRegion = club_region ? String(club_region).trim() : prevSettings.club_region;
-    const finalSmtpUser = smtp_user !== undefined ? String(smtp_user).trim() : prevSettings.smtp_user;
+    const finalSmtpUser =
+      smtp_user !== undefined && String(smtp_user).trim() !== ''
+        ? String(smtp_user).trim()
+        : prevSettings.smtp_user;
     const finalSmtpPass =
-      smtp_pass !== undefined ? String(smtp_pass).replace(/\s+/g, '') : prevSettings.smtp_pass;
+      smtp_pass !== undefined && String(smtp_pass).trim() !== ''
+        ? String(smtp_pass).replace(/\s+/g, '')
+        : prevSettings.smtp_pass;
     const finalGoogleClientId =
-      google_client_id !== undefined ? String(google_client_id).trim() : prevSettings.google_client_id;
+      google_client_id !== undefined && String(google_client_id).trim() !== ''
+        ? String(google_client_id).trim()
+        : prevSettings.google_client_id;
 
-    let userId = existing ? existing.id : `usr-dir-${Date.now().toString(36)}`;
+    let userId = existing ? existing.id : `usr-init-${Date.now().toString(36)}`;
     const pwdHash = hashPassword(String(password));
 
     db.exec('BEGIN');
@@ -248,7 +419,7 @@ app.post('/api/auth/setup-director', async (req, res) => {
         finalClubRegion,
         finalSmtpUser,
         finalSmtpPass,
-        finalClubName,
+        finalClubName || 'Clube de Desbravadores',
         finalGoogleClientId,
         disable_demo_accounts ? 0 : 1,
         now
@@ -261,27 +432,27 @@ app.post('/api/auth/setup-director', async (req, res) => {
       if (existing) {
         db.prepare(`
           UPDATE users
-          SET name = ?, password_hash = ?, role = 'DIRETOR', assigned_classes_json = '["*"]',
+          SET name = ?, password_hash = ?, role = ?, assigned_classes_json = '["*"]',
               active = 1, is_demo = 0, verification_code = ?, verification_expires_at = ?, last_login_at = ?
           WHERE id = ?
-        `).run(String(name).trim(), pwdHash, verificationCode, expiresAt, now, userId);
+        `).run(String(name).trim(), pwdHash, chosenRole, verificationCode, expiresAt, now, userId);
       } else {
         db.prepare(`
           INSERT INTO users (
             id, name, email, password_hash, role, unit_id, assigned_classes_json,
             active, is_demo, email_verified, invite_status, verification_code, verification_expires_at,
             last_login_at, created_at
-          ) VALUES (?, ?, ?, ?, 'DIRETOR', NULL, '["*"]', 1, 0, 0, 'PENDING_VERIFICATION', ?, ?, ?, ?)
-        `).run(userId, String(name).trim(), cleanEmail, pwdHash, verificationCode, expiresAt, now, now);
+          ) VALUES (?, ?, ?, ?, ?, NULL, '["*"]', 1, 0, 0, 'PENDING_VERIFICATION', ?, ?, ?, ?)
+        `).run(userId, String(name).trim(), cleanEmail, pwdHash, chosenRole, verificationCode, expiresAt, now, now);
       }
 
       recordAudit({
-        user: { id: userId, name: String(name).trim(), role: 'DIRETOR' },
-        action: 'DIRECTOR_INITIAL_SETUP',
+        user: { id: userId, name: String(name).trim(), role: chosenRole },
+        action: 'INITIAL_SETUP',
         entityType: 'USER',
         entityId: userId,
-        summary: `Diretor(a) "${name}" (${cleanEmail}) configurou o acesso oficial do clube "${finalClubName}".`,
-        newState: { email: cleanEmail, club_name: finalClubName, disable_demo_accounts },
+        summary: `${chosenRole === 'DIRETOR' ? 'Diretor(a)' : 'Gestor(a)'} "${name}" (${cleanEmail}) configurou o Primeiro Acesso oficial do clube "${finalClubName}".`,
+        newState: { email: cleanEmail, role: chosenRole, club_name: finalClubName },
         createdAt: now,
       });
 
@@ -304,7 +475,6 @@ app.post('/api/auth/setup-director', async (req, res) => {
       emailResult = { sent: false, reason: mailErr.message };
     }
 
-    // Se o SMTP ainda não foi configurado, marca como verificado automaticamente para não bloquear o Diretor
     if (!emailResult.sent) {
       db.prepare("UPDATE users SET email_verified = 1, invite_status = 'ACTIVE' WHERE id = ?").run(userId);
     }
@@ -320,10 +490,10 @@ app.post('/api/auth/setup-director', async (req, res) => {
       email_sent: emailResult.sent,
       email_notice: emailResult.sent
         ? `Enviamos um código de confirmação de 6 dígitos para ${cleanEmail}.`
-        : 'Sua conta de Diretor foi criada e ativada! Configure o Gmail + Senha de App na aba "Líderes & Clube" para disparar e-mails reais.',
+        : 'Sua conta foi criada e ativada com sucesso!',
     });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Erro ao configurar conta do Diretor.' });
+    res.status(500).json({ error: err.message || 'Erro ao configurar Primeiro Acesso.' });
   }
 });
 
@@ -358,13 +528,16 @@ app.post('/api/auth/verify-email', (req, res) => {
   res.json({ success: true, token, user });
 });
 
-// Consulta pública de Token de Convite (?invite=TOKEN)
+// Consulta pública de Token de Convite (?invite=TOKEN) — Suporta Líderes e Desbravadores!
 app.get('/api/auth/invite-info', (req, res) => {
   const token = String(req.query.token || '').trim();
   if (!token) {
     return res.status(400).json({ error: 'Token de convite não informado.' });
   }
-  const row = db
+  const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+
+  // 1. Verifica se é convite de Líder
+  const leaderRow = db
     .prepare(
       `SELECT u.*, un.name as unit_name
        FROM users u
@@ -373,67 +546,172 @@ app.get('/api/auth/invite-info', (req, res) => {
     )
     .get(token);
 
-  if (!row) {
-    return res.status(404).json({ error: 'Convite inválido, já utilizado ou expirado.' });
+  if (leaderRow) {
+    return res.json({
+      invite: {
+        type: 'LEADER',
+        id: leaderRow.id,
+        name: leaderRow.name,
+        email: leaderRow.email,
+        role: leaderRow.role,
+        unit_name: leaderRow.unit_name || null,
+        assigned_classes: JSON.parse(leaderRow.assigned_classes_json || '[]'),
+        club_name: settings.club_name || 'Clube de Desbravadores',
+      },
+    });
   }
 
-  const settings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
-  res.json({
-    invite: {
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      role: row.role,
-      unit_name: row.unit_name || null,
-      assigned_classes: JSON.parse(row.assigned_classes_json || '[]'),
-      club_name: settings.club_name || 'Clube de Desbravadores',
-    },
-  });
+  // 2. Verifica se é convite individual de Desbravador
+  const pfRow = db
+    .prepare(
+      `SELECT p.*, un.name as unit_name
+       FROM pathfinders p
+       LEFT JOIN units un ON un.id = p.unit_id
+       WHERE p.invite_token = ?`
+    )
+    .get(token);
+
+  if (pfRow) {
+    const enrolledClasses = db
+      .prepare(
+        `SELECT cc.name
+         FROM class_enrollments ce
+         JOIN classes_catalog cc ON cc.slug = ce.class_slug
+         WHERE ce.pathfinder_id = ?
+         ORDER BY cc.display_order ASC`
+      )
+      .all(pfRow.id)
+      .map((r) => r.name);
+
+    return res.json({
+      invite: {
+        type: 'PATHFINDER',
+        id: pfRow.id,
+        pathfinder_id: pfRow.id,
+        name: pfRow.name,
+        email: pfRow.email || '',
+        role: 'DESBRAVADOR',
+        unit_name: pfRow.unit_name || null,
+        assigned_classes: enrolledClasses,
+        club_name: settings.club_name || 'Clube de Desbravadores',
+      },
+    });
+  }
+
+  return res.status(404).json({ error: 'Convite inválido, já utilizado ou expirado.' });
 });
 
-// Aceitar Convite e Definir Senha Pessoal
+// Aceitar Convite (Líder ou Desbravador) e Definir E-mail / Senha Pessoal
 app.post('/api/auth/accept-invite', (req, res) => {
-  const { token, password, name } = req.body || {};
+  const { token, password, name, email } = req.body || {};
   if (!token || !password) {
-    return res.status(400).json({ error: 'Informe o token de convite e sua nova senha.' });
+    return res.status(400).json({ error: 'Informe o token de convite e sua senha.' });
   }
   if (String(password).length < 6) {
     return res.status(400).json({ error: 'Sua senha deve ter no mínimo 6 caracteres.' });
   }
 
-  const row = db
-    .prepare('SELECT * FROM users WHERE invite_token = ?')
-    .get(String(token).trim());
-
-  if (!row) {
-    return res.status(404).json({ error: 'Convite não encontrado ou já ativado.' });
-  }
-
+  const cleanToken = String(token).trim();
   const now = new Date().toISOString();
   const pwdHash = hashPassword(String(password));
-  const finalName = name ? String(name).trim() : row.name;
 
-  db.prepare(`
-    UPDATE users
-    SET name = ?, password_hash = ?, active = 1, email_verified = 1,
-        invite_status = 'ACTIVE', invite_token = NULL, last_login_at = ?
-    WHERE id = ?
-  `).run(finalName, pwdHash, now, row.id);
+  // 1. Tenta localizar convite de Líder
+  const leaderRow = db.prepare('SELECT * FROM users WHERE invite_token = ?').get(cleanToken);
+  if (leaderRow) {
+    const finalName = name ? String(name).trim() : leaderRow.name;
+    const finalEmail = email ? String(email).trim().toLowerCase() : leaderRow.email;
 
-  recordAudit({
-    user: { id: row.id, name: finalName, role: row.role },
-    action: 'LEADER_INVITE_ACCEPTED',
-    entityType: 'USER',
-    entityId: row.id,
-    summary: `Líder "${finalName}" (${row.email}) aceitou o convite e ativou sua conta (${row.role}).`,
-    createdAt: now,
-  });
+    db.prepare(`
+      UPDATE users
+      SET name = ?, email = ?, password_hash = ?, active = 1, email_verified = 1,
+          invite_status = 'ACTIVE', invite_token = NULL, last_login_at = ?
+      WHERE id = ?
+    `).run(finalName, finalEmail, pwdHash, now, leaderRow.id);
 
-  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(row.id);
-  const user = formatUser(updated);
-  const jwtToken = createToken({ id: user.id, email: user.email, role: user.role });
+    recordAudit({
+      user: { id: leaderRow.id, name: finalName, role: leaderRow.role },
+      action: 'LEADER_INVITE_ACCEPTED',
+      entityType: 'USER',
+      entityId: leaderRow.id,
+      summary: `Líder "${finalName}" (${finalEmail}) aceitou o convite e ativou sua conta (${leaderRow.role}).`,
+      createdAt: now,
+    });
 
-  res.json({ success: true, token: jwtToken, user });
+    const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(leaderRow.id);
+    const user = formatUser(updated);
+    const jwtToken = createToken({ id: user.id, email: user.email, role: user.role });
+
+    return res.json({ success: true, token: jwtToken, user });
+  }
+
+  // 2. Tenta localizar convite individual de Desbravador
+  const pfRow = db.prepare('SELECT * FROM pathfinders WHERE invite_token = ?').get(cleanToken);
+  if (pfRow) {
+    const chosenEmail = String(email || pfRow.email || '').trim().toLowerCase();
+    if (!chosenEmail || !chosenEmail.includes('@')) {
+      return res.status(400).json({ error: 'Informe um endereço de e-mail válido para criar sua conta.' });
+    }
+
+    const emailConflict = db
+      .prepare('SELECT id, pathfinder_id FROM users WHERE LOWER(email) = ?')
+      .get(chosenEmail);
+    if (emailConflict && emailConflict.pathfinder_id !== pfRow.id && emailConflict.id !== pfRow.user_id) {
+      return res.status(400).json({
+        error: 'Este endereço de e-mail já está sendo utilizado por outra conta no sistema.',
+      });
+    }
+
+    const finalName = name ? String(name).trim() : pfRow.name;
+    const userId = emailConflict ? emailConflict.id : pfRow.user_id || `usr-dbv-${Date.now().toString(36)}`;
+
+    db.exec('BEGIN');
+    try {
+      const existingUserRow = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+      if (existingUserRow) {
+        db.prepare(`
+          UPDATE users
+          SET name = ?, email = ?, password_hash = ?, role = 'DESBRAVADOR', unit_id = ?, pathfinder_id = ?,
+              active = 1, email_verified = 1, invite_status = 'ACTIVE', invite_token = NULL, last_login_at = ?
+          WHERE id = ?
+        `).run(finalName, chosenEmail, pwdHash, pfRow.unit_id || null, pfRow.id, now, userId);
+      } else {
+        db.prepare(`
+          INSERT INTO users (
+            id, name, email, password_hash, role, unit_id, pathfinder_id, assigned_classes_json,
+            active, is_demo, email_verified, invite_status, last_login_at, created_at
+          ) VALUES (?, ?, ?, ?, 'DESBRAVADOR', ?, ?, '[]', 1, 0, 1, 'ACTIVE', ?, ?)
+        `).run(userId, finalName, chosenEmail, pwdHash, pfRow.unit_id || null, pfRow.id, now, now);
+      }
+
+      db.prepare(`
+        UPDATE pathfinders
+        SET name = ?, email = ?, user_id = ?, invite_status = 'ACTIVE', invite_token = NULL
+        WHERE id = ?
+      `).run(finalName, chosenEmail, userId, pfRow.id);
+
+      recordAudit({
+        user: { id: userId, name: finalName, role: 'DESBRAVADOR' },
+        action: 'PATHFINDER_INVITE_ACCEPTED',
+        entityType: 'PATHFINDER',
+        entityId: pfRow.id,
+        summary: `Desbravador(a) "${finalName}" (${chosenEmail}) criou sua conta individual e acessou seu Cartão Virtual.`,
+        createdAt: now,
+      });
+
+      db.exec('COMMIT');
+    } catch (txErr) {
+      db.exec('ROLLBACK');
+      return res.status(500).json({ error: txErr.message || 'Erro ao criar conta do desbravador.' });
+    }
+
+    const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    const user = formatUser(updated);
+    const jwtToken = createToken({ id: user.id, email: user.email, role: user.role });
+
+    return res.json({ success: true, token: jwtToken, user });
+  }
+
+  return res.status(404).json({ error: 'Convite não encontrado ou já utilizado.' });
 });
 
 // Solicitar Recuperação de Senha por E-mail ("Esqueci minha senha")
@@ -605,17 +883,36 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     enrollmentsByPathfinder[enr.pathfinder_id].push(enr);
   }
 
+  const smtpCfg = getSmtpConfig(clubSettings);
+
   const pathfinders = rawPathfinders.map((p) => ({
     ...p,
     active: Boolean(p.active),
+    has_account: Boolean(p.user_id),
+    invite_url: p.invite_token
+      ? `${smtpCfg.frontendUrl}/?invite=${encodeURIComponent(p.invite_token)}`
+      : null,
     enrollments: enrollmentsByPathfinder[p.id] || [],
   }));
 
   const rawProgress = db.prepare('SELECT * FROM progress_records').all();
-  const progressRecords = rawProgress.map((pr) => ({
-    ...pr,
-    completed_sub_items: JSON.parse(pr.completed_sub_items_json || '[]'),
-  }));
+  const progressRecords = rawProgress.map((pr) => {
+    let attachments = [];
+    try {
+      attachments = JSON.parse(pr.attachments_json || '[]');
+    } catch {
+      attachments = [];
+    }
+    return {
+      ...pr,
+      completed_sub_items: JSON.parse(pr.completed_sub_items_json || '[]'),
+      submission_text: pr.submission_text || '',
+      attachments,
+      submitted_by_pathfinder: Boolean(pr.submitted_by_pathfinder),
+      submitted_at: pr.submitted_at || null,
+      review_notes: pr.review_notes || '',
+    };
+  });
 
   const rawEvents = db
     .prepare('SELECT * FROM activity_events ORDER BY scheduled_date DESC, created_at DESC')
@@ -645,11 +942,11 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
       `SELECT u.*, un.name as unit_name
        FROM users u
        LEFT JOIN units un ON un.id = u.unit_id
+       WHERE u.role != 'DESBRAVADOR'
        ORDER BY u.is_demo ASC, u.name ASC`
     )
     .all();
 
-  const smtpCfg = getSmtpConfig(clubSettings);
   const leaders = rawLeaders.map((l) => ({
     ...formatUser(l),
     unit_name: l.unit_name || null,
@@ -697,7 +994,7 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 3. INDIVIDUAL PROGRESS & SUB-ITEMS UPDATE
+// 3. INDIVIDUAL PROGRESS, SUB-ITEMS & PATHFINDER EVIDENCE/ATTACHMENTS UPDATE
 // ============================================================================
 app.post('/api/progress/update', requireAuth, (req, res) => {
   const {
@@ -707,6 +1004,9 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
     completed_sub_items,
     notes,
     completed_at,
+    submission_text,
+    attachments,
+    review_notes,
   } = req.body || {};
 
   if (!pathfinder_id || !requirement_id || !status) {
@@ -731,6 +1031,13 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
     .prepare('SELECT * FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?')
     .get(pathfinder_id, requirement_id);
 
+  // Impede que o desbravador desfaça uma aprovação já assinada por um líder
+  if (req.user.role === 'DESBRAVADOR' && existing && existing.status === 'APROVADO') {
+    return res.status(400).json({
+      error: 'Este requisito já foi assinado e aprovado pela liderança do clube.',
+    });
+  }
+
   const subItemsCatalog = JSON.parse(reqItem.sub_items_json || '[]');
   let finalSubItems = Array.isArray(completed_sub_items)
     ? completed_sub_items
@@ -751,13 +1058,43 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
 
   const now = new Date().toISOString();
   const todayDate = completed_at || now.slice(0, 10);
-  const finalNotes = notes !== undefined ? String(notes) : existing ? existing.notes : '';
+  const finalNotes = notes !== undefined ? String(notes) : existing ? existing.notes || '' : '';
+  const finalSubmissionText =
+    submission_text !== undefined
+      ? String(submission_text)
+      : existing
+      ? existing.submission_text || ''
+      : '';
+  const finalAttachments = Array.isArray(attachments)
+    ? attachments
+    : existing
+    ? JSON.parse(existing.attachments_json || '[]')
+    : [];
+  const finalReviewNotes =
+    review_notes !== undefined
+      ? String(review_notes)
+      : existing
+      ? existing.review_notes || ''
+      : '';
+
+  const isPathfinderSubmitting = req.user.role === 'DESBRAVADOR';
+  const submittedByPathfinder = isPathfinderSubmitting
+    ? 1
+    : existing
+    ? Number(existing.submitted_by_pathfinder || 0)
+    : 0;
+  const submittedAt = isPathfinderSubmitting
+    ? now
+    : existing?.submitted_at || null;
 
   const prevState = existing
     ? {
         status: existing.status,
         completed_sub_items: JSON.parse(existing.completed_sub_items_json || '[]'),
         notes: existing.notes || '',
+        submission_text: existing.submission_text || '',
+        attachments: JSON.parse(existing.attachments_json || '[]'),
+        review_notes: existing.review_notes || '',
         completed_at: existing.completed_at,
         marked_by_user_id: existing.marked_by_user_id,
         marked_by_name: existing.marked_by_name,
@@ -768,17 +1105,28 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
         status: 'PENDENTE',
         completed_sub_items: [],
         notes: '',
+        submission_text: '',
+        attachments: [],
+        review_notes: '',
         completed_at: null,
       };
 
   const markedByUserId =
-    effectiveStatus === 'PENDENTE' ? null : existing?.marked_by_user_id || req.user.id;
+    effectiveStatus === 'PENDENTE'
+      ? null
+      : isPathfinderSubmitting
+      ? req.user.id
+      : existing?.marked_by_user_id || req.user.id;
   const markedByName =
-    effectiveStatus === 'PENDENTE' ? null : existing?.marked_by_name || req.user.name;
+    effectiveStatus === 'PENDENTE'
+      ? null
+      : isPathfinderSubmitting
+      ? `${req.user.name} (Desbravador)`
+      : existing?.marked_by_name || req.user.name;
   const approvedByUserId = effectiveStatus === 'APROVADO' ? req.user.id : null;
   const approvedByName = effectiveStatus === 'APROVADO' ? req.user.name : null;
   const finalCompletedAt =
-    effectiveStatus === 'PENDENTE' ? null : existing?.completed_at || todayDate;
+    effectiveStatus === 'PENDENTE' ? null : completed_at || existing?.completed_at || todayDate;
 
   db.exec('BEGIN');
   try {
@@ -786,13 +1134,19 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
     db.prepare(`
       INSERT INTO progress_records (
         id, pathfinder_id, requirement_id, status, completed_sub_items_json,
-        notes, completed_at, marked_by_user_id, marked_by_name,
+        notes, submission_text, attachments_json, submitted_by_pathfinder, submitted_at, review_notes,
+        completed_at, marked_by_user_id, marked_by_name,
         approved_by_user_id, approved_by_name, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(pathfinder_id, requirement_id) DO UPDATE SET
         status = excluded.status,
         completed_sub_items_json = excluded.completed_sub_items_json,
         notes = excluded.notes,
+        submission_text = excluded.submission_text,
+        attachments_json = excluded.attachments_json,
+        submitted_by_pathfinder = excluded.submitted_by_pathfinder,
+        submitted_at = excluded.submitted_at,
+        review_notes = excluded.review_notes,
         completed_at = excluded.completed_at,
         marked_by_user_id = excluded.marked_by_user_id,
         marked_by_name = excluded.marked_by_name,
@@ -806,6 +1160,11 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
       effectiveStatus,
       JSON.stringify(finalSubItems),
       finalNotes,
+      finalSubmissionText,
+      JSON.stringify(finalAttachments),
+      submittedByPathfinder,
+      submittedAt,
+      finalReviewNotes,
       finalCompletedAt,
       markedByUserId,
       markedByName,
@@ -818,6 +1177,11 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
       status: effectiveStatus,
       completed_sub_items: finalSubItems,
       notes: finalNotes,
+      submission_text: finalSubmissionText,
+      attachments: finalAttachments,
+      submitted_by_pathfinder: Boolean(submittedByPathfinder),
+      submitted_at: submittedAt,
+      review_notes: finalReviewNotes,
       completed_at: finalCompletedAt,
       marked_by_user_id: markedByUserId,
       marked_by_name: markedByName,
@@ -827,10 +1191,12 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
 
     recordAudit({
       user: req.user,
-      action: 'STATUS_CHANGE',
+      action: isPathfinderSubmitting ? 'PATHFINDER_SUBMISSION' : 'STATUS_CHANGE',
       entityType: 'PROGRESS_RECORD',
       entityId: `${pathfinder_id}:${requirement_id}`,
-      summary: `${req.user.name} alterou ${reqItem.code} (${reqItem.title}) de "${pf.name}" de ${prevState.status} para ${effectiveStatus}.`,
+      summary: isPathfinderSubmitting
+        ? `Desbravador(a) "${pf.name}" enviou evidências para ${reqItem.code} (${reqItem.title}) — Status: ${effectiveStatus} (${finalAttachments.length} anexo(s)).`
+        : `${req.user.name} alterou ${reqItem.code} (${reqItem.title}) de "${pf.name}" de ${prevState.status} para ${effectiveStatus}.`,
       previousState: { pathfinder_id, requirement_id, ...prevState },
       newState: { pathfinder_id, requirement_id, ...newState },
       createdAt: now,
@@ -1004,17 +1370,18 @@ app.post('/api/progress/bulk', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 5. PATHFINDERS & CLASS ENROLLMENTS (INCLUDING CLASSES AGRUPADAS)
+// 5. PATHFINDERS, INDIVIDUAL INVITES & CLASS ENROLLMENTS
 // ============================================================================
 app.post('/api/pathfinders', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res
       .status(403)
-      .json({ error: 'Apenas Diretor, Admin ou Secretário(a) podem cadastrar desbravadores.' });
+      .json({ error: 'Apenas Gestor, Diretor, Admin ou Secretário(a) podem cadastrar desbravadores.' });
   }
 
   const {
     name,
+    email = '',
     birth_date,
     gender = 'M',
     unit_id = null,
@@ -1029,6 +1396,8 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
 
   const now = new Date().toISOString();
   const pfId = `dbv-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
+  const inviteToken = `dbv-inv-${crypto.randomUUID()}`;
+  const cleanEmail = email ? String(email).trim().toLowerCase() : '';
 
   // Calculate grouped classes by age if requested
   let finalClassSlugs = Array.isArray(class_slugs) ? [...class_slugs] : [];
@@ -1048,9 +1417,11 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
   db.exec('BEGIN');
   try {
     db.prepare(`
-      INSERT INTO pathfinders (id, name, birth_date, gender, unit_id, notes, active, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-    `).run(pfId, String(name).trim(), birth_date, gender, unit_id || null, notes, now);
+      INSERT INTO pathfinders (
+        id, name, email, birth_date, gender, unit_id, notes,
+        invite_token, invite_status, active, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_INVITE', 1, ?)
+    `).run(pfId, String(name).trim(), cleanEmail, birth_date, gender, unit_id || null, notes, inviteToken, now);
 
     const insertEnr = db.prepare(`
       INSERT OR IGNORE INTO class_enrollments (id, pathfinder_id, class_slug, year, is_grouped_card, status, enrolled_at)
@@ -1067,23 +1438,110 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
       entityId: pfId,
       summary: `${req.user.name} cadastrou o(a) desbravador(a) "${name}" nas classes: ${finalClassSlugs.join(', ') || 'nenhuma'}.`,
       previousState: null,
-      newState: { id: pfId, name, birth_date, gender, unit_id, classes: finalClassSlugs },
+      newState: { id: pfId, name, email: cleanEmail, birth_date, gender, unit_id, classes: finalClassSlugs },
       createdAt: now,
     });
 
     db.exec('COMMIT');
-    res.json({ success: true, id: pfId });
+
+    const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    const inviteUrl = `${getSmtpConfig(clubSettings).frontendUrl}/?invite=${encodeURIComponent(inviteToken)}`;
+    res.json({ success: true, id: pfId, invite_token: inviteToken, invite_url: inviteUrl });
   } catch (err) {
     db.exec('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
 });
 
+// Gerar Link Individual de Convite e/ou Enviar Convite por E-mail para o Desbravador
+app.post('/api/pathfinders/:id/invite', requireAuth, async (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO', 'CONSELHEIRO'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para gerar convites de desbravadores.' });
+  }
+
+  try {
+    const pfId = req.params.id;
+    const pf = db
+      .prepare(
+        `SELECT p.*, u.name as unit_name
+         FROM pathfinders p
+         LEFT JOIN units u ON u.id = p.unit_id
+         WHERE p.id = ?`
+      )
+      .get(pfId);
+
+    if (!pf) {
+      return res.status(404).json({ error: 'Desbravador não encontrado.' });
+    }
+
+    const { email, send_email = false, regenerate = false } = req.body || {};
+    const finalEmail =
+      email !== undefined ? String(email).trim().toLowerCase() : pf.email || '';
+    const inviteToken =
+      !regenerate && pf.invite_token
+        ? pf.invite_token
+        : `dbv-inv-${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      UPDATE pathfinders
+      SET email = ?, invite_token = ?,
+          invite_status = CASE WHEN user_id IS NOT NULL THEN 'ACTIVE' ELSE 'PENDING_INVITE' END,
+          invited_at = ?
+      WHERE id = ?
+    `).run(finalEmail, inviteToken, now, pfId);
+
+    const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    const smtpCfg = getSmtpConfig(clubSettings);
+    const inviteUrl = `${smtpCfg.frontendUrl}/?invite=${encodeURIComponent(inviteToken)}`;
+
+    let mailResult = { sent: false, inviteUrl };
+    if (send_email && finalEmail) {
+      const enrolledClasses = db
+        .prepare(
+          `SELECT cc.name
+           FROM class_enrollments ce
+           JOIN classes_catalog cc ON cc.slug = ce.class_slug
+           WHERE ce.pathfinder_id = ?`
+        )
+        .all(pfId)
+        .map((c) => c.name)
+        .join(', ');
+
+      try {
+        mailResult = await sendPathfinderInviteEmail({
+          clubSettings,
+          toEmail: finalEmail,
+          toName: pf.name,
+          unitName: pf.unit_name || '',
+          classesList: enrolledClasses,
+          invitedByName: req.user.name,
+          inviteToken,
+        });
+      } catch (mailErr) {
+        mailResult.error = mailErr.message;
+      }
+    }
+
+    res.json({
+      success: true,
+      invite_token: inviteToken,
+      invite_url: inviteUrl,
+      email_sent: mailResult.sent,
+      message: mailResult.sent
+        ? `Convite enviado por e-mail para ${finalEmail} e link individual disponível!`
+        : 'Link de convite individual gerado! Copie e envie para o desbravador.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Erro ao gerar convite do desbravador.' });
+  }
+});
+
 app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res
       .status(403)
-      .json({ error: 'Apenas Diretor, Admin ou Secretário(a) podem editar dados cadastrais.' });
+      .json({ error: 'Apenas Gestor, Diretor, Admin ou Secretário(a) podem editar dados cadastrais.' });
   }
 
   const pfId = req.params.id;
@@ -1094,6 +1552,7 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
 
   const {
     name = existing.name,
+    email = existing.email || '',
     birth_date = existing.birth_date,
     gender = existing.gender,
     unit_id = existing.unit_id,
@@ -1112,10 +1571,11 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
   try {
     db.prepare(`
       UPDATE pathfinders
-      SET name = ?, birth_date = ?, gender = ?, unit_id = ?, notes = ?, active = ?
+      SET name = ?, email = ?, birth_date = ?, gender = ?, unit_id = ?, notes = ?, active = ?
       WHERE id = ?
     `).run(
       String(name).trim(),
+      String(email || '').trim().toLowerCase(),
       birth_date,
       gender,
       unit_id || null,
@@ -1123,6 +1583,15 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
       active ? 1 : 0,
       pfId
     );
+
+    if (existing.user_id) {
+      db.prepare('UPDATE users SET name = ?, unit_id = ?, active = ? WHERE id = ?').run(
+        String(name).trim(),
+        unit_id || null,
+        active ? 1 : 0,
+        existing.user_id
+      );
+    }
 
     if (Array.isArray(class_slugs)) {
       db.prepare('DELETE FROM class_enrollments WHERE pathfinder_id = ?').run(pfId);
@@ -1144,6 +1613,7 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
       previousState: { ...existing, classes: prevEnrollments },
       newState: {
         name,
+        email,
         birth_date,
         gender,
         unit_id,
@@ -1163,10 +1633,10 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
 });
 
 app.delete('/api/pathfinders/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res
       .status(403)
-      .json({ error: 'Apenas Diretor, Admin ou Secretário(a) podem excluir desbravadores.' });
+      .json({ error: 'Apenas Gestor, Diretor, Admin ou Secretário(a) podem excluir desbravadores.' });
   }
   const pfId = req.params.id;
   const existing = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pfId);
@@ -1174,7 +1644,18 @@ app.delete('/api/pathfinders/:id', requireAuth, (req, res) => {
     return res.status(404).json({ error: 'Desbravador não encontrado.' });
   }
 
-  db.prepare('DELETE FROM pathfinders WHERE id = ?').run(pfId);
+  db.exec('BEGIN');
+  try {
+    if (existing.user_id) {
+      db.prepare('DELETE FROM users WHERE id = ?').run(existing.user_id);
+    }
+    db.prepare('DELETE FROM users WHERE pathfinder_id = ?').run(pfId);
+    db.prepare('DELETE FROM pathfinders WHERE id = ?').run(pfId);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    return res.status(500).json({ error: err.message });
+  }
 
   recordAudit({
     user: req.user,
@@ -1190,22 +1671,27 @@ app.delete('/api/pathfinders/:id', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 6. UNITS MANAGEMENT
+// 6. UNITS MANAGEMENT (CREATE, EDIT, DELETE)
 // ============================================================================
 app.post('/api/units', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Sem permissão para criar unidades.' });
   }
-  const { name, gender = 'MASCULINO', counselor_description = '', color_hex = '#0284c7' } =
-    req.body || {};
+  const {
+    name,
+    gender = 'MASCULINO',
+    age_range = '',
+    counselor_description = '',
+    color_hex = '#0284c7',
+  } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Nome da unidade é obrigatório.' });
 
   const id = `unit-${Date.now().toString(36)}`;
   const now = new Date().toISOString();
   db.prepare(`
-    INSERT INTO units (id, name, gender, counselor_description, color_hex, active, created_at)
-    VALUES (?, ?, ?, ?, ?, 1, ?)
-  `).run(id, String(name).trim(), gender, counselor_description, color_hex, now);
+    INSERT INTO units (id, name, gender, age_range, counselor_description, color_hex, active, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+  `).run(id, String(name).trim(), gender, age_range, counselor_description, color_hex, now);
 
   recordAudit({
     user: req.user,
@@ -1213,7 +1699,7 @@ app.post('/api/units', requireAuth, (req, res) => {
     entityType: 'UNIT',
     entityId: id,
     summary: `${req.user.name} criou a unidade "${name}".`,
-    newState: { id, name, gender, counselor_description, color_hex },
+    newState: { id, name, gender, age_range, counselor_description, color_hex },
     createdAt: now,
   });
 
@@ -1221,7 +1707,7 @@ app.post('/api/units', requireAuth, (req, res) => {
 });
 
 app.put('/api/units/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Sem permissão para editar unidades.' });
   }
   const unitId = req.params.id;
@@ -1231,15 +1717,20 @@ app.put('/api/units/:id', requireAuth, (req, res) => {
   const {
     name = existing.name,
     gender = existing.gender,
-    counselor_description = existing.counselor_description,
-    color_hex = existing.color_hex,
+    age_range = existing.age_range || '',
+    counselor_description = existing.counselor_description || '',
+    color_hex = existing.color_hex || '#0284c7',
   } = req.body || {};
+
+  if (!String(name).trim()) {
+    return res.status(400).json({ error: 'O nome da unidade não pode ficar vazio.' });
+  }
 
   db.prepare(`
     UPDATE units
-    SET name = ?, gender = ?, counselor_description = ?, color_hex = ?
+    SET name = ?, gender = ?, age_range = ?, counselor_description = ?, color_hex = ?
     WHERE id = ?
-  `).run(String(name).trim(), gender, counselor_description, color_hex, unitId);
+  `).run(String(name).trim(), gender, age_range, counselor_description, color_hex, unitId);
 
   recordAudit({
     user: req.user,
@@ -1248,21 +1739,30 @@ app.put('/api/units/:id', requireAuth, (req, res) => {
     entityId: unitId,
     summary: `${req.user.name} atualizou a unidade "${name}".`,
     previousState: existing,
-    newState: { name, gender, counselor_description, color_hex },
+    newState: { name, gender, age_range, counselor_description, color_hex },
   });
 
   res.json({ success: true });
 });
 
 app.delete('/api/units/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Sem permissão para excluir unidades.' });
   }
   const unitId = req.params.id;
   const existing = db.prepare('SELECT * FROM units WHERE id = ?').get(unitId);
   if (!existing) return res.status(404).json({ error: 'Unidade não encontrada.' });
 
-  db.prepare('DELETE FROM units WHERE id = ?').run(unitId);
+  db.exec('BEGIN');
+  try {
+    db.prepare('UPDATE pathfinders SET unit_id = NULL WHERE unit_id = ?').run(unitId);
+    db.prepare('UPDATE users SET unit_id = NULL WHERE unit_id = ?').run(unitId);
+    db.prepare('DELETE FROM units WHERE id = ?').run(unitId);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    return res.status(500).json({ error: err.message });
+  }
 
   recordAudit({
     user: req.user,
@@ -1281,10 +1781,10 @@ app.delete('/api/units/:id', requireAuth, (req, res) => {
 // 7. EVENTS & BULK ACTIVITY EXECUTION
 // ============================================================================
 app.post('/api/events', requireAuth, (req, res) => {
-  if (req.user.role === 'CONSELHEIRO') {
+  if (['CONSELHEIRO', 'DESBRAVADOR'].includes(req.user.role)) {
     return res
       .status(403)
-      .json({ error: 'Apenas Diretores, Secretários e Instrutores podem criar eventos do clube.' });
+      .json({ error: 'Apenas Gestores, Diretores, Secretários e Instrutores podem criar eventos do clube.' });
   }
 
   const {
@@ -1354,10 +1854,10 @@ app.post('/api/events', requireAuth, (req, res) => {
 });
 
 app.post('/api/events/:id/execute', requireAuth, (req, res) => {
-  if (req.user.role === 'CONSELHEIRO') {
+  if (['CONSELHEIRO', 'DESBRAVADOR'].includes(req.user.role)) {
     return res
       .status(403)
-      .json({ error: 'Apenas Diretores, Secretários e Instrutores podem aprovar eventos em lote.' });
+      .json({ error: 'Apenas Gestores, Diretores, Secretários e Instrutores podem aprovar eventos em lote.' });
   }
 
   const eventId = req.params.id;
@@ -1419,7 +1919,6 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
       const pf = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pid);
       if (!pf) continue;
 
-      // Only update requirements that belong to a class this pathfinder is enrolled in (or if only 1 class selected, update directly)
       const pfClasses = db
         .prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?')
         .all(pid)
@@ -1429,8 +1928,6 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
         const reqItem = db.prepare('SELECT * FROM requirements_catalog WHERE id = ?').get(rid);
         if (!reqItem) continue;
 
-        // If pathfinder is enrolled in classes, match the requirement's class_slug to their enrolled classes
-        // unless the event has only 1 requirement or pathfinder has no enrollment restriction
         if (pfClasses.length > 0 && finalReqs.length > 1 && !pfClasses.includes(reqItem.class_slug)) {
           continue;
         }
@@ -1523,7 +2020,7 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
 });
 
 app.delete('/api/events/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Sem permissão para excluir eventos.' });
   }
   const eventId = req.params.id;
@@ -1550,15 +2047,17 @@ app.delete('/api/events/:id', requireAuth, (req, res) => {
 // ============================================================================
 const ROLE_LABELS_PT = {
   ADMIN: 'Administrador',
+  GESTOR: 'Gestor(a) do Sistema / TI',
   DIRETOR: 'Diretor(a) do Clube',
   SECRETARIO: 'Secretário(a) do Clube',
   INSTRUTOR: 'Instrutor(a) de Classe',
   CONSELHEIRO: 'Conselheiro(a) de Unidade',
+  DESBRAVADOR: 'Desbravador(a)',
 };
 
 app.post('/api/leaders', requireAuth, async (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode cadastrar novos líderes.' });
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Gestor, Diretor ou Admin pode cadastrar novos líderes.' });
   }
 
   try {
@@ -1581,7 +2080,7 @@ app.post('/api/leaders', requireAuth, async (req, res) => {
       .prepare('SELECT id FROM users WHERE LOWER(email) = ?')
       .get(cleanEmail);
     if (exists) {
-      return res.status(400).json({ error: 'Já existe um líder cadastrado com este e-mail.' });
+      return res.status(400).json({ error: 'Já existe um usuário cadastrado com este e-mail.' });
     }
 
     const id = `usr-${Date.now().toString(36)}`;
@@ -1667,8 +2166,8 @@ app.post('/api/leaders', requireAuth, async (req, res) => {
 
 // Disparar ou Reenviar Convite por E-mail para um Líder
 app.post('/api/leaders/:id/send-invite', requireAuth, async (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode enviar convites.' });
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Gestor, Diretor ou Admin pode enviar convites.' });
   }
 
   try {
@@ -1723,8 +2222,8 @@ app.post('/api/leaders/:id/send-invite', requireAuth, async (req, res) => {
 });
 
 app.put('/api/leaders/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode editar permissões de líderes.' });
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Gestor, Diretor ou Admin pode editar permissões de líderes.' });
   }
 
   const targetId = req.params.id;
@@ -1777,8 +2276,8 @@ app.put('/api/leaders/:id', requireAuth, (req, res) => {
 });
 
 app.delete('/api/leaders/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode excluir contas de líderes.' });
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Gestor, Diretor ou Admin pode excluir contas de líderes.' });
   }
   const targetId = req.params.id;
   if (targetId === req.user.id) {
@@ -1806,8 +2305,8 @@ app.delete('/api/leaders/:id', requireAuth, (req, res) => {
 // 9. CLUB SETTINGS, GMAIL SMTP & GOOGLE OAUTH CONFIGURATION
 // ============================================================================
 app.put('/api/settings', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas o Diretor ou Admin pode alterar configurações do clube.' });
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Gestor, Diretor ou Admin pode alterar configurações do clube.' });
   }
 
   const prev = db.prepare('SELECT * FROM club_settings WHERE id = 1').get();
@@ -1883,8 +2382,8 @@ app.put('/api/settings', requireAuth, (req, res) => {
 });
 
 app.post('/api/settings/test-smtp', requireAuth, async (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas o Diretor pode testar o servidor de e-mail.' });
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas o Gestor ou Diretor pode testar o servidor de e-mail.' });
   }
   try {
     const prev = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
@@ -1944,10 +2443,10 @@ app.post('/api/settings/test-smtp', requireAuth, async (req, res) => {
 // 10. AUDIT LOGS & REVERT ACTION / BATCH
 // ============================================================================
 app.post('/api/audit/:id/revert', requireAuth, (req, res) => {
-  if (!['ADMIN', 'DIRETOR'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
     return res
       .status(403)
-      .json({ error: 'Apenas o Diretor ou Admin tem permissão para reverter ações no histórico de auditoria.' });
+      .json({ error: 'Apenas o Gestor, Diretor ou Admin tem permissão para reverter ações no histórico de auditoria.' });
   }
 
   const logId = req.params.id;

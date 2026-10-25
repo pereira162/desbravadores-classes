@@ -262,6 +262,21 @@ function ensureAuthAndEmailColumnsOn(targetDb, isTestDb = false) {
   addColumnIfNotExistsOn(targetDb, 'users', 'reset_expires_at', 'TEXT');
   addColumnIfNotExistsOn(targetDb, 'users', 'google_sub', 'TEXT');
   addColumnIfNotExistsOn(targetDb, 'users', 'avatar_url', 'TEXT');
+  addColumnIfNotExistsOn(targetDb, 'users', 'pathfinder_id', 'TEXT DEFAULT NULL');
+
+  addColumnIfNotExistsOn(targetDb, 'pathfinders', 'email', "TEXT DEFAULT ''");
+  addColumnIfNotExistsOn(targetDb, 'pathfinders', 'user_id', 'TEXT DEFAULT NULL');
+  addColumnIfNotExistsOn(targetDb, 'pathfinders', 'invite_token', 'TEXT DEFAULT NULL');
+  addColumnIfNotExistsOn(targetDb, 'pathfinders', 'invite_status', "TEXT DEFAULT 'NONE'");
+  addColumnIfNotExistsOn(targetDb, 'pathfinders', 'invited_at', 'TEXT DEFAULT NULL');
+
+  addColumnIfNotExistsOn(targetDb, 'progress_records', 'submission_text', "TEXT DEFAULT ''");
+  addColumnIfNotExistsOn(targetDb, 'progress_records', 'attachments_json', "TEXT DEFAULT '[]'");
+  addColumnIfNotExistsOn(targetDb, 'progress_records', 'submitted_by_pathfinder', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfNotExistsOn(targetDb, 'progress_records', 'submitted_at', 'TEXT DEFAULT NULL');
+  addColumnIfNotExistsOn(targetDb, 'progress_records', 'review_notes', "TEXT DEFAULT ''");
+
+  addColumnIfNotExistsOn(targetDb, 'units', 'age_range', "TEXT DEFAULT ''");
 
   if (isTestDb) {
     targetDb.prepare("UPDATE users SET is_demo = 1 WHERE email LIKE '%@clube.org'").run();

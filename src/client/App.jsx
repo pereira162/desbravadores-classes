@@ -104,6 +104,12 @@ export default function App() {
     apiRequest('/api/auth/me')
       .then((res) => {
         setUser(res.user);
+        if (res.user?.role === 'DESBRAVADOR') {
+          setActiveTab('PATHFINDERS');
+          if (res.user.pathfinder_id) {
+            setSelectedPathfinderId(res.user.pathfinder_id);
+          }
+        }
         return fetchBootstrapData();
       })
       .catch(() => {
@@ -116,6 +122,14 @@ export default function App() {
   const handleLoginSuccess = (token, loggedUser) => {
     setStoredToken(token);
     setUser(loggedUser);
+    if (loggedUser?.role === 'DESBRAVADOR') {
+      setActiveTab('PATHFINDERS');
+      if (loggedUser.pathfinder_id) {
+        setSelectedPathfinderId(loggedUser.pathfinder_id);
+      }
+    } else {
+      setActiveTab('DASHBOARD');
+    }
     fetchBootstrapData();
     showToast(`Bem-vindo(a), ${loggedUser.name}!`, 'success');
   };
@@ -365,17 +379,52 @@ export default function App() {
     }
   };
 
-  // Criar Unidade
-  const handleCreateUnit = async (payload) => {
+  // Criar ou Editar Unidade
+  const handleSaveUnit = async (payload, unitId = null) => {
     try {
-      await apiRequest('/api/units', {
+      if (unitId) {
+        await apiRequest(`/api/units/${unitId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+        await fetchBootstrapData();
+        showToast(`Unidade "${payload.name}" atualizada com sucesso!`);
+      } else {
+        await apiRequest('/api/units', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        await fetchBootstrapData();
+        showToast(`Unidade "${payload.name}" criada com sucesso!`);
+      }
+    } catch (err) {
+      showToast(err.message || 'Erro ao salvar unidade.', 'error');
+      throw err;
+    }
+  };
+
+  // Gerar Link Individual ou Enviar Convite por E-mail para Desbravador
+  const handleInvitePathfinder = async (pfId, payload = {}) => {
+    try {
+      const res = await apiRequest(`/api/pathfinders/${pfId}/invite`, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
       await fetchBootstrapData();
-      showToast(`Unidade "${payload.name}" criada com sucesso!`);
+      if (payload.send_email) {
+        if (res.email_sent) {
+          showToast(`Convite individual enviado para ${payload.email}!`);
+        } else {
+          showToast(
+            res.email_reason ||
+              'Link individual gerado! Copie o link para enviar ao desbravador.',
+            'info'
+          );
+        }
+      }
+      return res;
     } catch (err) {
-      showToast(err.message || 'Erro ao criar unidade.', 'error');
+      showToast(err.message || 'Erro ao gerar convite do desbravador.', 'error');
       throw err;
     }
   };
@@ -692,7 +741,10 @@ export default function App() {
         {/* Sub-barra de Navegação por Abas */}
         <div className="bg-slate-900/90 border-t border-slate-800/80">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto py-1.5">
-            {NAV_ITEMS.map((item) => {
+            {(user.role === 'DESBRAVADOR'
+              ? [{ id: 'PATHFINDERS', label: 'Meu Cartão de Classes', icon: Users }]
+              : NAV_ITEMS
+            ).map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -716,7 +768,7 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6">
-        {activeTab === 'DASHBOARD' && (
+        {activeTab === 'DASHBOARD' && user.role !== 'DESBRAVADOR' && (
           <DashboardView
             catalog={normalizedData.catalog}
             pathfinders={normalizedData.pathfinders}
@@ -742,7 +794,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'DEMAND' && (
+        {activeTab === 'DEMAND' && user.role !== 'DESBRAVADOR' && (
           <DemandPlanningView
             catalog={normalizedData.catalog}
             pathfinders={normalizedData.pathfinders}
@@ -764,7 +816,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'MATRIX' && (
+        {activeTab === 'MATRIX' && user.role !== 'DESBRAVADOR' && (
           <ClassMatrixView
             catalog={normalizedData.catalog}
             pathfinders={normalizedData.pathfinders}
@@ -787,7 +839,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'PATHFINDERS' && (
+        {(activeTab === 'PATHFINDERS' || user.role === 'DESBRAVADOR') && (
           <PathfindersView
             catalog={normalizedData.catalog}
             pathfinders={normalizedData.pathfinders}
@@ -799,13 +851,14 @@ export default function App() {
             currentUser={user}
             onSavePathfinder={handleSavePathfinder}
             onDeletePathfinder={handleDeletePathfinder}
-            onCreateUnit={handleCreateUnit}
+            onSaveUnit={handleSaveUnit}
             onDeleteUnit={handleDeleteUnit}
+            onInvitePathfinder={handleInvitePathfinder}
             onOpenRequirementDetail={handleOpenRequirementDetail}
           />
         )}
 
-        {activeTab === 'EVENTS' && (
+        {activeTab === 'EVENTS' && user.role !== 'DESBRAVADOR' && (
           <EventsBatchView
             catalog={normalizedData.catalog}
             events={normalizedData.events}
@@ -821,7 +874,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'LEADERS' && (
+        {activeTab === 'LEADERS' && user.role !== 'DESBRAVADOR' && (
           <LeadersSettingsView
             catalog={normalizedData.catalog}
             leaders={normalizedData.leaders}
@@ -836,7 +889,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'AUDIT' && (
+        {activeTab === 'AUDIT' && user.role !== 'DESBRAVADOR' && (
           <AuditLogsView
             auditLogs={normalizedData.auditLogs}
             leaders={normalizedData.leaders}
@@ -846,7 +899,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal Global: Detalhe / Subitens do Requisito */}
+      {/* Modal Global: Detalhe / Subitens / Evidências do Requisito */}
       <RequirementDetailModal
         isOpen={detailModal.isOpen}
         onClose={() =>
@@ -860,6 +913,7 @@ export default function App() {
         }
         pathfinder={detailModal.pathfinder}
         progressRecord={activeDetailProgress}
+        currentUser={user}
         onSaveProgress={handleSaveProgress}
         onOpenBulkForRequirement={(req) => {
           setDetailModal({ isOpen: false, requirement: null, pathfinder: null });

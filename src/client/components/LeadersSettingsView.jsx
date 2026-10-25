@@ -84,7 +84,9 @@ export default function LeadersSettingsView({
   const [sendingInviteId, setSendingInviteId] = useState(null);
   const [inviteLinksMap, setInviteLinksMap] = useState({});
 
-  const canManageLeaders = ['ADMIN', 'DIRETOR'].includes(currentUser?.role);
+  const canManageLeaders = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(
+    currentUser?.role
+  );
 
   const openCreateLeader = () => {
     setEditingLeader(null);
@@ -674,7 +676,8 @@ export default function LeadersSettingsView({
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold"
                 >
-                  <option value="DIRETOR">DIRETOR(A) — Acesso Total e Reversão de Logs</option>
+                  <option value="DIRETOR">DIRETOR(A) — Direção Geral do Clube e Reversão de Logs</option>
+                  <option value="GESTOR">GESTOR(A) / TI — Administração do Sistema (mesmos direitos do Diretor)</option>
                   <option value="SECRETARIO">SECRETÁRIO(A) — Cadastros, Unidades e Relatórios</option>
                   <option value="INSTRUTOR">INSTRUTOR(A) — Avalia e Assina Classes Atribuídas</option>
                   <option value="CONSELHEIRO">CONSELHEIRO(A) — Acompanha Desbravadores da Unidade</option>

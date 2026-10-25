@@ -43,15 +43,20 @@ export const ROLE_CONFIG = {
     badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
     description: 'Acesso total ao sistema, auditoria e configurações.',
   },
+  GESTOR: {
+    label: 'Gestor(a) / TI do Clube',
+    badgeClass: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+    description: 'Mesmos direitos do Diretor: organiza o sistema, gerencia unidades, convida o Diretor e a liderança.',
+  },
   DIRETOR: {
     label: 'Diretor(a) do Clube',
     badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
-    description: 'Aprova qualquer classe, gerencia líderes, eventos e reversão de logs.',
+    description: 'Aprova qualquer classe, gerencia líderes, unidades, eventos e reversão de logs.',
   },
   SECRETARIO: {
     label: 'Secretário(a)',
     badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-    description: 'Gerencia unidades, desbravadores, matrículas e relatórios SGC.',
+    description: 'Gerencia unidades, desbravadores, matrículas, convites e relatórios SGC.',
   },
   INSTRUTOR: {
     label: 'Instrutor(a) de Classe',
@@ -62,6 +67,11 @@ export const ROLE_CONFIG = {
     label: 'Conselheiro(a) de Unidade',
     badgeClass: 'bg-rose-100 text-rose-800 border-rose-200',
     description: 'Acompanha e marca atividades concluídas pelos desbravadores da sua unidade.',
+  },
+  DESBRAVADOR: {
+    label: 'Desbravador(a)',
+    badgeClass: 'bg-sky-100 text-sky-900 border-sky-300',
+    description: 'Acessa seu Cartão Virtual, acompanha o que falta fazer e envia requisitos com fotos e relatos.',
   },
 };
 

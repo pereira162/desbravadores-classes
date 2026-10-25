@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Shield,
   Lock,
   Mail,
   LogIn,
@@ -8,12 +7,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  KeyRound,
   UserPlus,
   ArrowLeft,
   Send,
-  ExternalLink,
   HelpCircle,
+  Award,
 } from 'lucide-react';
 import { apiRequest, getAssetUrl, isTestMode, getTestModeUrl } from '../api';
 import { ROLE_CONFIG } from '../constants';
@@ -37,12 +35,13 @@ export default function LoginView({ onLoginSuccess }) {
   const [clubName, setClubName] = useState('Clube de Desbravadores');
   const [googleClientId, setGoogleClientId] = useState('');
 
-  // Setup Director state (100% em branco para o Diretor preencher os dados reais)
+  // Setup Primeiro Acesso (Gestor/TI ou Diretor)
   const [dirName, setDirName] = useState('');
   const [dirEmail, setDirEmail] = useState('');
   const [dirPassword, setDirPassword] = useState('');
   const [dirClubName, setDirClubName] = useState('');
   const [dirClubRegion, setDirClubRegion] = useState('');
+  const [isDirectorRole, setIsDirectorRole] = useState(false); // false = GESTOR (TI), true = DIRETOR
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
   const [disableDemo, setDisableDemo] = useState(true);
@@ -53,18 +52,32 @@ export default function LoginView({ onLoginSuccess }) {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Invite Acceptance state
+  // Invite Acceptance state (Líder ou Desbravador)
   const [inviteToken, setInviteToken] = useState('');
   const [inviteInfo, setInviteInfo] = useState(null);
   const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
   const [invitePassword, setInvitePassword] = useState('');
 
   const googleBtnRef = useRef(null);
+  const setupStateRef = useRef({
+    dirClubName: '',
+    dirClubRegion: '',
+    isDirectorRole: false,
+  });
+
+  useEffect(() => {
+    setupStateRef.current = {
+      dirClubName,
+      dirClubRegion,
+      isDirectorRole,
+    };
+  }, [dirClubName, dirClubRegion, isDirectorRole]);
 
   // Load public config and check URL query params (?invite=, ?reset_email=, ?verify_email=)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const invToken = params.get('invite');
+    const invToken = params.get('invite') || params.get('convite_dbv');
     const resetEmailParam = params.get('reset_email');
     const resetCodeParam = params.get('code');
     const verifyEmailParam = params.get('verify_email');
@@ -73,7 +86,8 @@ export default function LoginView({ onLoginSuccess }) {
       .then((res) => {
         setDemoAccounts(testMode ? res.accounts || [] : []);
         setDemoEnabled(testMode && res.demo_mode_enabled !== false);
-        setSetupCompleted(Boolean(res.setup_completed));
+        const isDone = Boolean(res.setup_completed);
+        setSetupCompleted(isDone);
         if (res.club_name) {
           setClubName(res.club_name);
           if (res.club_name !== 'Clube de Desbravadores') {
@@ -83,8 +97,8 @@ export default function LoginView({ onLoginSuccess }) {
         if (res.google_client_id) {
           setGoogleClientId(res.google_client_id);
         }
-        // No sistema real de produção, se ainda não houver Diretor cadastrado, abre direto o cadastro oficial do Diretor!
-        if (!testMode && !res.setup_completed && !invToken && !resetEmailParam && !verifyEmailParam) {
+        // No sistema real de produção, se ainda não houve Primeiro Acesso, abre direto a tela de Primeiro Acesso!
+        if (!testMode && !isDone && !invToken && !resetEmailParam && !verifyEmailParam) {
           setMode('SETUP_DIRECTOR');
         }
         // Na página temporária de teste (?teste=1), preenche o login de teste
@@ -102,6 +116,7 @@ export default function LoginView({ onLoginSuccess }) {
         .then((res) => {
           setInviteInfo(res.invite);
           setInviteName(res.invite?.name || '');
+          setInviteEmail(res.invite?.email || '');
         })
         .catch((err) => {
           setError(err.message || 'Convite inválido ou já utilizado.');
@@ -117,9 +132,14 @@ export default function LoginView({ onLoginSuccess }) {
     }
   }, [testMode]);
 
-  // Load Google Identity Services button if googleClientId is configured
+  // Load Google Identity Services button on LOGIN, ACCEPT_INVITE, and SETUP_DIRECTOR
   useEffect(() => {
-    if (!googleClientId || (mode !== 'LOGIN' && mode !== 'ACCEPT_INVITE')) return;
+    if (
+      !googleClientId ||
+      (mode !== 'LOGIN' && mode !== 'ACCEPT_INVITE' && mode !== 'SETUP_DIRECTOR')
+    ) {
+      return;
+    }
 
     const initGoogleButton = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return;
@@ -127,6 +147,17 @@ export default function LoginView({ onLoginSuccess }) {
         client_id: googleClientId,
         callback: async (response) => {
           if (!response.credential) return;
+
+          if (mode === 'SETUP_DIRECTOR') {
+            const currentClub = setupStateRef.current.dirClubName.trim();
+            if (!currentClub) {
+              setError(
+                'Por favor, preencha o "Nome Oficial do Seu Clube" acima antes de concluir o Primeiro Acesso com o Google.'
+              );
+              return;
+            }
+          }
+
           setLoading(true);
           setError('');
           try {
@@ -135,6 +166,19 @@ export default function LoginView({ onLoginSuccess }) {
               body: JSON.stringify({
                 credential: response.credential,
                 invite_token: mode === 'ACCEPT_INVITE' ? inviteToken : undefined,
+                setup_mode: mode === 'SETUP_DIRECTOR',
+                club_name:
+                  mode === 'SETUP_DIRECTOR'
+                    ? setupStateRef.current.dirClubName
+                    : undefined,
+                club_region:
+                  mode === 'SETUP_DIRECTOR'
+                    ? setupStateRef.current.dirClubRegion
+                    : undefined,
+                is_director:
+                  mode === 'SETUP_DIRECTOR'
+                    ? setupStateRef.current.isDirectorRole
+                    : undefined,
               }),
             });
             window.history.replaceState({}, '', window.location.pathname);
@@ -146,6 +190,7 @@ export default function LoginView({ onLoginSuccess }) {
           }
         },
       });
+      googleBtnRef.current.innerHTML = '';
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: 'outline',
         size: 'large',
@@ -158,12 +203,19 @@ export default function LoginView({ onLoginSuccess }) {
     if (window.google?.accounts?.id) {
       initGoogleButton();
     } else {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = initGoogleButton;
-      document.body.appendChild(script);
+      const existingScript = document.querySelector(
+        'script[src="https://accounts.google.com/gsi/client"]'
+      );
+      if (existingScript) {
+        existingScript.addEventListener('load', initGoogleButton);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = initGoogleButton;
+        document.body.appendChild(script);
+      }
     }
   }, [googleClientId, mode, inviteToken, onLoginSuccess]);
 
@@ -218,11 +270,14 @@ export default function LoginView({ onLoginSuccess }) {
           password: dirPassword,
           club_name: dirClubName,
           club_region: dirClubRegion,
+          is_director: isDirectorRole,
+          role: isDirectorRole ? 'DIRETOR' : 'GESTOR',
           smtp_user: smtpUser,
           smtp_pass: smtpPass,
           disable_demo_accounts: disableDemo,
         }),
       });
+      setSetupCompleted(true);
       if (res.email_sent) {
         setInfoMessage(res.email_notice);
         setMode('VERIFY_EMAIL');
@@ -230,7 +285,7 @@ export default function LoginView({ onLoginSuccess }) {
         onLoginSuccess(res.token, res.user);
       }
     } catch (err) {
-      setError(err.message || 'Erro ao configurar conta do Diretor.');
+      setError(err.message || 'Erro ao configurar Primeiro Acesso.');
     } finally {
       setLoading(false);
     }
@@ -308,6 +363,7 @@ export default function LoginView({ onLoginSuccess }) {
         body: JSON.stringify({
           token: inviteToken,
           name: inviteName,
+          email: inviteEmail,
           password: invitePassword,
         }),
       });
@@ -326,7 +382,9 @@ export default function LoginView({ onLoginSuccess }) {
         {/* Painel Esquerdo: Login / Primeiro Acesso / Convite / Recuperação */}
         <div
           className={`${
-            demoEnabled && demoAccounts.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12 max-w-xl mx-auto w-full'
+            demoEnabled && demoAccounts.length > 0
+              ? 'lg:col-span-6'
+              : 'lg:col-span-12 max-w-xl mx-auto w-full'
           } p-6 sm:p-8 flex flex-col justify-between bg-white`}
         >
           <div>
@@ -343,7 +401,7 @@ export default function LoginView({ onLoginSuccess }) {
                   {clubName} — DSA
                 </span>
                 <h1 className="text-xl font-extrabold text-slate-900 leading-tight">
-                  Gestão de Classes & Demanda
+                  Gestão de Classes & Cartão Virtual
                 </h1>
               </div>
             </div>
@@ -366,13 +424,13 @@ export default function LoginView({ onLoginSuccess }) {
             {mode === 'LOGIN' && (
               <>
                 <p className="text-sm text-slate-600 mb-5">
-                  Acesse com seu e-mail e senha de liderança (ou conta Google) para organizar as atividades do ano e assinar cartões.
+                  Acesse com seu e-mail e senha (ou conta Google) como Líder ou Desbravador para acompanhar e assinar o Cartão de Classes.
                 </p>
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      E-mail do Líder
+                      Seu E-mail de Acesso
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -428,257 +486,209 @@ export default function LoginView({ onLoginSuccess }) {
                 </form>
 
                 {/* Botão Entrar com Google */}
-                <div className="mt-4">
-                  {googleClientId ? (
-                    <div className="flex justify-center" ref={googleBtnRef} />
-                  ) : (
+                {googleClientId && (
+                  <div className="mt-4">
+                    <div className="relative flex py-2 items-center">
+                      <div className="grow border-t border-slate-200"></div>
+                      <span className="shrink mx-3 text-[11px] font-bold uppercase text-slate-400">
+                        ou acesse em 1 clique
+                      </span>
+                      <div className="grow border-t border-slate-200"></div>
+                    </div>
+                    <div className="flex justify-center mt-1" ref={googleBtnRef} />
+                  </div>
+                )}
+
+                {/* Callout para Primeiro Acesso — Exibido SOMENTE se o clube AINDA NÃO tiver concluído o Primeiro Acesso */}
+                {!setupCompleted && !testMode && (
+                  <div className="mt-5 p-3.5 rounded-xl bg-indigo-50/90 border border-indigo-200 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-extrabold text-indigo-950 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                        Primeiro Acesso Oficial do Clube
+                      </div>
+                      <p className="text-[11px] text-indigo-800 mt-0.5">
+                        Configure o nome do seu clube e crie a primeira conta de Gestor(a)/TI ou Diretor(a).
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() =>
-                        setInfoMessage(
-                          'Para ativar o login em 1 clique com o Google, configure o Google Client ID na aba "Líderes & Clube" ou use seu e-mail Gmail e senha acima.'
-                        )
-                      }
-                      className="w-full py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                      onClick={() => {
+                        setError('');
+                        setInfoMessage('');
+                        setMode('SETUP_DIRECTOR');
+                      }}
+                      className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 cursor-pointer shadow-xs"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path
-                          fill="#4285F4"
-                          d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"
-                        />
-                      </svg>
-                      Entrar com Conta Google
+                      Configurar Clube
                     </button>
-                  )}
-                </div>
-
-                {/* Callout para Primeiro Acesso do Diretor */}
-                <div className="mt-5 p-3.5 rounded-xl bg-indigo-50/90 border border-indigo-200 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-extrabold text-indigo-950 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                      Primeiro Acesso Oficial do Diretor?
-                    </div>
-                    <p className="text-[11px] text-indigo-800 mt-0.5">
-                      Cadastre seu e-mail real de Diretor, configure o envio de convites via Gmail e assuma o clube.
-                    </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('');
-                      setInfoMessage('');
-                      setMode('SETUP_DIRECTOR');
-                    }}
-                    className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 cursor-pointer shadow-xs"
-                  >
-                    Configurar Diretor
-                  </button>
-                </div>
+                )}
               </>
             )}
 
-            {/* ==================== MODO 2: PRIMEIRO ACESSO DO DIRETOR ==================== */}
-            {mode === 'SETUP_DIRECTOR' && (
-              <form onSubmit={handleSetupDirectorSubmit} className="space-y-3.5">
+            {/* ==================== MODO 2: PRIMEIRO ACESSO (GESTOR / TI OU DIRETOR) ==================== */}
+            {mode === 'SETUP_DIRECTOR' && !setupCompleted && (
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-base font-extrabold text-slate-900">
-                      Primeiro Acesso — Configurar Clube & Diretor
+                      Primeiro Acesso — Configurar Clube & Gestor/Diretor
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Preencha os dados reais do seu clube e crie sua conta de Diretor(a).
+                      Este cadastro inicial só pode ser realizado uma única vez para inaugurar o sistema do clube.
                     </p>
                   </div>
-                  {setupCompleted && (
-                    <button
-                      type="button"
-                      onClick={() => setMode('LOGIN')}
-                      className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer shrink-0"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" /> Login
-                    </button>
-                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Nome Oficial do Seu Clube *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={dirClubName}
-                      onChange={(e) => setDirClubName(e.target.value)}
-                      placeholder="Digite o nome do seu clube"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
+                {/* Dados do Clube + Seleção Gestor vs Diretor */}
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Nome Oficial do Seu Clube *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={dirClubName}
+                        onChange={(e) => setDirClubName(e.target.value)}
+                        placeholder="Digite o nome do seu clube"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Região / Associação / Campo
+                      </label>
+                      <input
+                        type="text"
+                        value={dirClubRegion}
+                        onChange={(e) => setDirClubRegion(e.target.value)}
+                        placeholder="Ex: 1ª Região — Associação"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 bg-white"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Região / Associação / Campo
+                  {/* Opção Gestor (TI) vs Diretor do Clube */}
+                  <div className="pt-2 border-t border-slate-200">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isDirectorRole}
+                        onChange={(e) => setIsDirectorRole(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div>
+                        <span className="text-xs font-extrabold text-slate-900 block">
+                          Eu sou o(a) Diretor(a) titular do Clube
+                        </span>
+                        <span className="text-[11px] text-slate-600 block mt-0.5">
+                          {isDirectorRole
+                            ? 'Sua conta será criada diretamente com o cargo de Diretor(a) do Clube.'
+                            : 'Desmarcado: sua conta será criada como Gestor(a) / Responsável de TI do Clube (com os mesmos poderes do Diretor, permitindo organizar o sistema e enviar o convite oficial para o Diretor e demais líderes).'}
+                        </span>
+                      </div>
                     </label>
-                    <input
-                      type="text"
-                      value={dirClubRegion}
-                      onChange={(e) => setDirClubRegion(e.target.value)}
-                      placeholder="Ex: 1ª Região — Associação"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Seu Nome Completo (Diretor/Diretora) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={dirName}
-                      onChange={(e) => setDirName(e.target.value)}
-                      placeholder="Digite seu nome completo"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Seu E-mail Real de Login *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={dirEmail}
-                      onChange={(e) => {
-                        setDirEmail(e.target.value);
-                        if (!smtpUser && e.target.value.includes('@gmail.com')) {
-                          setSmtpUser(e.target.value);
-                        }
-                      }}
-                      placeholder="seu.email@gmail.com"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Escolha sua Senha Pessoal *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={dirPassword}
-                      onChange={(e) => setDirPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
-                    />
                   </div>
                 </div>
 
-                {/* Configuração opcional imediata do Gmail SMTP */}
-                <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-amber-700" />
-                      Envio de E-mails Reais via Gmail (Opcional agora)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowGmailHelp((v) => !v)}
-                      className="text-[11px] font-bold text-indigo-700 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      Como pegar a Senha de App?
-                    </button>
+                {/* Opção A: Criar Conta do Primeiro Acesso com Google */}
+                {googleClientId && (
+                  <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center space-y-2">
+                    <div className="text-xs font-extrabold text-indigo-950">
+                      Opção 1: Criar conta de {isDirectorRole ? 'Diretor(a)' : 'Gestor(a) / TI'} com Google
+                    </div>
+                    <p className="text-[11px] text-indigo-800">
+                      Preencha o nome do clube acima e clique no botão do Google abaixo:
+                    </p>
+                    <div className="flex justify-center pt-1" ref={googleBtnRef} />
                   </div>
+                )}
 
-                  {showGmailHelp && (
-                    <div className="p-2.5 rounded-lg bg-white border border-amber-200 text-[11px] text-slate-700 space-y-1 leading-relaxed">
-                      <p>
-                        <strong>1.</strong> Você <strong>não</strong> usa sua senha normal do Gmail.
-                      </p>
-                      <p>
-                        <strong>2.</strong> Acesse{' '}
-                        <a
-                          href="https://myaccount.google.com/apppasswords"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-indigo-600 font-bold underline"
-                        >
-                          myaccount.google.com/apppasswords
-                        </a>{' '}
-                        na conta Gmail que enviará os convites do clube.
-                      </p>
-                      <p>
-                        <strong>3.</strong> Crie uma senha chamada <em>&ldquo;Clube Desbravadores&rdquo;</em> e cole o código de <strong>16 letras</strong> gerado abaixo!
-                      </p>
+                {/* Opção B: Criar Conta com E-mail e Senha */}
+                <form onSubmit={handleSetupDirectorSubmit} className="space-y-3.5">
+                  {googleClientId && (
+                    <div className="relative flex py-1 items-center">
+                      <div className="grow border-t border-slate-200"></div>
+                      <span className="shrink mx-3 text-[11px] font-bold uppercase text-slate-400">
+                        ou cadastre com e-mail e senha
+                      </span>
+                      <div className="grow border-t border-slate-200"></div>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Seu Nome Completo ({isDirectorRole ? 'Diretor/Diretora' : 'Gestor/Responsável'}) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={dirName}
+                        onChange={(e) => setDirName(e.target.value)}
+                        placeholder="Digite seu nome completo"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
+                      />
+                    </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Conta Gmail Remetente
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Seu E-mail Real de Login *
                       </label>
                       <input
                         type="email"
-                        value={smtpUser}
-                        onChange={(e) => setSmtpUser(e.target.value)}
-                        placeholder="clube@gmail.com"
-                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                        required
+                        value={dirEmail}
+                        onChange={(e) => setDirEmail(e.target.value)}
+                        placeholder="seu.email@gmail.com"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Senha de App do Google (16 letras)
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Escolha sua Senha Pessoal *
                       </label>
                       <input
                         type="password"
-                        value={smtpPass}
-                        onChange={(e) => setSmtpPass(e.target.value)}
-                        placeholder="abcd efgh ijkl mnop"
-                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-mono"
+                        required
+                        minLength={6}
+                        value={dirPassword}
+                        onChange={(e) => setDirPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300"
                       />
                     </div>
                   </div>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition cursor-pointer"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  {loading
-                    ? 'Criando Conta Oficial...'
-                    : 'Criar Conta Oficial de Diretor & Entrar'}
-                </button>
-
-                <div className="text-center pt-1">
                   <button
-                    type="button"
-                    onClick={() => setMode('LOGIN')}
-                    className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition cursor-pointer"
                   >
-                    Já possui conta cadastrada? Fazer Login
+                    <UserPlus className="w-4 h-4" />
+                    {loading
+                      ? 'Configurando Clube...'
+                      : `Criar Conta Oficial de ${
+                          isDirectorRole ? 'Diretor(a)' : 'Gestor(a) / TI'
+                        } & Iniciar`}
                   </button>
-                </div>
-              </form>
+
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setMode('LOGIN')}
+                      className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                    >
+                      Já realizou o Primeiro Acesso? Ir para Login
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {/* ==================== MODO 3: VERIFICAR CÓDIGO DE E-MAIL ==================== */}
@@ -709,25 +719,41 @@ export default function LoginView({ onLoginSuccess }) {
               </form>
             )}
 
-            {/* ==================== MODO 4: ACEITAR CONVITE DE LÍDER ==================== */}
+            {/* ==================== MODO 4: ACEITAR CONVITE (LÍDER OU DESBRAVADOR) ==================== */}
             {mode === 'ACCEPT_INVITE' && (
-              <form onSubmit={handleAcceptInviteSubmit} className="space-y-4">
-                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <div className="text-xs font-extrabold uppercase text-emerald-800">
-                    Convite Oficial de Liderança
+              <div className="space-y-4">
+                <div
+                  className={`p-4 rounded-xl border ${
+                    inviteInfo?.type === 'PATHFINDER'
+                      ? 'bg-sky-50 border-sky-200'
+                      : 'bg-emerald-50 border-emerald-200'
+                  }`}
+                >
+                  <div className="text-xs font-extrabold uppercase flex items-center gap-1.5 text-slate-900">
+                    <Award className="w-4 h-4 text-amber-600" />
+                    {inviteInfo?.type === 'PATHFINDER'
+                      ? 'Convite Individual de Desbravador(a)'
+                      : 'Convite Oficial da Diretoria'}
                   </div>
                   {inviteInfo ? (
-                    <div className="text-xs text-emerald-950 mt-1 space-y-0.5">
+                    <div className="text-xs text-slate-800 mt-1.5 space-y-1">
                       <div>
                         <strong>Clube:</strong> {inviteInfo.club_name}
                       </div>
                       <div>
-                        <strong>E-mail:</strong> {inviteInfo.email}
+                        <strong>Convidado(a):</strong> {inviteInfo.name}
                       </div>
                       <div>
-                        <strong>Cargo:</strong>{' '}
+                        <strong>Perfil:</strong>{' '}
                         {ROLE_CONFIG[inviteInfo.role]?.label || inviteInfo.role}
+                        {inviteInfo.unit_name ? ` • Unidade ${inviteInfo.unit_name}` : ''}
                       </div>
+                      {inviteInfo.assigned_classes?.length > 0 && (
+                        <div>
+                          <strong>Classe(s):</strong>{' '}
+                          {inviteInfo.assigned_classes.join(', ')}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-xs text-slate-600 mt-1">
@@ -736,46 +762,81 @@ export default function LoginView({ onLoginSuccess }) {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Confirme seu Nome Completo *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Crie sua Senha Pessoal de Acesso *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={invitePassword}
-                    onChange={(e) => setInvitePassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || !inviteInfo}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm cursor-pointer"
-                >
-                  {loading ? 'Ativando sua conta...' : 'Ativar Minha Conta e Entrar'}
-                </button>
-
-                {googleClientId && (
-                  <div className="pt-2 flex justify-center" ref={googleBtnRef} />
+                {/* Opção 1: Aceitar Convite com Conta Google em 1 clique */}
+                {googleClientId && inviteInfo && (
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2">
+                    <div className="text-xs font-extrabold text-slate-800">
+                      Opção 1: Criar sua conta em 1 clique com o Google
+                    </div>
+                    <div className="flex justify-center" ref={googleBtnRef} />
+                  </div>
                 )}
-              </form>
+
+                {/* Opção 2: Criar conta escolhendo e-mail e senha */}
+                <form onSubmit={handleAcceptInviteSubmit} className="space-y-3.5">
+                  {googleClientId && (
+                    <div className="relative flex py-1 items-center">
+                      <div className="grow border-t border-slate-200"></div>
+                      <span className="shrink mx-3 text-[11px] font-bold uppercase text-slate-400">
+                        ou escolha seu e-mail e senha
+                      </span>
+                      <div className="grow border-t border-slate-200"></div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Seu Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Seu E-mail para Login *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="Digite seu e-mail preferido"
+                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Crie sua Senha Pessoal de Acesso *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || !inviteInfo}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm cursor-pointer disabled:opacity-50"
+                  >
+                    {loading
+                      ? 'Criando sua conta...'
+                      : 'Criar Minha Conta e Acessar Cartão'}
+                  </button>
+                </form>
+              </div>
             )}
 
             {/* ==================== MODO 5: ESQUECI MINHA SENHA ==================== */}

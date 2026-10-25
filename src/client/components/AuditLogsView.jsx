@@ -23,6 +23,9 @@ const ACTION_BADGES = {
   PATHFINDER_CREATE: { label: 'Novo Desbravador', badge: 'bg-sky-100 text-sky-800 border-sky-200' },
   PATHFINDER_UPDATE: { label: 'Edição de Desbravador', badge: 'bg-sky-100 text-sky-800 border-sky-200' },
   UNIT_CREATE: { label: 'Nova Unidade', badge: 'bg-teal-100 text-teal-800 border-teal-200' },
+  UNIT_UPDATE: { label: 'Edição de Unidade', badge: 'bg-teal-100 text-teal-800 border-teal-200' },
+  UNIT_DELETE: { label: 'Exclusão de Unidade', badge: 'bg-rose-100 text-rose-800 border-rose-200' },
+  PATHFINDER_INVITE: { label: 'Convite de Desbravador', badge: 'bg-teal-100 text-teal-800 border-teal-200' },
   LEADER_CREATE: { label: 'Novo Líder', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
   USER_PERMISSION_CHANGE: { label: 'Permissões de Líder', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
   SETTINGS_UPDATE: { label: 'Configurações do Clube', badge: 'bg-slate-200 text-slate-800 border-slate-300' },
@@ -40,7 +43,7 @@ export default function AuditLogsView({
   const [expandedLogIds, setExpandedLogIds] = useState({});
   const [revertingId, setRevertingId] = useState(null);
 
-  const canRevert = ['ADMIN', 'DIRETOR'].includes(currentUser?.role);
+  const canRevert = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role);
 
   const filteredLogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();

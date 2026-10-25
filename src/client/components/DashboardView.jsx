@@ -211,9 +211,13 @@ export default function DashboardView({
     );
   }, [stats.approvalQueue, queueClassFilter]);
 
-  const canApproveQueue = ['ADMIN', 'DIRETOR', 'SECRETARIO', 'INSTRUTOR'].includes(
-    currentUser?.role
-  );
+  const canApproveQueue = [
+    'ADMIN',
+    'GESTOR',
+    'DIRETOR',
+    'SECRETARIO',
+    'INSTRUTOR',
+  ].includes(currentUser?.role);
 
   const handleApproveAllFilteredQueue = async () => {
     if (!canApproveQueue || filteredQueue.length === 0) return;
@@ -485,10 +489,25 @@ export default function DashboardView({
                       <span className="text-xs text-slate-500">
                         • {item.pathfinder.unit_name} • {item.classInfo?.name}
                       </span>
+                      {Boolean(item.progress?.submitted_by_pathfinder) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
+                          Enviado pelo Desbravador
+                        </span>
+                      )}
+                      {item.progress?.attachments?.length > 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                          📎 {item.progress.attachments.length} foto(s)/anexo(s)
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-700 mt-0.5 line-clamp-1">
                       <strong>{item.requirement.marker}</strong> {item.requirement.title}
                     </p>
+                    {item.progress?.submission_text && (
+                      <p className="text-[11px] text-teal-800 mt-0.5 font-medium">
+                        Relato do Desbravador: &ldquo;{item.progress.submission_text}&rdquo;
+                      </p>
+                    )}
                     {item.progress?.notes && (
                       <p className="text-[11px] text-sky-700 mt-0.5 italic">
                         Evidência: &ldquo;{item.progress.notes}&rdquo;
@@ -504,7 +523,9 @@ export default function DashboardView({
                     }
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-slate-700 cursor-pointer"
                   >
-                    Detalhes
+                    {item.progress?.attachments?.length > 0
+                      ? 'Ver Fotos / Detalhes'
+                      : 'Detalhes'}
                   </button>
                   {canApproveQueue && (
                     <button

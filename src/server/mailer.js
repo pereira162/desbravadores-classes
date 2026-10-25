@@ -278,11 +278,61 @@ async function verifyGoogleIdToken(credential, expectedClientId) {
   };
 }
 
+async function sendPathfinderInviteEmail({
+  clubSettings,
+  toEmail,
+  toName,
+  unitName,
+  classesList,
+  invitedByName,
+  inviteToken,
+}) {
+  const { transporter, cfg } = createTransporter(clubSettings);
+  const inviteUrl = `${cfg.frontendUrl}/?invite=${encodeURIComponent(inviteToken)}`;
+
+  if (!transporter || !toEmail) {
+    return {
+      sent: false,
+      reason: !toEmail ? 'NO_EMAIL' : 'SMTP_NOT_CONFIGURED',
+      inviteUrl,
+    };
+  }
+
+  const html = buildHtmlTemplate({
+    clubName: clubSettings.club_name,
+    badge: 'Cartão Virtual do Desbravador',
+    title: `Seu Cartão de Classes está pronto!`,
+    bodyHtml: `
+      <p>Olá, <strong>${toName}</strong>! Maranata!</p>
+      <p>A diretoria do <strong>${clubSettings.club_name || 'Clube de Desbravadores'}</strong> (${invitedByName}) liberou o seu acesso individual ao <strong>Cartão Virtual de Classes</strong>.</p>
+      <ul style="background: #f8fafc; padding: 14px 18px 14px 34px; border-radius: 10px; border: 1px solid #e2e8f0;">
+        ${unitName ? `<li><strong>Unidade:</strong> ${unitName}</li>` : ''}
+        ${classesList ? `<li><strong>Classe(s):</strong> ${classesList}</li>` : ''}
+      </ul>
+      <p>Com a sua conta você poderá acompanhar o que já concluiu, ver o que falta para a sua investidura, marcar os requisitos realizados, informar quando e como fez e anexar fotos das suas atividades!</p>
+      <p>Clique no botão abaixo para criar sua conta (com Google ou com seu e-mail e senha):</p>
+    `,
+    ctaLabel: 'Criar Minha Conta de Desbravador',
+    ctaUrl: inviteUrl,
+  });
+
+  await transporter.sendMail({
+    from: `"${cfg.fromName}" <${cfg.user}>`,
+    to: toEmail,
+    subject: `Convite do Desbravador: Acesse seu Cartão de Classes — ${clubSettings.club_name || 'Desbravadores'}`,
+    html,
+  });
+
+  return { sent: true, inviteUrl };
+}
+
 module.exports = {
   getSmtpConfig,
   sendVerificationEmail,
   sendLeaderInviteEmail,
+  sendPathfinderInviteEmail,
   sendPasswordResetEmail,
   sendTestSmtpEmail,
   verifyGoogleIdToken,
 };
+
