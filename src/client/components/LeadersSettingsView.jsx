@@ -9,6 +9,7 @@ import {
   Mail,
   Send,
   Copy,
+  Check,
   KeyRound,
   HelpCircle,
   Sparkles,
@@ -83,6 +84,7 @@ export default function LeadersSettingsView({
   const [savingLeader, setSavingLeader] = useState(false);
   const [sendingInviteId, setSendingInviteId] = useState(null);
   const [inviteLinksMap, setInviteLinksMap] = useState({});
+  const [copiedLeaderId, setCopiedLeaderId] = useState(null);
 
   const canManageLeaders = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(
     currentUser?.role
@@ -160,10 +162,13 @@ export default function LeadersSettingsView({
     }
   };
 
-  const handleCopyInviteLink = (url) => {
+  const handleCopyInviteLink = (leaderId, url) => {
     if (!url) return;
     navigator.clipboard?.writeText(url);
-    alert(`Link de convite copiado!\n\n${url}`);
+    setCopiedLeaderId(leaderId);
+    setTimeout(() => {
+      setCopiedLeaderId((prev) => (prev === leaderId ? null : prev));
+    }, 3000);
   };
 
   const handleSettingsSubmit = async (e) => {
@@ -319,11 +324,24 @@ export default function LeadersSettingsView({
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleCopyInviteLink(inviteUrl)}
-                          className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                          onClick={() => handleCopyInviteLink(ld.id, inviteUrl)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer ${
+                            copiedLeaderId === ld.id
+                              ? 'bg-emerald-600 text-white shadow-sm scale-105'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          }`}
                         >
-                          <Copy className="w-3 h-3" />
-                          Copiar Link
+                          {copiedLeaderId === ld.id ? (
+                            <>
+                              <Check className="w-3 h-3" />
+                              ✓ Copiado!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              Copiar Link
+                            </>
+                          )}
                         </button>
                       </div>
                     )}
@@ -596,8 +614,9 @@ export default function LeadersSettingsView({
 
             <form
               onSubmit={handleLeaderSubmit}
-              className="p-6 space-y-4 overflow-y-auto"
+              className="flex-1 overflow-hidden flex flex-col"
             >
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Nome Completo do Líder *
@@ -744,8 +763,9 @@ export default function LeadersSettingsView({
                 />
                 Conta Ativa (pode fazer login no sistema)
               </label>
+              </div>
 
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
+              <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
                 {editingLeader &&
                 onDeleteLeader &&
                 editingLeader.id !== currentUser?.id ? (

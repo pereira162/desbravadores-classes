@@ -229,11 +229,11 @@ export default function RequirementDetailModal({
     Boolean(progressRecord?.submitted_by_pathfinder);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
         {/* Header colorido conforme a classe */}
         <div
-          className="px-6 py-4 text-white flex items-start justify-between gap-4"
+          className="px-6 py-4 text-white flex items-start justify-between gap-4 shrink-0"
           style={{ backgroundColor: classInfo?.color_hex || '#1e293b' }}
         >
           <div>
@@ -261,37 +261,37 @@ export default function RequirementDetailModal({
           </button>
         </div>
 
-        <div className="p-6 max-h-[82vh] overflow-y-auto space-y-5">
-          {/* Descrição Oficial Completa do Cartão */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
-              <span>Texto Oficial do Cartão (DSA)</span>
-              {requirement.selection_rule !== 'TODOS' && (
-                <span className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-bold">
-                  Regra:{' '}
-                  {requirement.selection_rule === 'ESCOLHER_1'
-                    ? 'Escolher 1 opção'
-                    : 'Escolher 2 opções'}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-slate-800 leading-relaxed font-medium">
-              {requirement.description}
-            </p>
+        {pathfinder ? (
+          <form onSubmit={handleSave} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
+              {/* Descrição Oficial Completa do Cartão */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
+                  <span>Texto Oficial do Cartão (DSA)</span>
+                  {requirement.selection_rule !== 'TODOS' && (
+                    <span className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-bold">
+                      Regra:{' '}
+                      {requirement.selection_rule === 'ESCOLHER_1'
+                        ? 'Escolher 1 opção'
+                        : 'Escolher 2 opções'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                  {requirement.description}
+                </p>
 
-            {requirement.book_info && (
-              <div className="mt-2.5 pt-2.5 border-t border-slate-200 text-xs text-slate-600 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>
-                  <strong>Livro Oficial Atual:</strong> {requirement.book_info.livro_atual} |{' '}
-                  <strong>Edição Anterior Aceita:</strong> {requirement.book_info.livro_historico}
-                </span>
+                {requirement.book_info && (
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      <strong>Livro Oficial Atual:</strong> {requirement.book_info.livro_atual} |{' '}
+                      <strong>Edição Anterior Aceita:</strong> {requirement.book_info.livro_historico}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {pathfinder ? (
-            <form onSubmit={handleSave} className="space-y-5">
               {/* Cabeçalho do Desbravador */}
               <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200">
                 <div>
@@ -638,8 +638,93 @@ export default function RequirementDetailModal({
                 </div>
               )}
 
-              {/* Rodapé de Botões: diferente para Desbravador vs Liderança */}
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-200">
+            </div>
+
+            {/* Rodapé de Botões Docked */}
+            <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-2 shrink-0 z-10">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+              >
+                Fechar
+              </button>
+
+              {isPathfinderUser ? (
+                isAlreadyApproved ? (
+                  <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-extrabold">
+                    ✓ Requisito já Assinado pela Liderança
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => submitWithStatus('EM_ANDAMENTO')}
+                      className="px-4 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold cursor-pointer"
+                    >
+                      Salvar em Andamento
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => submitWithStatus('CONCLUIDO')}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {saving
+                        ? 'Enviando...'
+                        : 'Marcar como Feito e Enviar p/ Diretoria'}
+                    </button>
+                  </>
+                )
+              ) : (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? 'Salvando...' : 'Salvar no Cartão e Auditar'}
+                </button>
+              )}
+            </div>
+          </form>
+        ) : (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
+                  <span>Texto Oficial do Cartão (DSA)</span>
+                  {requirement.selection_rule !== 'TODOS' && (
+                    <span className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-bold">
+                      Regra:{' '}
+                      {requirement.selection_rule === 'ESCOLHER_1'
+                        ? 'Escolher 1 opção'
+                        : 'Escolher 2 opções'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                  {requirement.description}
+                </p>
+
+                {requirement.book_info && (
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      <strong>Livro Oficial Atual:</strong> {requirement.book_info.livro_atual} |{' '}
+                      <strong>Edição Anterior Aceita:</strong> {requirement.book_info.livro_historico}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 z-10">
+              <div className="text-xs text-slate-500">
+                Tags: {(requirement.tags || []).map((t) => `#${t}`).join('  ')}
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={onClose}
@@ -647,66 +732,22 @@ export default function RequirementDetailModal({
                 >
                   Fechar
                 </button>
-
-                {isPathfinderUser ? (
-                  isAlreadyApproved ? (
-                    <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-extrabold">
-                      ✓ Requisito já Assinado pela Liderança
-                    </span>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => submitWithStatus('EM_ANDAMENTO')}
-                        className="px-4 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold cursor-pointer"
-                      >
-                        Salvar em Andamento
-                      </button>
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => submitWithStatus('CONCLUIDO')}
-                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        {saving
-                          ? 'Enviando...'
-                          : 'Marcar como Feito e Enviar p/ Diretoria'}
-                      </button>
-                    </>
-                  )
-                ) : (
+                {onOpenBulkForRequirement && (
                   <button
-                    type="submit"
-                    disabled={saving}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition cursor-pointer disabled:opacity-50"
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenBulkForRequirement(requirement);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
                   >
-                    {saving ? 'Salvando...' : 'Salvar no Cartão e Auditar'}
+                    ✓ Dar Baixa em Lote neste Requisito
                   </button>
                 )}
               </div>
-            </form>
-          ) : (
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-xs text-slate-500">
-                Tags: {(requirement.tags || []).map((t) => `#${t}`).join('  ')}
-              </div>
-              {onOpenBulkForRequirement && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenBulkForRequirement(requirement);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
-                >
-                  ✓ Dar Baixa em Lote neste Requisito
-                </button>
-              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Lightbox para Visualizar Foto Anexada em Tamanho Real */}

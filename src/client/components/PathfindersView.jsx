@@ -16,6 +16,7 @@ import {
   Layers,
   Link2,
   Copy,
+  Check,
   Send,
   Paperclip,
   MessageSquare,
@@ -79,6 +80,7 @@ export default function PathfindersView({
   const [inviteUrl, setInviteUrl] = useState('');
   const [loadingInvite, setLoadingInvite] = useState(false);
   const [sendingInviteEmail, setSendingInviteEmail] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const isPathfinderUser = currentUser?.role === 'DESBRAVADOR';
   const canManageRegistry = ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(
@@ -213,16 +215,36 @@ export default function PathfindersView({
       });
   }, [activePf, catalog.requirements, progressMap, cardSelectedClassSlug, cardOnlyPending]);
 
+  const applyAgeSuggestedClasses = (groupedMode = false, dateToUse = pfBirthDate) => {
+    const age = calculateAge(dateToUse) || 10;
+    const allClasses = catalog.classes || [];
+    if (!groupedMode) {
+      const targetAge = Math.min(15, Math.max(10, age));
+      const matched = allClasses
+        .filter((c) => c.min_age === targetAge)
+        .map((c) => c.slug);
+      setPfClassSlugs(matched.length > 0 ? matched : ['amigo', 'amigo-avancado']);
+      setPfIsGrouped(false);
+    } else {
+      const targetAge = Math.min(15, Math.max(10, age));
+      const matched = allClasses
+        .filter((c) => c.min_age <= targetAge && c.type === 'REGULAR')
+        .map((c) => c.slug);
+      setPfClassSlugs(matched.length > 0 ? matched : ['amigo']);
+      setPfIsGrouped(true);
+    }
+  };
+
   const openCreatePfModal = () => {
     setEditingPf(null);
     setPfName('');
     setPfEmail('');
-    setPfBirthDate('2015-04-15');
+    const defaultBirth = '2016-04-15';
+    setPfBirthDate(defaultBirth);
     setPfUnitId(units[0]?.id || '');
     setPfNotes('');
     setPfActive(true);
-    setPfClassSlugs(['amigo', 'amigo-avancado']);
-    setPfIsGrouped(false);
+    applyAgeSuggestedClasses(false, defaultBirth);
     setPfModalOpen(true);
   };
 
@@ -243,27 +265,6 @@ export default function PathfindersView({
     setPfClassSlugs((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
     );
-  };
-
-  // Auto-seleciona classes compatíveis com a idade (Modo Regular ou Modo Classes Agrupadas)
-  const applyAgeSuggestedClasses = (groupedMode = false) => {
-    const age = calculateAge(pfBirthDate) || 10;
-    const allClasses = catalog.classes || [];
-    if (!groupedMode) {
-      const targetAge = Math.min(15, Math.max(10, age));
-      const matched = allClasses
-        .filter((c) => c.min_age === targetAge)
-        .map((c) => c.slug);
-      setPfClassSlugs(matched);
-      setPfIsGrouped(false);
-    } else {
-      const targetAge = Math.min(15, Math.max(10, age));
-      const matched = allClasses
-        .filter((c) => c.min_age <= targetAge && c.type === 'REGULAR')
-        .map((c) => c.slug);
-      setPfClassSlugs(matched);
-      setPfIsGrouped(true);
-    }
   };
 
   const handleSavePfSubmit = async (e) => {
@@ -372,7 +373,8 @@ export default function PathfindersView({
   const handleCopyLink = (url) => {
     if (!url) return;
     navigator.clipboard?.writeText(url);
-    alert(`Link individual copiado com sucesso!\n\nEnvie para o desbravador:\n${url}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 3000);
   };
 
   return (
@@ -978,9 +980,10 @@ export default function PathfindersView({
 
             <form
               onSubmit={handleSavePfSubmit}
-              className="p-6 space-y-4 overflow-y-auto"
+              className="flex-1 overflow-hidden flex flex-col"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Nome Completo do Desbravador *
@@ -1003,7 +1006,13 @@ export default function PathfindersView({
                     type="date"
                     required
                     value={pfBirthDate}
-                    onChange={(e) => setPfBirthDate(e.target.value)}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setPfBirthDate(newDate);
+                      if (!editingPf && newDate) {
+                        applyAgeSuggestedClasses(pfIsGrouped, newDate);
+                      }
+                    }}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <span className="text-[11px] text-slate-500 mt-0.5 block">
@@ -1112,8 +1121,9 @@ export default function PathfindersView({
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                 />
               </div>
+              </div>
 
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
+              <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
                 {editingPf && onDeletePathfinder ? (
                   <button
                     type="button"
@@ -1178,7 +1188,7 @@ export default function PathfindersView({
               </button>
             </div>
 
-            <div className="p-6 space-y-5 overflow-y-auto">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
               <form
                 onSubmit={handleSaveUnitSubmit}
                 className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200"
@@ -1350,19 +1360,19 @@ export default function PathfindersView({
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingUnit(null);
-                    setUnitModalOpen(false);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer"
-                >
-                  Concluir e Fechar
-                </button>
-              </div>
+            <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingUnit(null);
+                  setUnitModalOpen(false);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer shadow-sm transition"
+              >
+                Concluir e Fechar
+              </button>
             </div>
           </div>
         </div>
@@ -1413,10 +1423,23 @@ export default function PathfindersView({
                     <button
                       type="button"
                       onClick={() => handleCopyLink(inviteUrl)}
-                      className="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                        copiedLink
+                          ? 'bg-emerald-600 text-white shadow-sm scale-105'
+                          : 'bg-teal-700 hover:bg-teal-800 text-white'
+                      }`}
                     >
-                      <Copy className="w-3.5 h-3.5" />
-                      Copiar Link
+                      {copiedLink ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          ✓ Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar Link
+                        </>
+                      )}
                     </button>
                   </div>
                 )}

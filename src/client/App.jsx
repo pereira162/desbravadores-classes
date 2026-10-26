@@ -77,8 +77,14 @@ export default function App() {
     }, 4500);
   }, []);
 
-  const fetchBootstrapData = useCallback(async () => {
-    setLoadingData(true);
+  // Parâmetro de convite na URL (?invite= ou ?convite_dbv=)
+  const [activeInviteUrlParam, setActiveInviteUrlParam] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('invite') || params.get('convite_dbv') || null;
+  });
+
+  const fetchBootstrapData = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoadingData(true);
     try {
       const data = await apiRequest('/api/bootstrap');
       setRawBootstrap(data);
@@ -86,13 +92,39 @@ export default function App() {
       if (err.status === 401) {
         setStoredToken(null);
         setUser(null);
-      } else {
+      } else if (!isBackground) {
         showToast(err.message || 'Erro ao carregar dados do clube.', 'error');
       }
     } finally {
-      setLoadingData(false);
+      if (!isBackground) setLoadingData(false);
     }
   }, [showToast]);
+
+  // Polling em background a cada 45 segundos e ao focar a janela/aba
+  useEffect(() => {
+    if (!user) return;
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchBootstrapData(true);
+      }
+    }, 45000);
+
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchBootstrapData(true);
+      }
+    };
+
+    window.addEventListener('visibilitychange', onVisibilityOrFocus);
+    window.addEventListener('focus', onVisibilityOrFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      window.removeEventListener('focus', onVisibilityOrFocus);
+    };
+  }, [user, fetchBootstrapData]);
 
   // Verifica sessão salva ao iniciar
   useEffect(() => {
@@ -658,6 +690,44 @@ export default function App() {
           >
             Ir para o Site Oficial de Produção →
           </a>
+        </div>
+      )}
+
+      {/* Aviso de Link de Convite Acessado com Usuário Logado */}
+      {user && activeInviteUrlParam && (
+        <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white px-4 py-3 text-xs font-semibold flex flex-wrap items-center justify-between gap-3 border-b border-indigo-700 shadow-md no-print animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-extrabold text-indigo-200">Link de Convite Detectado: </span>
+              Você acessou um link de convite oficial, mas este navegador já está conectado como <strong>{user.name}</strong> ({user.email}).
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sair e Criar Conta do Convite
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveInviteUrlParam(null);
+                const url = new URL(window.location.href);
+                url.searchParams.delete('invite');
+                url.searchParams.delete('convite_dbv');
+                window.history.replaceState({}, '', url.toString());
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition cursor-pointer"
+            >
+              Permanecer como {user.name.split(' ')[0]}
+            </button>
+          </div>
         </div>
       )}
 
