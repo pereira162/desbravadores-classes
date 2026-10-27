@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 
 /**
  * Gera um nome de arquivo único com timestamp e código aleatório

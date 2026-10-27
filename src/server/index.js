@@ -2904,6 +2904,7 @@ app.post('/api/backups/clone-test-to-prod', requireAuth, (req, res) => {
 const DIST_DIR = path.resolve(__dirname, '../../dist');
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
+  app.use('/desbravadores-classes', express.static(DIST_DIR));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/data')) return next();
     res.sendFile(path.join(DIST_DIR, 'index.html'));
