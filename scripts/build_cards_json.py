@@ -57,7 +57,7 @@ EQUIVALENCE_GROUPS = [
     {
         "id": "EQ-CURSO-LEITURA",
         "title": "Curso de Leitura Oficial do Ano (DSA)",
-        "description": "Ler o livro oficial do ano do Curso de Leitura dos Desbravadores indicado pela DSA para a faixa etária."
+        "description": "Ler o livro oficial do ano do Curso de Leitura dos Desbravadores indicado pela DSA."
     },
     {
         "id": "EQ-CLASSE-BIBLICA",
@@ -66,18 +66,18 @@ EQUIVALENCE_GROUPS = [
     },
     {
         "id": "EQ-CAMINHADA-EXCURSIONISMO",
-        "title": "Caminhada ao Ar Livre e Excursionismo Pedestre",
-        "description": "Participar de caminhada oficial na natureza com orientação, mochila e pernoite ao ar livre."
+        "title": "Caminhada ao Ar Livre e Excursionismo Pedestre (5 a 20 km)",
+        "description": "Participar da caminhada rústica na natureza (ao percorrer a maior distância, cumprem-se todas as distâncias menores)."
     },
     {
         "id": "EQ-ACAMPAMENTO-PRATICO",
         "title": "Acampamento Prático de Fim de Semana",
-        "description": "Participar de acampamento prático de fim de semana com a unidade ou clube envolvendo montagem de barraca e vida campestre."
+        "description": "Participar do acampamento de fim de semana com a unidade ou clube envolvendo montagem de barraca, culinária e vida campestre."
     },
     {
         "id": "EQ-PROJETO-COMUNITARIO",
-        "title": "Projeto Comunitário da Igreja ou Comunidade",
-        "description": "Planejar ou participar diretamente de projeto de serviço comunitário em prol de famílias ou bairros necessitados."
+        "title": "Projeto Comunitário da Igreja ou Cidade",
+        "description": "Planejar e executar projeto comunitário oficial de auxílio à comunidade ou bairro."
     },
     {
         "id": "EQ-SERVICO-COMUNITARIO-HORAS",
@@ -87,37 +87,27 @@ EQUIVALENCE_GROUPS = [
     {
         "id": "EQ-CERIMONIAS-E-EVENTOS",
         "title": "Participação em Cerimônia Oficial do Clube",
-        "description": "Participar ativamente da organização ou execução de cerimônia de investidura ou admissão em lenço do Clube."
+        "description": "Participar ativamente da organização ou execução de cerimônia de investidura, admissão em lenço ou Dia Mundial do Desbravador."
     },
     {
-        "id": "EQ-ESP-NATUREZA",
-        "title": "Especialidade em Estudo da Natureza",
-        "description": "Completar uma especialidade oficial na área de Estudo da Natureza (animais, plantas, clima, astronomia ou ecologia)."
+        "id": "EQ-SERMAO-DA-MONTANHA",
+        "title": "Estudo das Bem-Aventuranças / Sermão da Montanha",
+        "description": "Estudar, memorizar e demonstrar conhecimento do Sermão da Montanha / Bem-Aventuranças (Mt 5)."
     },
     {
         "id": "EQ-ESP-ARTES-MANUAIS",
         "title": "Especialidade em Artes e Habilidades Manuais",
-        "description": "Completar uma especialidade oficial na área de Artes e Habilidades Manuais ou Artesanato."
+        "description": "Completar uma especialidade oficial na área de Artes e Habilidades Manuais ou Artesanato (exigida igualmente em Amigo, Companheiro e Pesquisador)."
     },
     {
-        "id": "EQ-ESP-MISSAO-HABILIDADES",
-        "title": "Especialidade em Atividades Missionárias / Habilidades",
-        "description": "Completar uma especialidade oficial em Atividades Missionárias, Agrícolas, Domésticas ou de Saúde."
+        "id": "EQ-ESP-NATUREZA-LIVRE",
+        "title": "Nova Especialidade em Estudo da Natureza (Livre Escolha)",
+        "description": "Completar uma nova especialidade oficial em Estudo da Natureza de livre escolha não realizada anteriormente (exigida em Pioneiro e Excursionista)."
     },
     {
-        "id": "EQ-ESP-VIDA-CAMPESTRE",
-        "title": "Especialidade em Vida Campestre / Acampamento",
-        "description": "Completar uma especialidade oficial na área de Atividades Campestres (Acampamento, Arte de Acampar, Fogueiras ou Pioneirias)."
-    },
-    {
-        "id": "EQ-ESP-PRIMEIROS-SOCORROS",
-        "title": "Especialidade em Primeiros Socorros e Segurança",
-        "description": "Completar uma especialidade oficial na área de Primeiros Socorros, Resgate ou Segurança Básica."
-    },
-    {
-        "id": "EQ-ESP-RECREATIVAS",
-        "title": "Especialidade em Atividades Recreativas",
-        "description": "Completar uma especialidade oficial na área de Atividades Recreativas e Esportes."
+        "id": "EQ-MOVEL-ACAMPAMENTO",
+        "title": "Construção de Móvel de Acampamento com Amarras",
+        "description": "Construir e utilizar móvel de acampamento em tamanho real com as amarras básicas e pioneiria."
     }
 ]
 
@@ -171,44 +161,22 @@ OFFICIAL_EQUIVALENCE_MAP = {
     "COMPANHEIRO_AVANCADO_AV_8": "EQ-CERIMONIAS-E-EVENTOS",
     "PESQUISADOR_AVANCADO_AV_6": "EQ-CERIMONIAS-E-EVENTOS",
 
-    # 9. EQ-ESP-NATUREZA (6)
-    "AMIGO_VII_1": "EQ-ESP-NATUREZA",
-    "COMPANHEIRO_VII_2": "EQ-ESP-NATUREZA",
-    "PESQUISADOR_VII_2": "EQ-ESP-NATUREZA",
-    "PIONEIRO_VII_2": "EQ-ESP-NATUREZA",
-    "EXCURSIONISTA_VII_2": "EQ-ESP-NATUREZA",
-    "GUIA_VII_2": "EQ-ESP-NATUREZA",
+    # 9. EQ-SERMAO-DA-MONTANHA (2)
+    "COMPANHEIRO_II_4": "EQ-SERMAO-DA-MONTANHA",
+    "PIONEIRO_II_1": "EQ-SERMAO-DA-MONTANHA",
 
     # 10. EQ-ESP-ARTES-MANUAIS (3)
     "AMIGO_IX_1": "EQ-ESP-ARTES-MANUAIS",
     "COMPANHEIRO_IX_1": "EQ-ESP-ARTES-MANUAIS",
     "PESQUISADOR_IX_1": "EQ-ESP-ARTES-MANUAIS",
 
-    # 11. EQ-ESP-MISSAO-HABILIDADES (5)
-    "AMIGO_AVANCADO_AV_9": "EQ-ESP-MISSAO-HABILIDADES",
-    "COMPANHEIRO_AVANCADO_AV_12": "EQ-ESP-MISSAO-HABILIDADES",
-    "PESQUISADOR_AVANCADO_AV_11": "EQ-ESP-MISSAO-HABILIDADES",
-    "PIONEIRO_IX_1": "EQ-ESP-MISSAO-HABILIDADES",
-    "EXCURSIONISTA_IX_1": "EQ-ESP-MISSAO-HABILIDADES",
+    # 11. EQ-ESP-NATUREZA-LIVRE (2)
+    "PIONEIRO_VII_2": "EQ-ESP-NATUREZA-LIVRE",
+    "EXCURSIONISTA_VII_2": "EQ-ESP-NATUREZA-LIVRE",
 
-    # 12. EQ-ESP-VIDA-CAMPESTRE (8)
-    "AMIGO_VIII_2": "EQ-ESP-VIDA-CAMPESTRE",
-    "AMIGO_AVANCADO_AV_5": "EQ-ESP-VIDA-CAMPESTRE",
-    "COMPANHEIRO_V_4": "EQ-ESP-VIDA-CAMPESTRE",
-    "PESQUISADOR_VIII_2": "EQ-ESP-VIDA-CAMPESTRE",
-    "PIONEIRO_AVANCADO_AV_10": "EQ-ESP-VIDA-CAMPESTRE",
-    "EXCURSIONISTA_VIII_2": "EQ-ESP-VIDA-CAMPESTRE",
-    "EXCURSIONISTA_AVANCADO_AV_11": "EQ-ESP-VIDA-CAMPESTRE",
-    "GUIA_VIII_4": "EQ-ESP-VIDA-CAMPESTRE",
-    "GUIA_AVANCADO_AV_6": "EQ-ESP-VIDA-CAMPESTRE",
-
-    # 13. EQ-ESP-PRIMEIROS-SOCORROS (2)
-    "AMIGO_V_1": "EQ-ESP-PRIMEIROS-SOCORROS",
-    "PIONEIRO_VIII_3": "EQ-ESP-PRIMEIROS-SOCORROS",
-
-    # 14. EQ-ESP-RECREATIVAS (2)
-    "PIONEIRO_AVANCADO_AV_8": "EQ-ESP-RECREATIVAS",
-    "GUIA_IX_1": "EQ-ESP-RECREATIVAS",
+    # 12. EQ-MOVEL-ACAMPAMENTO (2)
+    "PESQUISADOR_AVANCADO_AV_8": "EQ-MOVEL-ACAMPAMENTO",
+    "GUIA_VIII_3": "EQ-MOVEL-ACAMPAMENTO",
 }
 
 
