@@ -4,13 +4,20 @@
   "description": "Sistema de Gestão de Classes Oficiais DSA, Cartão Virtual e Planejamento Anual de Investidura dos Desbravadores",
   "icons": [
     {
-      "src": "/desbravadores-classes/assets/logo_amigo-CSkmGumt.png",
+      "src": "/desbravadores-classes/icons/icon-192.png",
       "type": "image/png",
-      "sizes": "192x192 512x512",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/desbravadores-classes/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
   "start_url": "/desbravadores-classes/",
+  "scope": "/desbravadores-classes/",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "display": "standalone",

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -12,11 +12,13 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronUp,
+  FileDown,
   Printer,
   Sparkles,
   RotateCcw,
 } from 'lucide-react';
 import { STATUS_CONFIG, EXECUTION_CONTEXT_LABELS } from '../constants';
+import { exportElementToPdf } from '../utils/pdfExport';
 
 export default function DemandPlanningView({
   catalog,
@@ -38,6 +40,8 @@ export default function DemandPlanningView({
   const [viewMode, setViewMode] = useState('REQUIREMENTS'); // REQUIREMENTS | EQUIVALENCE
   const [sortBy, setSortBy] = useState('MOST_PENDING'); // MOST_PENDING | CARD_ORDER
   const [expandedIds, setExpandedIds] = useState({});
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const planningRef = useRef(null);
 
   const activePathfinders = useMemo(
     () =>
@@ -47,9 +51,20 @@ export default function DemandPlanningView({
     [pathfinders, unitFilter]
   );
 
-  // Calcula a demanda real de cada um dos 212 requisitos com base nos desbravadores matriculados
+  // Requisitos administrativos que não dependem de planejamento anual (idade, membro ativo)
+  const isNonPlanningRequirement = (req) => {
+    const code = req.code;
+    const title = (req.title || '').toLowerCase();
+    if (code === 'I.1' && title.includes('idade')) return true;
+    if (code === 'I.2' && title.includes('membro ativo')) return true;
+    return false;
+  };
+
+  // Calcula a demanda real dos requisitos curriculares com base nos desbravadores matriculados
   const enrichedRequirements = useMemo(() => {
-    return (catalog.requirements || []).map((req) => {
+    return (catalog.requirements || [])
+      .filter((req) => !isNonPlanningRequirement(req))
+      .map((req) => {
       const enrolledPfs = activePathfinders.filter((pf) =>
         pf.enrollments?.some((enr) => enr.class_slug === req.class_slug)
       );
@@ -164,6 +179,7 @@ export default function DemandPlanningView({
 
     for (const r of filteredRequirements) {
       const gid = r.equivalence_group;
+      if (!gid) continue;
       if (!groupsMap[gid]) {
         groupsMap[gid] = {
           id: gid,
@@ -254,11 +270,28 @@ export default function DemandPlanningView({
 
           <button
             type="button"
-            onClick={() => window.print()}
-            className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            onClick={async () => {
+              if (!planningRef.current) return;
+              setExportingPdf(true);
+              try {
+                await exportElementToPdf(planningRef.current, {
+                  filenamePrefix: `planejamento_demanda_${viewMode.toLowerCase()}`,
+                  orientation: 'portrait',
+                  scale: 2,
+                  marginMm: 5,
+                });
+              } catch (err) {
+                console.error('Erro ao gerar PDF do planejamento:', err);
+                alert('Não foi possível gerar o PDF. Tente novamente.');
+              } finally {
+                setExportingPdf(false);
+              }
+            }}
+            disabled={exportingPdf}
+            className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            <Printer className="w-4 h-4" />
-            Imprimir Lista
+            <FileDown className="w-4 h-4" />
+            {exportingPdf ? 'Gerando PDF...' : 'Baixar PDF do Planejamento'}
           </button>
         </div>
       </div>
@@ -446,10 +479,11 @@ export default function DemandPlanningView({
       </div>
 
       {/* =====================================================================
-          MODO 1: AGRUPADO POR EQUIVALÊNCIA INTER-CLASSES
+          CONTEÚDO DO PLANEJAMENTO (CAPTURADO PARA PDF)
          ===================================================================== */}
-      {viewMode === 'EQUIVALENCE' ? (
-        <div className="space-y-4">
+      <div ref={planningRef} className="space-y-4">
+        {viewMode === 'EQUIVALENCE' ? (
+          <div className="space-y-4">
           {equivalenceGroupsData.map((group) => {
             const uniquePfs = Array.from(group.uniquePendingPathfinders.values());
             return (
@@ -776,6 +810,7 @@ export default function DemandPlanningView({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

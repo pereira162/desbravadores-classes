@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Search,
   CheckCircle2,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { STATUS_CONFIG, OFFICIAL_PDF_BY_BASE_SLUG } from '../constants';
 import { getAssetUrl } from '../api';
+import { exportElementToPdf } from '../utils/pdfExport';
+import InstructorControlSheetModal from './InstructorControlSheetModal';
 
 const BASE_CLASSES = [
   { baseSlug: 'amigo', label: 'Amigo', age: 10, color: '#0072BC' },
@@ -46,6 +48,9 @@ export default function ClassMatrixView({
   const [searchQuery, setSearchQuery] = useState('');
   const [fastClickMode, setFastClickMode] = useState(false);
   const [busyCellKey, setBusyCellKey] = useState(null);
+  const [instructorModalOpen, setInstructorModalOpen] = useState(false);
+  const [exportingMatrix, setExportingMatrix] = useState(false);
+  const matrixTableRef = useRef(null);
 
   const regularClass = useMemo(
     () =>
@@ -268,17 +273,15 @@ export default function ClassMatrixView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 no-print">
-            {pdfUrl && (
-              <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold flex items-center gap-1.5 backdrop-blur-xs transition"
-              >
-                <FileDown className="w-4 h-4" />
-                PDF Controle do Instrutor
-              </a>
-            )}
+            <button
+              type="button"
+              onClick={() => setInstructorModalOpen(true)}
+              className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-md transition cursor-pointer"
+              title="Abrir o Controle Oficial do Instrutor em 1 única folha oficial pronta para imprimir ou baixar"
+            >
+              <FileDown className="w-4 h-4" />
+              PDF Controle do Instrutor (1 Página)
+            </button>
             {regularClass.source_url && (
               <a
                 href={regularClass.source_url}
@@ -291,11 +294,29 @@ export default function ClassMatrixView({
               </a>
             )}
             <button
-              onClick={() => window.print()}
-              className="px-3 py-2 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+              type="button"
+              onClick={async () => {
+                if (!matrixTableRef.current) return;
+                setExportingMatrix(true);
+                try {
+                  await exportElementToPdf(matrixTableRef.current, {
+                    filenamePrefix: `matriz_${selectedBaseSlug}_${selectedMode}`,
+                    orientation: 'landscape',
+                    scale: 2,
+                    marginMm: 5,
+                  });
+                } catch (err) {
+                  console.error('Erro ao gerar PDF da matriz:', err);
+                  alert('Não foi possível gerar o PDF. Tente novamente.');
+                } finally {
+                  setExportingMatrix(false);
+                }
+              }}
+              disabled={exportingMatrix}
+              className="px-3 py-2 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" />
-              Imprimir Ficha
+              <FileDown className="w-4 h-4" />
+              {exportingMatrix ? 'Gerando PDF...' : 'Baixar PDF da Matriz'}
             </button>
           </div>
         </div>
@@ -415,7 +436,10 @@ export default function ClassMatrixView({
           Nenhum desbravador matriculado nesta classe para o filtro de unidade selecionado.
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div
+          ref={matrixTableRef}
+          className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+        >
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -579,7 +603,16 @@ export default function ClassMatrixView({
                                     pr?.notes ? `\nObs: ${pr.notes}` : ''
                                   }`}
                                 >
-                                  <span>{isBusy ? '...' : cfg.shortLabel}</span>
+                                  {isBusy ? (
+                                    <span>...</span>
+                                  ) : st === 'PENDENTE' ? (
+                                    <span
+                                      className="inline-block w-3.5 h-3.5 rounded-full border border-slate-300 bg-white"
+                                      title="Pendente — Espaço para visto/data"
+                                    />
+                                  ) : (
+                                    <span>{cfg.shortLabel}</span>
+                                  )}
                                   {subCount > 0 && (
                                     <span className="text-[9px] opacity-80 font-normal">
                                       {st === 'APROVADO'
@@ -601,6 +634,19 @@ export default function ClassMatrixView({
           </div>
         </div>
       )}
+
+      {/* Modal Oficial do Controle do Instrutor em 1 Página A4 */}
+      <InstructorControlSheetModal
+        isOpen={instructorModalOpen}
+        onClose={() => setInstructorModalOpen(false)}
+        initialBaseSlug={selectedBaseSlug}
+        catalog={catalog}
+        pathfinders={pathfinders}
+        units={units}
+        progressMap={progressMap}
+        classesMap={classesMap}
+        settings={settings}
+      />
     </div>
   );
 }

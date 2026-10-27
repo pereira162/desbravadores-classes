@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Users,
   UserPlus,
@@ -9,6 +9,7 @@ import {
   Clock,
   Edit3,
   Trash2,
+  FileDown,
   Printer,
   Sparkles,
   X,
@@ -30,6 +31,7 @@ import {
   EXECUTION_CONTEXT_LABELS,
 } from '../constants';
 import DateInput from './DateInput';
+import { exportElementToPdf } from '../utils/pdfExport';
 
 export default function PathfindersView({
   catalog,
@@ -46,12 +48,17 @@ export default function PathfindersView({
   onDeleteUnit,
   onInvitePathfinder,
   onOpenRequirementDetail,
+  settings,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [unitFilter, setUnitFilter] = useState('ALL');
   const [classFilter, setClassFilter] = useState('ALL');
   const [cardOnlyPending, setCardOnlyPending] = useState(false);
   const [cardSelectedClassSlug, setCardSelectedClassSlug] = useState('ALL');
+  const [compactOnePageMode, setCompactOnePageMode] = useState(false);
+  const [exportingCardPdf, setExportingCardPdf] = useState(false);
+  const cardContainerRef = useRef(null);
+  const compactCardRef = useRef(null);
 
   // Estado do Modal de Novo/Editar Desbravador
   const [pfModalOpen, setPfModalOpen] = useState(false);
@@ -701,11 +708,51 @@ export default function PathfindersView({
                       </>
                     )}
                     <button
-                      onClick={() => window.print()}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                      type="button"
+                      onClick={() => setCompactOnePageMode(!compactOnePageMode)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
+                        compactOnePageMode
+                          ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                      title="Alternar entre a ficha detalhada e o modelo simplificado de 1 página A4"
                     >
-                      <Printer className="w-3.5 h-3.5" />
-                      Imprimir Ficha Individual
+                      <Layers className="w-3.5 h-3.5" />
+                      {compactOnePageMode ? 'Ver Ficha Completa' : 'Versão Simplificada (1 Página)'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const targetEl = compactOnePageMode
+                          ? compactCardRef.current
+                          : cardContainerRef.current;
+                        if (!targetEl) return;
+                        setExportingCardPdf(true);
+                        try {
+                          await exportElementToPdf(targetEl, {
+                            filenamePrefix: `ficha_${compactOnePageMode ? 'simplificada_1_pag' : 'completa'}_${activePf.name}`,
+                            orientation: 'portrait',
+                            singlePage: compactOnePageMode,
+                            scale: 2,
+                            marginMm: compactOnePageMode ? 4 : 6,
+                          });
+                        } catch (err) {
+                          console.error('Erro ao gerar PDF da ficha:', err);
+                          alert('Não foi possível gerar o PDF da ficha. Tente novamente.');
+                        } finally {
+                          setExportingCardPdf(false);
+                        }
+                      }}
+                      disabled={exportingCardPdf}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <FileDown className="w-3.5 h-3.5" />
+                      {exportingCardPdf
+                        ? 'Gerando PDF...'
+                        : compactOnePageMode
+                        ? 'Baixar PDF (1 Página)'
+                        : 'Baixar PDF da Ficha'}
                     </button>
                   </div>
                 </div>
@@ -800,164 +847,277 @@ export default function PathfindersView({
                 </div>
               </div>
 
-              {/* Lista dos Requisitos do Cartão do Desbravador */}
-              {activePfRequirementsByClass.map((clsBlock) => (
+              {/* Visualização: Modo Compacto 1 Página OU Modo Detalhado */}
+              {compactOnePageMode ? (
                 <div
-                  key={clsBlock.slug}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+                  ref={compactCardRef}
+                  className="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm font-sans"
+                  style={{ minHeight: '1080px' }}
                 >
-                  <div
-                    className="px-5 py-3 text-white flex items-center justify-between"
-                    style={{
-                      backgroundColor: clsBlock.classInfo?.color || '#334155',
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-extrabold">
-                        {clsBlock.classInfo?.name}
-                      </span>
-                      <span className="text-xs bg-black/25 px-2 py-0.5 rounded-full font-semibold">
-                        {clsBlock.requirements.length} itens exibidos
-                      </span>
+                  {/* Cabeçalho Compacto Oficial 1 Página */}
+                  <div className="border-b-2 border-slate-900 pb-3 mb-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                        CLUBE DE DESBRAVADORES • DIVISÃO SUL-AMERICANA
+                      </div>
+                      <h1 className="text-lg font-black text-slate-950 uppercase">
+                        FICHA INDIVIDUAL DE PROGRESSO EM CLASSES (1 PÁGINA)
+                      </h1>
+                      <div className="text-xs font-bold text-slate-700">
+                        Clube: {settings?.club_name || 'Clube de Desbravadores'} • Ano: 2026
+                      </div>
                     </div>
-                    <span className="text-xs font-bold">
-                      Concluído: {clsBlock.pct}%
-                    </span>
+                    <div className="text-right text-xs">
+                      <div className="text-sm font-black text-slate-950">{activePf.name}</div>
+                      <div className="text-slate-600 font-semibold">
+                        Unidade: {activePf.unit_name || 'Sem Unidade'} • {activePf.age} anos ({formatDateBR(activePf.birth_date)})
+                      </div>
+                      <div className="text-amber-700 font-extrabold text-[11px] mt-0.5">
+                        Concluído: {activePf.pct}% ({activePf.approvedReqs}/{activePf.totalReqs} itens)
+                      </div>
+                    </div>
                   </div>
 
-                  {clsBlock.requirements.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-emerald-700 font-semibold">
-                      Parabéns! Todos os requisitos desta classe já foram aprovados!
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {clsBlock.requirements.map((req) => {
-                        const cfg =
-                          STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDENTE;
-                        const ctxBadge =
-                          EXECUTION_CONTEXT_LABELS[req.execution_context];
-                        const subCount = req.subitems?.length || 0;
-                        const attachCount = req.progress?.attachments?.length || 0;
-                        const hasSubmissionText = Boolean(req.progress?.submission_text);
-                        const hasReviewNotes = Boolean(req.progress?.review_notes);
+                  {/* Grid de Requisitos em 2 Colunas Densas */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
+                    {activePfRequirementsByClass.map((clsBlock) => (
+                      <div key={clsBlock.slug} className="border border-slate-200 rounded p-2 bg-slate-50/50">
+                        <div
+                          className="font-black text-white px-2 py-0.5 rounded text-[10px] uppercase mb-1.5 flex items-center justify-between"
+                          style={{ backgroundColor: clsBlock.classInfo?.color || '#0f172a' }}
+                        >
+                          <span>{clsBlock.classInfo?.name}</span>
+                          <span>{clsBlock.pct}%</span>
+                        </div>
 
-                        return (
-                          <div
-                            key={req.id}
-                            onClick={() =>
-                              onOpenRequirementDetail(activePf, req)
-                            }
-                            className="p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                          >
-                            <div className="space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                                  {req.code}
-                                </span>
-                                <span className="text-[11px] font-bold text-slate-500 uppercase">
-                                  {req.section}
-                                </span>
-                                {ctxBadge && (
-                                  <span
-                                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
-                                  >
-                                    {ctxBadge.label}
+                        <div className="space-y-1">
+                          {clsBlock.requirements.map((req) => {
+                            const isApproved = req.status === 'APROVADO';
+                            const isDone = req.status === 'CONCLUIDO';
+                            return (
+                              <div
+                                key={req.id}
+                                className="flex items-start justify-between gap-1.5 py-0.5 border-b border-slate-100 last:border-0 leading-tight"
+                              >
+                                <div className="min-w-0 pr-1">
+                                  <span className="font-extrabold text-slate-900 mr-1">
+                                    {req.code}
                                   </span>
-                                )}
-                                {attachCount > 0 && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
-                                    <Paperclip className="w-3 h-3" />
-                                    {attachCount} {attachCount === 1 ? 'anexo/foto' : 'anexos/fotos'}
+                                  <span className="text-slate-700 font-medium">
+                                    {req.title}
                                   </span>
-                                )}
-                                {hasSubmissionText && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex items-center gap-1">
-                                    <MessageSquare className="w-3 h-3" />
-                                    Relato enviado
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
-                                <strong className="font-bold mr-1">
-                                  {req.marker}
-                                </strong>
-                                {req.title}
-                              </p>
-                              {subCount > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pt-1">
-                                  {req.subitems.map((sub) => {
-                                    const done =
-                                      req.status === 'APROVADO' ||
-                                      Boolean(
-                                        req.progress?.completed_subitems?.[
-                                          sub.key
-                                        ]
-                                      );
-                                    return (
-                                      <span
-                                        key={sub.key}
-                                        className={`text-[10px] px-2 py-0.5 rounded border ${
-                                          done
-                                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200'
-                                        }`}
-                                      >
-                                        {sub.key}) {sub.text.slice(0, 42)}
-                                        {sub.text.length > 42 ? '...' : ''}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              {hasSubmissionText && (
-                                <p className="text-[11px] text-teal-800 bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 rounded-lg mt-1">
-                                  <strong>Como fez:</strong> &ldquo;{req.progress.submission_text}&rdquo;
-                                  {req.progress.completed_at && (
-                                    <span className="ml-1.5 text-slate-500">
-                                      (em {formatDateBR(req.progress.completed_at)})
+                                  {req.subitems?.length > 0 && (
+                                    <span className="text-[9px] text-slate-400 ml-1">
+                                      ({req.subitems.map((s) => s.key).join(',')})
                                     </span>
                                   )}
-                                </p>
-                              )}
-                              {hasReviewNotes && (
-                                <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg mt-1">
-                                  <strong>Feedback do Líder:</strong> &ldquo;{req.progress.review_notes}&rdquo;
-                                </p>
-                              )}
-                              {req.progress?.notes && (
-                                <p className="text-[11px] text-indigo-700 italic">
-                                  Obs: &ldquo;{req.progress.notes}&rdquo;
-                                </p>
-                              )}
-                            </div>
+                                </div>
+                                <div className="shrink-0 text-center w-6">
+                                  {isApproved ? (
+                                    <span className="text-emerald-700 font-black text-xs">✓</span>
+                                  ) : isDone ? (
+                                    <span className="text-teal-700 font-bold text-[9px]">F</span>
+                                  ) : (
+                                    <span
+                                      className="inline-block w-3.5 h-3.5 rounded-full border border-slate-400 bg-white align-middle"
+                                      title="Pendente"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                            <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
-                              <span
-                                className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
-                              >
-                                {cfg.label}
-                              </span>
-                              {isPathfinderUser && req.status !== 'APROVADO' && (
-                                <span className="text-[10px] font-bold text-teal-700 flex items-center gap-1">
-                                  <Camera className="w-3 h-3" />
-                                  {req.status === 'CONCLUIDO'
-                                    ? 'Editar envio / fotos'
-                                    : 'Marcar & anexar fotos'}
-                                </span>
-                              )}
-                              {req.progress?.updated_at && (
-                                <span className="text-[10px] text-slate-400">
-                                  {formatDateBR(req.progress.updated_at)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                  {/* Rodapé Oficial com Assinaturas */}
+                  <div className="mt-6 pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-700">
+                    <div className="w-56 text-center">
+                      <div className="border-b border-slate-500 mb-1 h-5"></div>
+                      <div className="font-bold">Instrutor(a) / Conselheiro(a)</div>
                     </div>
-                  )}
+                    <div className="w-56 text-center">
+                      <div className="border-b border-slate-500 mb-1 h-5"></div>
+                      <div className="font-bold">Diretor(a) do Clube</div>
+                    </div>
+                    <div className="w-48 text-center">
+                      <div className="border-b border-slate-500 mb-1 h-5"></div>
+                      <div className="font-bold">Data da Avaliação</div>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <div ref={cardContainerRef} className="space-y-4">
+                  {/* Lista dos Requisitos do Cartão do Desbravador */}
+                  {activePfRequirementsByClass.map((clsBlock) => (
+                    <div
+                      key={clsBlock.slug}
+                      className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+                    >
+                      <div
+                        className="px-5 py-3 text-white flex items-center justify-between"
+                        style={{
+                          backgroundColor: clsBlock.classInfo?.color || '#334155',
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-extrabold">
+                            {clsBlock.classInfo?.name}
+                          </span>
+                          <span className="text-xs bg-black/25 px-2 py-0.5 rounded-full font-semibold">
+                            {clsBlock.requirements.length} itens exibidos
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold">
+                          Concluído: {clsBlock.pct}%
+                        </span>
+                      </div>
+
+                      {clsBlock.requirements.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-emerald-700 font-semibold">
+                          Parabéns! Todos os requisitos desta classe já foram aprovados!
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {clsBlock.requirements.map((req) => {
+                            const cfg =
+                              STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDENTE;
+                            const ctxBadge =
+                              EXECUTION_CONTEXT_LABELS[req.execution_context];
+                            const subCount = req.subitems?.length || 0;
+                            const attachCount = req.progress?.attachments?.length || 0;
+                            const hasSubmissionText = Boolean(req.progress?.submission_text);
+                            const hasReviewNotes = Boolean(req.progress?.review_notes);
+
+                            return (
+                              <div
+                                key={req.id}
+                                onClick={() =>
+                                  onOpenRequirementDetail(activePf, req)
+                                }
+                                className="p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                                      {req.code}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-500 uppercase">
+                                      {req.section}
+                                    </span>
+                                    {ctxBadge && (
+                                      <span
+                                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
+                                      >
+                                        {ctxBadge.label}
+                                      </span>
+                                    )}
+                                    {attachCount > 0 && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
+                                        <Paperclip className="w-3 h-3" />
+                                        {attachCount} {attachCount === 1 ? 'anexo/foto' : 'anexos/fotos'}
+                                      </span>
+                                    )}
+                                    {hasSubmissionText && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex items-center gap-1">
+                                        <MessageSquare className="w-3 h-3" />
+                                        Relato enviado
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
+                                    <strong className="font-bold mr-1">
+                                      {req.marker}
+                                    </strong>
+                                    {req.title}
+                                  </p>
+                                  {subCount > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                      {req.subitems.map((sub) => {
+                                        const done =
+                                          req.status === 'APROVADO' ||
+                                          Boolean(
+                                            req.progress?.completed_subitems?.[
+                                              sub.key
+                                            ]
+                                          );
+                                        return (
+                                          <span
+                                            key={sub.key}
+                                            className={`text-[10px] px-2 py-0.5 rounded border ${
+                                              done
+                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
+                                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                                            }`}
+                                          >
+                                            {sub.key}) {sub.text}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  {hasSubmissionText && (
+                                    <p className="text-[11px] text-teal-800 bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 rounded-lg mt-1">
+                                      <strong>Como fez:</strong> &ldquo;{req.progress.submission_text}&rdquo;
+                                      {req.progress.completed_at && (
+                                        <span className="ml-1.5 text-slate-500">
+                                          (em {formatDateBR(req.progress.completed_at)})
+                                        </span>
+                                      )}
+                                    </p>
+                                  )}
+                                  {hasReviewNotes && (
+                                    <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg mt-1">
+                                      <strong>Feedback do Líder:</strong> &ldquo;{req.progress.review_notes}&rdquo;
+                                    </p>
+                                  )}
+                                  {req.progress?.notes && (
+                                    <p className="text-[11px] text-indigo-700 italic">
+                                      Obs: &ldquo;{req.progress.notes}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
+                                  {req.status === 'PENDENTE' ? (
+                                    <span
+                                      className="inline-flex items-center justify-center w-6 h-6 rounded-full border-2 border-slate-300 bg-white"
+                                      title="Pendente — Espaço para visto ou data"
+                                    >
+                                      <span className="w-2 h-2 rounded-full border border-dashed border-slate-300" />
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
+                                    >
+                                      {cfg.label}
+                                    </span>
+                                  )}
+                                  {isPathfinderUser && req.status !== 'APROVADO' && (
+                                    <span className="text-[10px] font-bold text-teal-700 flex items-center gap-1">
+                                      <Camera className="w-3 h-3" />
+                                      {req.status === 'CONCLUIDO'
+                                        ? 'Editar envio / fotos'
+                                        : 'Marcar & anexar fotos'}
+                                    </span>
+                                  )}
+                                  {req.progress?.updated_at && (
+                                    <span className="text-[10px] text-slate-400">
+                                      {formatDateBR(req.progress.updated_at)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

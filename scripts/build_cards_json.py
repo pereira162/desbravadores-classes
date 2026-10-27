@@ -51,125 +51,96 @@ CONTEXT_TAGS_CATALOG = [
 EQUIVALENCE_GROUPS = [
     {
         "id": "EQ-MEMBRO-ATIVO",
-        "title": "Frequência e Participação Ativa no Clube",
-        "description": "Acompanhamento de presença e participação regular nas atividades anuais do Clube."
-    },
-    {
-        "id": "EQ-CLASSE-BIBLICA",
-        "title": "Participação e Organização da Classe Bíblica",
-        "description": "Participação semanal na Classe Bíblica do Clube (10 a 12 anos) e apoio na organização."
-    },
-    {
-        "id": "EQ-IDEAIS-MEMORIZACAO",
-        "title": "Ideais dos Desbravadores e JA (Voto, Lei, Alvo, Lema, Objetivo, Hino)",
-        "description": "Estudo, memorização e explicação dos ideais em reuniões regulares ou cantinho da unidade."
+        "title": "Membro Ativo e Frequência no Clube",
+        "description": "Ser membro ativo e regular do Clube de Desbravadores durante o ano de atividades."
     },
     {
         "id": "EQ-CURSO-LEITURA",
-        "title": "Curso de Leitura Anual dos Desbravadores",
-        "description": "Leitura do livro oficial do ano indicado pela DSA e entrega do resumo/parágrafos."
+        "title": "Curso de Leitura Oficial do Ano (DSA)",
+        "description": "Ler o livro oficial do ano do Curso de Leitura dos Desbravadores indicado pela DSA para a faixa etária."
     },
     {
-        "id": "EQ-LIVRO-ESPECIFICO",
-        "title": "Leitura do Livro Específico da Classe",
-        "description": "Livros fixos de cada cartão (Vaso de Barro, Um Simples Lanche, Além da Magia, Expedição Galápagos, O Fim do Começo, O Livro Amargo, O Maior Discurso de Cristo)."
-    },
-    {
-        "id": "EQ-LEITURA-BIBLICA",
-        "title": "Plano de Leitura Bíblica Anual (Ano Bíblico Juvenil/Jovem)",
-        "description": "Acompanhamento contínuo dos capítulos bíblicos designados para cada classe."
-    },
-    {
-        "id": "EQ-MEMORIZACAO-BIBLICA",
-        "title": "Conhecimentos e Versos Bíblicos de Memorização",
-        "description": "Memorização de listas bíblicas (Criação, Pragas, Tribos, Livros, Mandamentos, Levítico 11, Bem-Aventuranças, Apóstolos, Fruto do Espírito, Mensagens Angélicas) e versos chave."
-    },
-    {
-        "id": "EQ-PROJETO-COMUNITARIO",
-        "title": "Ação Social e Projetos Comunitários",
-        "description": "Atividades práticas de auxílio ao próximo, arrecadação de alimentos, visitas a enfermos e projetos ecológicos/comunitários."
-    },
-    {
-        "id": "EQ-MISSAO-EVANGELISMO",
-        "title": "Atividades Missionárias e Convite de Amigos",
-        "description": "Levar amigos não adventistas ao Clube/Escola Sabatina/Pequeno Grupo e participar de projetos missionários da igreja."
-    },
-    {
-        "id": "EQ-CIVISMO-BANDEIRAS",
-        "title": "Civismo, Hino Nacional, Bandeiras e Ordem Unida",
-        "description": "Estudo do Hino Nacional, Bandeira Nacional, Bandeira dos Desbravadores, Bandeirim de Unidade e Especialidade de Ordem Unida."
-    },
-    {
-        "id": "EQ-TEMPERANCA-SAUDE",
-        "title": "Saúde, Temperança, Prevenção às Drogas e Exercício Físico",
-        "description": "Debates, compromissos de abstinência (fumo/álcool), 8 remédios naturais, dieta saudável e Especialidade de Temperança."
+        "id": "EQ-CLASSE-BIBLICA",
+        "title": "Participação na Classe Bíblica do Clube",
+        "description": "Participar ativamente das reuniões da Classe Bíblica do Clube durante o período anual."
     },
     {
         "id": "EQ-CAMINHADA-EXCURSIONISMO",
-        "title": "Caminhadas e Excursionismo Pedestre (5km, 6km, 10km, 20km)",
-        "description": "Saídas de campo para cumprir metas de caminhada de Amigo (5km), Companheiro Av. (6km), Pesquisador Av. (10km), Pioneiro Av. (10km) e Excursionista (20km com pernoite)."
+        "title": "Caminhada ao Ar Livre e Excursionismo Pedestre",
+        "description": "Participar de caminhada oficial na natureza com orientação, mochila e pernoite ao ar livre."
     },
     {
         "id": "EQ-ACAMPAMENTO-PRATICO",
-        "title": "Acampamento de Fim de Semana, Barracas e Abrigos",
-        "description": "Acampamento prático envolvendo planejamento, montagem de barraca, arrumação de mochila, abrigos e relatórios."
+        "title": "Acampamento Prático de Fim de Semana",
+        "description": "Participar de acampamento prático de fim de semana com a unidade ou clube envolvendo montagem de barraca e vida campestre."
     },
     {
-        "id": "EQ-FOGUEIRA-COZINHA",
-        "title": "Fogueiras, Fogo Refletor e Cozinha ao Ar Livre",
-        "description": "Acendimento de fogueiras (materiais naturais, dia de chuva, fogo refletor), cardápio vegetariano e preparo de refeições no acampamento."
+        "id": "EQ-PROJETO-COMUNITARIO",
+        "title": "Projeto Comunitário da Igreja ou Comunidade",
+        "description": "Planejar ou participar diretamente de projeto de serviço comunitário em prol de famílias ou bairros necessitados."
     },
     {
-        "id": "EQ-NOS-AMARRAS-PIONEIRIA",
-        "title": "Nós, Amarras, Móveis de Acampamento e Portais",
-        "description": "Instrução prática de nós básicos e avançados, quadro de 15 nós, 4 amarras básicas, construção de móveis campestres e portais."
+        "id": "EQ-SERVICO-COMUNITARIO-HORAS",
+        "title": "Dedicação de 2 Horas em Serviço ao Próximo",
+        "description": "Dedicar 2 horas prestando socorro, alimentos ou apoio a pessoas doentes ou carentes."
     },
     {
-        "id": "EQ-ORIENTACAO-PISTAS-CODIGOS",
-        "title": "Orientação (Rosa dos Ventos, Bússola, GPS), Pistas e Códigos (Semáforo/Morse/Libras/Braille)",
-        "description": "Atividades práticas de orientação espacial, sinais de pista e comunicação por códigos."
-    },
-    {
-        "id": "EQ-FERRAMENTAS-CORTE",
-        "title": "Segurança e Uso de Faca, Facão e Machadinha",
-        "description": "Instrução teórica e prática das regras de segurança e manuseio de ferramentas de corte."
-    },
-    {
-        "id": "EQ-IDENTIFICACAO-NATUREZA",
-        "title": "Identificação em Campo (Flores, Insetos, Aves, Árvores, Pegadas, Estrelas, Plantas)",
-        "description": "Observação da natureza, moldes de pegadas em gesso, observação noturna de Órion/Centauro e coleções fotográficas."
-    },
-    {
-        "id": "EQ-CERIMONIAS-E-LIDERANCA-IGREJA",
-        "title": "Cerimônias do Clube, Meditações e Departamentos da Igreja",
-        "description": "Direção de meditações, abertura de reunião, apoio em Investidura/Admissão em Lenço/Dia Mundial, organograma da igreja e diaconato."
-    },
-    {
-        "id": "EQ-ESP-ACAMPAMENTO-ARTE",
-        "title": "Especialidades de Acampamento e Arte Campestre",
-        "description": "Acampamento I, II, III, Arte de Acampar, Excursionismo Pedestre com Mochila, Pioneirias, Fogueiras e Cozinha ao Ar Livre, Vida Silvestre e Liderança Campestre."
-    },
-    {
-        "id": "EQ-ESP-NATUREZA-ECOLOGIA",
-        "title": "Especialidades de Estudo da Natureza",
-        "description": "Especialidades de animais, plantas, astronomia, climatologia, ecologia e conservação ambiental."
-    },
-    {
-        "id": "EQ-ESP-ARTES-MANUAIS",
-        "title": "Especialidades de Artes e Habilidades Manuais",
-        "description": "Requisito presente em Amigo, Companheiro e Pesquisador na seção Estilo de Vida."
-    },
-    {
-        "id": "EQ-ESP-ESTILO-VIDA-DIVERSAS",
-        "title": "Especialidades Eletivas de Estilo de Vida (Missão, Agrícola, Saúde, Doméstica, Profissional, Recreativa)",
-        "description": "Especialidades de livre escolha dentro das áreas exigidas pelas classes regulares e avançadas."
-    },
-    {
-        "id": "EQ-ESP-SOCORROS-RESGATE-SEGURANCA",
-        "title": "Especialidades de Primeiros Socorros, Resgate e Segurança/Natação",
-        "description": "Primeiros Socorros Básico, Resgate Básico, Natação Principiante I e II, Segurança Básica na Água e Cultura Física."
+        "id": "EQ-CERIMONIAS-E-EVENTOS",
+        "title": "Participação em Cerimônia Oficial do Clube",
+        "description": "Participar ativamente da organização ou execução de cerimônia de investidura ou admissão em lenço do Clube."
     }
 ]
+
+
+OFFICIAL_EQUIVALENCE_MAP = {
+    # 1. EQ-MEMBRO-ATIVO (6)
+    "AMIGO_I_2": "EQ-MEMBRO-ATIVO",
+    "COMPANHEIRO_I_2": "EQ-MEMBRO-ATIVO",
+    "PESQUISADOR_I_2": "EQ-MEMBRO-ATIVO",
+    "PIONEIRO_I_2": "EQ-MEMBRO-ATIVO",
+    "EXCURSIONISTA_I_2": "EQ-MEMBRO-ATIVO",
+    "GUIA_I_2": "EQ-MEMBRO-ATIVO",
+
+    # 2. EQ-CURSO-LEITURA (6)
+    "AMIGO_I_4": "EQ-CURSO-LEITURA",
+    "COMPANHEIRO_I_4": "EQ-CURSO-LEITURA",
+    "PESQUISADOR_I_4": "EQ-CURSO-LEITURA",
+    "PIONEIRO_I_4": "EQ-CURSO-LEITURA",
+    "EXCURSIONISTA_I_4": "EQ-CURSO-LEITURA",
+    "GUIA_I_4": "EQ-CURSO-LEITURA",
+
+    # 3. EQ-CLASSE-BIBLICA (3)
+    "AMIGO_I_6": "EQ-CLASSE-BIBLICA",
+    "COMPANHEIRO_I_6": "EQ-CLASSE-BIBLICA",
+    "PESQUISADOR_I_6": "EQ-CLASSE-BIBLICA",
+
+    # 4. EQ-CAMINHADA-EXCURSIONISMO (5)
+    "AMIGO_VI_1": "EQ-CAMINHADA-EXCURSIONISMO",
+    "COMPANHEIRO_AVANCADO_AV_5": "EQ-CAMINHADA-EXCURSIONISMO",
+    "PESQUISADOR_AVANCADO_AV_5": "EQ-CAMINHADA-EXCURSIONISMO",
+    "PIONEIRO_AVANCADO_AV_3": "EQ-CAMINHADA-EXCURSIONISMO",
+    "EXCURSIONISTA_VIII_1": "EQ-CAMINHADA-EXCURSIONISMO",
+
+    # 5. EQ-ACAMPAMENTO-PRATICO (4)
+    "COMPANHEIRO_VIII_2": "EQ-ACAMPAMENTO-PRATICO",
+    "PESQUISADOR_VIII_1": "EQ-ACAMPAMENTO-PRATICO",
+    "PIONEIRO_VIII_2": "EQ-ACAMPAMENTO-PRATICO",
+    "GUIA_VIII_1": "EQ-ACAMPAMENTO-PRATICO",
+
+    # 6. EQ-PROJETO-COMUNITARIO (4)
+    "COMPANHEIRO_III_2": "EQ-PROJETO-COMUNITARIO",
+    "PESQUISADOR_III_1": "EQ-PROJETO-COMUNITARIO",
+    "PIONEIRO_III_2": "EQ-PROJETO-COMUNITARIO",
+    "EXCURSIONISTA_III_2": "EQ-PROJETO-COMUNITARIO",
+
+    # 7. EQ-SERVICO-COMUNITARIO-HORAS (2)
+    "AMIGO_III_1": "EQ-SERVICO-COMUNITARIO-HORAS",
+    "COMPANHEIRO_III_1": "EQ-SERVICO-COMUNITARIO-HORAS",
+
+    # 8. EQ-CERIMONIAS-E-EVENTOS (2)
+    "COMPANHEIRO_AVANCADO_AV_8": "EQ-CERIMONIAS-E-EVENTOS",
+    "PESQUISADOR_AVANCADO_AV_6": "EQ-CERIMONIAS-E-EVENTOS",
+}
 
 
 def req(
@@ -189,8 +160,11 @@ def req(
 ):
     prefix = class_slug.upper().replace("-", "_")
     clean_code = code.replace(".", "_")
+    req_id = f"{prefix}_{clean_code}"
+    # Auditoria DSA: aplica somente os 8 grupos legítimos, desfazendo unificações espúrias
+    valid_group = OFFICIAL_EQUIVALENCE_MAP.get(req_id, "")
     return {
-        "id": f"{prefix}_{clean_code}",
+        "id": req_id,
         "class_slug": class_slug,
         "class_type": class_type,
         "section_code": section_code,
@@ -201,7 +175,7 @@ def req(
         "category": category,
         "execution_context": execution_context,
         "tags": tags,
-        "equivalence_group": equivalence_group,
+        "equivalence_group": valid_group,
         "selection_rule": selection_rule,
         "sub_items": sub_items or []
     }

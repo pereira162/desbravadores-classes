@@ -48,8 +48,15 @@ function createTransporter(clubSettings = {}) {
   return { transporter, cfg };
 }
 
-function buildHtmlTemplate({ clubName, badge, title, bodyHtml, ctaLabel, ctaUrl, codeBox, footerNote }) {
+function buildHtmlTemplate({ clubName, badge, title, bodyHtml, ctaLabel, ctaUrl, codeBox, footerNote, preheader }) {
   return `
+  ${
+    preheader
+      ? `<div style="display:none;font-size:1px;color:#f1f5f9;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+          ${preheader} &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+        </div>`
+      : ''
+  }
   <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 32px 16px; color: #0f172a;">
     <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);">
       <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px 28px; color: #ffffff;">
@@ -71,11 +78,11 @@ function buildHtmlTemplate({ clubName, badge, title, bodyHtml, ctaLabel, ctaUrl,
 
         ${
           codeBox
-            ? `<div style="margin: 22px 0; padding: 16px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; text-align: center;">
-                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px;">
-                  Código de Segurança
+            ? `<div style="margin: 22px 0; padding: 18px; background: #f8fafc; border: 2px dashed #94a3b8; border-radius: 12px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #475569; margin-bottom: 6px; letter-spacing: 0.05em;">
+                  Seu Código de Confirmação
                 </div>
-                <div style="font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #0f172a; font-family: monospace;">
+                <div style="font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #0f172a; font-family: monospace;">
                   ${codeBox}
                 </div>
               </div>`
@@ -97,7 +104,7 @@ function buildHtmlTemplate({ clubName, badge, title, bodyHtml, ctaLabel, ctaUrl,
       </div>
 
       <div style="background: #f8fafc; padding: 16px 28px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
-        ${footerNote || 'E-mail automático enviado pelo Sistema de Gestão de Classes do Clube de Desbravadores.'}
+        ${footerNote || 'E-mail automático oficial do Sistema de Classes do Clube de Desbravadores.'}
       </div>
     </div>
   </div>`;
@@ -113,13 +120,17 @@ async function sendVerificationEmail({ clubSettings, toEmail, toName, verificati
   }
 
   const verifyUrl = `${cfg.frontendUrl}/?verify_email=${encodeURIComponent(toEmail)}&code=${encodeURIComponent(verificationCode)}`;
+  const preheaderText = `Seu código de confirmação é ${verificationCode}. Use-o para confirmar sua conta no clube.`;
+  const plainText = `Olá, ${toName}!\n\nSeu código de confirmação no ${clubSettings.club_name || 'Clube de Desbravadores'} é:\n\n👉  ${verificationCode}  👈\n\nVocê também pode confirmar com 1 clique acessando:\n${verifyUrl}\n\n(E-mail automático enviado pelo Sistema de Classes dos Desbravadores)`;
+
   const html = buildHtmlTemplate({
     clubName: clubSettings.club_name,
     badge: 'Confirmação de Conta Oficial',
     title: `Olá, ${toName}! Confirme seu e-mail`,
+    preheader: preheaderText,
     bodyHtml: `
       <p>Sua conta de liderança no <strong>${clubSettings.club_name || 'Clube de Desbravadores'}</strong> foi iniciada.</p>
-      <p>Utilize o código de 6 dígitos abaixo na tela do sistema ou clique no botão para confirmar seu endereço de e-mail:</p>
+      <p>Utilize o código de 6 dígitos abaixo diretamente na tela do sistema ou clique no botão para confirmar:</p>
     `,
     codeBox: verificationCode,
     ctaLabel: 'Confirmar Meu E-mail Agora',
@@ -129,8 +140,15 @@ async function sendVerificationEmail({ clubSettings, toEmail, toName, verificati
   await transporter.sendMail({
     from: `"${cfg.fromName}" <${cfg.user}>`,
     to: toEmail,
-    subject: `[${clubSettings.club_name || 'Desbravadores'}] Código de confirmação: ${verificationCode}`,
+    replyTo: cfg.user,
+    subject: `${verificationCode} é o seu código de confirmação — ${clubSettings.club_name || 'Desbravadores'}`,
+    text: plainText,
     html,
+    headers: {
+      'X-Mailer': 'SGC Desbravadores Classes/1.0',
+      'X-Priority': '1',
+      'Importance': 'high',
+    },
   });
 
   return { sent: true };
@@ -156,10 +174,14 @@ async function sendLeaderInviteEmail({
     };
   }
 
+  const preheaderText = `Você recebeu um convite oficial para a liderança do ${clubSettings.club_name || 'Clube de Desbravadores'}. Ative seu acesso agora.`;
+  const plainText = `Olá, ${toName}!\n\n${invitedByName} cadastrou você na liderança do ${clubSettings.club_name || 'Clube de Desbravadores'}.\n\nFunção: ${roleLabel}${scopeDescription ? `\nEscopo: ${scopeDescription}` : ''}\nE-mail de login: ${toEmail}\n\nPara aceitar o convite e criar sua senha, acesse o link:\n${inviteUrl}\n\n(E-mail automático enviado pelo Sistema de Classes dos Desbravadores)`;
+
   const html = buildHtmlTemplate({
     clubName: clubSettings.club_name,
     badge: 'Convite Oficial da Diretoria',
     title: `Você foi convidado(a) para a liderança do Clube!`,
+    preheader: preheaderText,
     bodyHtml: `
       <p>Olá, <strong>${toName}</strong>!</p>
       <p><strong>${invitedByName}</strong> cadastrou você no sistema de organização dos cartões de classes do <strong>${clubSettings.club_name}</strong>.</p>
@@ -177,8 +199,13 @@ async function sendLeaderInviteEmail({
   await transporter.sendMail({
     from: `"${cfg.fromName}" <${cfg.user}>`,
     to: toEmail,
+    replyTo: cfg.user,
     subject: `Convite de Liderança — ${clubSettings.club_name || 'Clube de Desbravadores'}`,
+    text: plainText,
     html,
+    headers: {
+      'X-Mailer': 'SGC Desbravadores Classes/1.0',
+    },
   });
 
   return { sent: true, inviteUrl };
@@ -196,10 +223,14 @@ async function sendPasswordResetEmail({ clubSettings, toEmail, toName, resetCode
     };
   }
 
+  const preheaderText = `Seu código de redefinição de senha é ${resetCode}. Válido por 30 minutos.`;
+  const plainText = `Olá, ${toName}!\n\nRecebemos uma solicitação de redefinição de senha para sua conta (${toEmail}) no ${clubSettings.club_name || 'Clube de Desbravadores'}.\n\nSeu código de verificação é:\n\n👉  ${resetCode}  👈\n\nOu redefina diretamente pelo link:\n${resetUrl}\n\nSe você não solicitou esta redefinição, desconsidere este e-mail.\n\n(E-mail automático enviado pelo Sistema de Classes dos Desbravadores)`;
+
   const html = buildHtmlTemplate({
     clubName: clubSettings.club_name,
     badge: 'Recuperação de Senha',
     title: `Redefinição de senha solicitada`,
+    preheader: preheaderText,
     bodyHtml: `
       <p>Olá, <strong>${toName}</strong>!</p>
       <p>Recebemos uma solicitação para redefinir a senha da sua conta (<strong>${toEmail}</strong>).</p>
@@ -213,8 +244,15 @@ async function sendPasswordResetEmail({ clubSettings, toEmail, toName, resetCode
   await transporter.sendMail({
     from: `"${cfg.fromName}" <${cfg.user}>`,
     to: toEmail,
-    subject: `[Recuperação de Senha] Código: ${resetCode} — ${clubSettings.club_name || 'Desbravadores'}`,
+    replyTo: cfg.user,
+    subject: `${resetCode} é o seu código de recuperação de senha — ${clubSettings.club_name || 'Desbravadores'}`,
+    text: plainText,
     html,
+    headers: {
+      'X-Mailer': 'SGC Desbravadores Classes/1.0',
+      'X-Priority': '1',
+      'Importance': 'high',
+    },
   });
 
   return { sent: true, resetUrl };
@@ -228,10 +266,14 @@ async function sendTestSmtpEmail({ clubSettings, toEmail }) {
 
   await transporter.verify();
 
+  const preheaderText = `Teste de conexão SMTP concluído com sucesso para o ${clubSettings.club_name || 'Clube de Desbravadores'}.`;
+  const plainText = `Parabéns! O servidor do ${clubSettings.club_name || 'Clube de Desbravadores'} está conectado ao SMTP (${cfg.user}) e pronto para enviar convites, códigos de confirmação e redefinição de senha.\n\nAcesse: ${cfg.frontendUrl}`;
+
   const html = buildHtmlTemplate({
     clubName: clubSettings.club_name,
     badge: 'Teste de Conexão SMTP',
     title: 'Envio de e-mail configurado com sucesso!',
+    preheader: preheaderText,
     bodyHtml: `
       <p>Parabéns! O servidor do <strong>${clubSettings.club_name}</strong> está conectado ao SMTP (<strong>${cfg.user}</strong>) e pronto para enviar:</p>
       <ul>
@@ -247,8 +289,13 @@ async function sendTestSmtpEmail({ clubSettings, toEmail }) {
   await transporter.sendMail({
     from: `"${cfg.fromName}" <${cfg.user}>`,
     to: toEmail,
+    replyTo: cfg.user,
     subject: `✓ Teste de E-mail Concluído — ${clubSettings.club_name}`,
+    text: plainText,
     html,
+    headers: {
+      'X-Mailer': 'SGC Desbravadores Classes/1.0',
+    },
   });
 
   return { sent: true };
@@ -298,10 +345,14 @@ async function sendPathfinderInviteEmail({
     };
   }
 
+  const preheaderText = `Seu Cartão Virtual de Classes está pronto no ${clubSettings.club_name || 'Clube de Desbravadores'}. Ative seu acesso agora.`;
+  const plainText = `Olá, ${toName}! Maranata!\n\nA diretoria do ${clubSettings.club_name || 'Clube de Desbravadores'} (${invitedByName}) liberou o seu acesso individual ao Cartão Virtual de Classes.\n\n${unitName ? `Unidade: ${unitName}\n` : ''}${classesList ? `Classe(s): ${classesList}\n` : ''}\nCom sua conta você acompanha seu progresso, anexa fotos e cumpre seus requisitos!\n\nAcesse o link abaixo para criar sua conta:\n${inviteUrl}\n\n(E-mail automático enviado pelo Sistema de Classes dos Desbravadores)`;
+
   const html = buildHtmlTemplate({
     clubName: clubSettings.club_name,
     badge: 'Cartão Virtual do Desbravador',
     title: `Seu Cartão de Classes está pronto!`,
+    preheader: preheaderText,
     bodyHtml: `
       <p>Olá, <strong>${toName}</strong>! Maranata!</p>
       <p>A diretoria do <strong>${clubSettings.club_name || 'Clube de Desbravadores'}</strong> (${invitedByName}) liberou o seu acesso individual ao <strong>Cartão Virtual de Classes</strong>.</p>
@@ -319,8 +370,13 @@ async function sendPathfinderInviteEmail({
   await transporter.sendMail({
     from: `"${cfg.fromName}" <${cfg.user}>`,
     to: toEmail,
+    replyTo: cfg.user,
     subject: `Convite do Desbravador: Acesse seu Cartão de Classes — ${clubSettings.club_name || 'Desbravadores'}`,
+    text: plainText,
     html,
+    headers: {
+      'X-Mailer': 'SGC Desbravadores Classes/1.0',
+    },
   });
 
   return { sent: true, inviteUrl };
