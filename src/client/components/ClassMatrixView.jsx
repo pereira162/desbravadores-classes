@@ -537,10 +537,12 @@ export default function ClassMatrixView({
                                   {req.title}
                                 </div>
                                 {subCount > 0 && (
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                      {subCount} subitens ({req.subitems.map((s) => s.key).join(', ')})
-                                    </span>
+                                  <div className="mt-1 space-y-0.5 text-[10px] text-slate-600 font-normal">
+                                    {req.subitems.map((s) => (
+                                      <div key={s.key} className="leading-snug">
+                                        <strong className="font-bold text-slate-700">{s.key})</strong> {s.text}
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                               </div>
@@ -608,10 +610,10 @@ export default function ClassMatrixView({
                                   {isBusy ? (
                                     <span>...</span>
                                   ) : st === 'PENDENTE' ? (
-                                    <span
-                                      className="inline-block w-3.5 h-3.5 rounded-full border border-slate-300 bg-white"
-                                      title="Pendente — Espaço para visto/data"
-                                    />
+                                    <>
+                                      <span className="print-hidden">{cfg.shortLabel}</span>
+                                      <span className="hidden print-block text-transparent select-none">&nbsp;</span>
+                                    </>
                                   ) : (
                                     <span>{cfg.shortLabel}</span>
                                   )}

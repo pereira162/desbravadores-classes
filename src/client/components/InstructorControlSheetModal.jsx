@@ -191,8 +191,8 @@ export default function InstructorControlSheetModal({
         <div
           ref={sheetRef}
           id="instructor-control-sheet"
-          className="bg-white text-slate-950 p-4 font-sans text-xs select-none"
-          style={{ width: '820px', minHeight: '1120px', margin: '0 auto' }}
+          className="bg-white text-slate-950 p-3 font-sans text-xs select-none"
+          style={{ width: '920px', minHeight: '1120px', margin: '0 auto' }}
         >
           {/* Cabeçalho Oficial do Clube e da Classe */}
           <div className="border-b-2 border-slate-900 pb-3 mb-2 flex items-center justify-between gap-4">
@@ -261,18 +261,18 @@ export default function InstructorControlSheetModal({
           <table className="w-full border-collapse border border-slate-400 text-[10px]">
             <thead>
               <tr className="bg-slate-200 border-b border-slate-400 text-slate-900">
-                <th className="border border-slate-400 px-1 py-1 text-center w-10 font-extrabold">
+                <th className="border border-slate-400 px-1 py-1 text-center w-9 font-extrabold">
                   CÓD
                 </th>
-                <th className="border border-slate-400 px-2 py-1 text-left font-extrabold w-[340px]">
+                <th className="border border-slate-400 px-2 py-1 text-left font-extrabold">
                   REQUISITOS OFICIAIS DA CLASSE
                 </th>
                 {columnsData.map((pf, idx) => (
                   <th
                     key={idx}
-                    className="border border-slate-400 px-1 py-1 text-center w-12 font-extrabold align-bottom bg-slate-100"
+                    className="border border-slate-400 px-0.5 py-1 text-center w-7 min-w-[28px] max-w-[28px] font-extrabold align-bottom bg-slate-100"
                   >
-                    <div className="writing-mode-vertical transform -rotate-180 h-24 mx-auto flex items-center justify-end text-[10px] font-bold text-slate-800">
+                    <div className="writing-mode-vertical transform -rotate-180 h-24 mx-auto flex items-center justify-end text-[9.5px] font-bold text-slate-800">
                       {pf ? pf.name.split(' ').slice(0, 2).join(' ') : `Desbravador ${idx + 1}`}
                     </div>
                   </th>
@@ -303,25 +303,29 @@ export default function InstructorControlSheetModal({
                         </td>
 
                         {/* Texto do Requisito */}
-                        <td className="border border-slate-400 px-1.5 py-0.5 align-middle leading-tight">
+                        <td className="border border-slate-400 px-2 py-0.5 align-middle leading-snug">
                           <span className="font-semibold text-slate-900">{req.title}</span>
                           {subCount > 0 && (
-                            <span className="text-[9px] text-slate-500 ml-1">
-                              ({req.subitems.map((s) => s.key).join(', ')})
-                            </span>
+                            <div className="mt-0.5 text-[8.5px] text-slate-600 font-normal leading-tight">
+                              {req.subitems.map((s) => (
+                                <span key={s.key} className="mr-2 inline-block">
+                                  <strong className="font-bold text-slate-700">{s.key})</strong> {s.text}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </td>
 
                         {/* Células de cada Desbravador */}
                         {columnsData.map((pf, colIdx) => {
                           if (!pf) {
-                            // Espaço vazio para preenchimento manual do instrutor
+                            // Espaço vazio limpo para preenchimento manual do instrutor
                             return (
                               <td
                                 key={colIdx}
-                                className="border border-slate-400 p-0.5 text-center align-middle"
+                                className="border border-slate-400 p-0.5 text-center align-middle w-7"
                               >
-                                <span className="inline-block w-3.5 h-3.5 rounded-full border border-slate-400 bg-white" />
+                                <span className="inline-block w-full text-center text-transparent select-none">&nbsp;</span>
                               </td>
                             );
                           }
@@ -332,7 +336,7 @@ export default function InstructorControlSheetModal({
                           return (
                             <td
                               key={colIdx}
-                              className="border border-slate-400 p-0.5 text-center align-middle"
+                              className="border border-slate-400 p-0.5 text-center align-middle w-7"
                             >
                               {st === 'APROVADO' ? (
                                 <span className="text-emerald-700 font-black text-[10px]">
@@ -347,11 +351,8 @@ export default function InstructorControlSheetModal({
                                   Andam.
                                 </span>
                               ) : (
-                                /* Círculo Vazio para o instrutor preencher à mão ao imprimir */
-                                <span
-                                  className="inline-block w-3.5 h-3.5 rounded-full border border-slate-400 bg-white"
-                                  title="Pendente"
-                                />
+                                /* Espaço em branco limpo para o instrutor preencher à mão ao imprimir */
+                                <span className="inline-block w-full text-center text-transparent select-none">&nbsp;</span>
                               )}
                             </td>
                           );

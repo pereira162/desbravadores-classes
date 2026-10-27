@@ -88,6 +88,36 @@ EQUIVALENCE_GROUPS = [
         "id": "EQ-CERIMONIAS-E-EVENTOS",
         "title": "Participação em Cerimônia Oficial do Clube",
         "description": "Participar ativamente da organização ou execução de cerimônia de investidura ou admissão em lenço do Clube."
+    },
+    {
+        "id": "EQ-ESP-NATUREZA",
+        "title": "Especialidade em Estudo da Natureza",
+        "description": "Completar uma especialidade oficial na área de Estudo da Natureza (animais, plantas, clima, astronomia ou ecologia)."
+    },
+    {
+        "id": "EQ-ESP-ARTES-MANUAIS",
+        "title": "Especialidade em Artes e Habilidades Manuais",
+        "description": "Completar uma especialidade oficial na área de Artes e Habilidades Manuais ou Artesanato."
+    },
+    {
+        "id": "EQ-ESP-MISSAO-HABILIDADES",
+        "title": "Especialidade em Atividades Missionárias / Habilidades",
+        "description": "Completar uma especialidade oficial em Atividades Missionárias, Agrícolas, Domésticas ou de Saúde."
+    },
+    {
+        "id": "EQ-ESP-VIDA-CAMPESTRE",
+        "title": "Especialidade em Vida Campestre / Acampamento",
+        "description": "Completar uma especialidade oficial na área de Atividades Campestres (Acampamento, Arte de Acampar, Fogueiras ou Pioneirias)."
+    },
+    {
+        "id": "EQ-ESP-PRIMEIROS-SOCORROS",
+        "title": "Especialidade em Primeiros Socorros e Segurança",
+        "description": "Completar uma especialidade oficial na área de Primeiros Socorros, Resgate ou Segurança Básica."
+    },
+    {
+        "id": "EQ-ESP-RECREATIVAS",
+        "title": "Especialidade em Atividades Recreativas",
+        "description": "Completar uma especialidade oficial na área de Atividades Recreativas e Esportes."
     }
 ]
 
@@ -140,6 +170,45 @@ OFFICIAL_EQUIVALENCE_MAP = {
     # 8. EQ-CERIMONIAS-E-EVENTOS (2)
     "COMPANHEIRO_AVANCADO_AV_8": "EQ-CERIMONIAS-E-EVENTOS",
     "PESQUISADOR_AVANCADO_AV_6": "EQ-CERIMONIAS-E-EVENTOS",
+
+    # 9. EQ-ESP-NATUREZA (6)
+    "AMIGO_VII_1": "EQ-ESP-NATUREZA",
+    "COMPANHEIRO_VII_2": "EQ-ESP-NATUREZA",
+    "PESQUISADOR_VII_2": "EQ-ESP-NATUREZA",
+    "PIONEIRO_VII_2": "EQ-ESP-NATUREZA",
+    "EXCURSIONISTA_VII_2": "EQ-ESP-NATUREZA",
+    "GUIA_VII_2": "EQ-ESP-NATUREZA",
+
+    # 10. EQ-ESP-ARTES-MANUAIS (3)
+    "AMIGO_IX_1": "EQ-ESP-ARTES-MANUAIS",
+    "COMPANHEIRO_IX_1": "EQ-ESP-ARTES-MANUAIS",
+    "PESQUISADOR_IX_1": "EQ-ESP-ARTES-MANUAIS",
+
+    # 11. EQ-ESP-MISSAO-HABILIDADES (5)
+    "AMIGO_AVANCADO_AV_9": "EQ-ESP-MISSAO-HABILIDADES",
+    "COMPANHEIRO_AVANCADO_AV_12": "EQ-ESP-MISSAO-HABILIDADES",
+    "PESQUISADOR_AVANCADO_AV_11": "EQ-ESP-MISSAO-HABILIDADES",
+    "PIONEIRO_IX_1": "EQ-ESP-MISSAO-HABILIDADES",
+    "EXCURSIONISTA_IX_1": "EQ-ESP-MISSAO-HABILIDADES",
+
+    # 12. EQ-ESP-VIDA-CAMPESTRE (8)
+    "AMIGO_VIII_2": "EQ-ESP-VIDA-CAMPESTRE",
+    "AMIGO_AVANCADO_AV_5": "EQ-ESP-VIDA-CAMPESTRE",
+    "COMPANHEIRO_V_4": "EQ-ESP-VIDA-CAMPESTRE",
+    "PESQUISADOR_VIII_2": "EQ-ESP-VIDA-CAMPESTRE",
+    "PIONEIRO_AVANCADO_AV_10": "EQ-ESP-VIDA-CAMPESTRE",
+    "EXCURSIONISTA_VIII_2": "EQ-ESP-VIDA-CAMPESTRE",
+    "EXCURSIONISTA_AVANCADO_AV_11": "EQ-ESP-VIDA-CAMPESTRE",
+    "GUIA_VIII_4": "EQ-ESP-VIDA-CAMPESTRE",
+    "GUIA_AVANCADO_AV_6": "EQ-ESP-VIDA-CAMPESTRE",
+
+    # 13. EQ-ESP-PRIMEIROS-SOCORROS (2)
+    "AMIGO_V_1": "EQ-ESP-PRIMEIROS-SOCORROS",
+    "PIONEIRO_VIII_3": "EQ-ESP-PRIMEIROS-SOCORROS",
+
+    # 14. EQ-ESP-RECREATIVAS (2)
+    "PIONEIRO_AVANCADO_AV_8": "EQ-ESP-RECREATIVAS",
+    "GUIA_IX_1": "EQ-ESP-RECREATIVAS",
 }
 
 

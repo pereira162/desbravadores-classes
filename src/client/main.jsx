@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
 
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const swUrl = import.meta.env.BASE_URL + 'sw.js';
+    const swUrl = (import.meta.env.BASE_URL || '/desbravadores-classes/') + 'sw.js';
     navigator.serviceWorker.register(swUrl).catch((err) => {
       console.warn('Falha ao registrar Service Worker:', err);
     });

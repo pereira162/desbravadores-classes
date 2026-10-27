@@ -183,6 +183,36 @@
       "id": "EQ-CERIMONIAS-E-EVENTOS",
       "title": "Participação em Cerimônia Oficial do Clube",
       "description": "Participar ativamente da organização ou execução de cerimônia de investidura ou admissão em lenço do Clube."
+    },
+    {
+      "id": "EQ-ESP-NATUREZA",
+      "title": "Especialidade em Estudo da Natureza",
+      "description": "Completar uma especialidade oficial na área de Estudo da Natureza (animais, plantas, clima, astronomia ou ecologia)."
+    },
+    {
+      "id": "EQ-ESP-ARTES-MANUAIS",
+      "title": "Especialidade em Artes e Habilidades Manuais",
+      "description": "Completar uma especialidade oficial na área de Artes e Habilidades Manuais ou Artesanato."
+    },
+    {
+      "id": "EQ-ESP-MISSAO-HABILIDADES",
+      "title": "Especialidade em Atividades Missionárias / Habilidades",
+      "description": "Completar uma especialidade oficial em Atividades Missionárias, Agrícolas, Domésticas ou de Saúde."
+    },
+    {
+      "id": "EQ-ESP-VIDA-CAMPESTRE",
+      "title": "Especialidade em Vida Campestre / Acampamento",
+      "description": "Completar uma especialidade oficial na área de Atividades Campestres (Acampamento, Arte de Acampar, Fogueiras ou Pioneirias)."
+    },
+    {
+      "id": "EQ-ESP-PRIMEIROS-SOCORROS",
+      "title": "Especialidade em Primeiros Socorros e Segurança",
+      "description": "Completar uma especialidade oficial na área de Primeiros Socorros, Resgate ou Segurança Básica."
+    },
+    {
+      "id": "EQ-ESP-RECREATIVAS",
+      "title": "Especialidade em Atividades Recreativas",
+      "description": "Completar uma especialidade oficial na área de Atividades Recreativas e Esportes."
     }
   ],
   "classes": [
@@ -506,7 +536,7 @@
             "ar_livre",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-PRIMEIROS-SOCORROS",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -612,7 +642,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-NATUREZA",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -769,7 +799,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -827,7 +857,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -942,7 +972,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1020,7 +1050,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1411,7 +1441,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1496,7 +1526,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-NATUREZA",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1663,7 +1693,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -1931,7 +1961,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2391,7 +2421,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-NATUREZA",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2452,7 +2482,7 @@
             "acampamento",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2500,7 +2530,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -2766,7 +2796,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3244,7 +3274,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-NATUREZA",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3303,7 +3333,7 @@
             "ar_livre",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-PRIMEIROS-SOCORROS",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3322,7 +3352,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3546,7 +3576,7 @@
             "ar_livre",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-RECREATIVAS",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3607,7 +3637,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -4105,7 +4135,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-NATUREZA",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4146,7 +4176,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4165,7 +4195,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -4418,7 +4448,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -4934,7 +4964,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-NATUREZA",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -5023,7 +5053,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -5059,7 +5089,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-RECREATIVAS",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -5219,7 +5249,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5672,7 +5702,7 @@
         "ar_livre",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-PRIMEIROS-SOCORROS",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -5790,7 +5820,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-NATUREZA",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -5959,7 +5989,7 @@
         "acampamento",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Amigo",
@@ -6026,7 +6056,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Amigo",
@@ -6154,7 +6184,7 @@
         "acampamento",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Amigo da Natureza",
@@ -6244,7 +6274,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -6671,7 +6701,7 @@
         "acampamento",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -6768,7 +6798,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-NATUREZA",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -6950,7 +6980,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Companheiro",
@@ -7252,7 +7282,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -7754,7 +7784,7 @@
         "reuniao_clube",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-NATUREZA",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -7821,7 +7851,7 @@
         "acampamento",
         "primeiros_socorros"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -7875,7 +7905,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Pesquisador",
@@ -8172,7 +8202,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -8695,7 +8725,7 @@
         "reuniao_clube",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-NATUREZA",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Pioneiro",
@@ -8763,7 +8793,7 @@
         "ar_livre",
         "primeiros_socorros"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-PRIMEIROS-SOCORROS",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Pioneiro",
@@ -8785,7 +8815,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -9031,7 +9061,7 @@
         "ar_livre",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-RECREATIVAS",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Pioneiro de Novas Fronteiras",
@@ -9098,7 +9128,7 @@
         "ar_livre",
         "fogueira_cozinha"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Pioneiro de Novas Fronteiras",
@@ -9647,7 +9677,7 @@
         "reuniao_clube",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-NATUREZA",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Excursionista",
@@ -9694,7 +9724,7 @@
         "ar_livre",
         "nos_e_amarras"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Excursionista",
@@ -9716,7 +9746,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-MISSAO-HABILIDADES",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -10000,7 +10030,7 @@
         "acampamento",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Excursionista na Mata",
@@ -10564,7 +10594,7 @@
         "reuniao_clube",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-NATUREZA",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -10665,7 +10695,7 @@
         "ar_livre",
         "acampamento"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -10704,7 +10734,7 @@
         "especialidade",
         "reuniao_clube"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-RECREATIVAS",
       "selection_rule": "ESCOLHER_1",
       "sub_items": [
         {
@@ -10880,7 +10910,7 @@
         "acampamento",
         "ar_livre"
       ],
-      "equivalence_group": "",
+      "equivalence_group": "EQ-ESP-VIDA-CAMPESTRE",
       "selection_rule": "TODOS",
       "sub_items": [],
       "class_name": "Guia de Exploração",

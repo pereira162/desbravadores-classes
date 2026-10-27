@@ -908,9 +908,13 @@ export default function PathfindersView({
                                     {req.title}
                                   </span>
                                   {req.subitems?.length > 0 && (
-                                    <span className="text-[9px] text-slate-400 ml-1">
-                                      ({req.subitems.map((s) => s.key).join(',')})
-                                    </span>
+                                    <div className="mt-0.5 pl-1.5 space-y-0.5 text-[9px] text-slate-500 font-normal leading-tight">
+                                      {req.subitems.map((s) => (
+                                        <div key={s.key}>
+                                          <strong className="font-bold text-slate-700">{s.key})</strong> {s.text}
+                                        </div>
+                                      ))}
+                                    </div>
                                   )}
                                 </div>
                                 <div className="shrink-0 text-center w-6">
@@ -919,10 +923,7 @@ export default function PathfindersView({
                                   ) : isDone ? (
                                     <span className="text-teal-700 font-bold text-[9px]">F</span>
                                   ) : (
-                                    <span
-                                      className="inline-block w-3.5 h-3.5 rounded-full border border-slate-400 bg-white align-middle"
-                                      title="Pendente"
-                                    />
+                                    <span className="inline-block w-full text-center text-transparent select-none">&nbsp;</span>
                                   )}
                                 </div>
                               </div>
@@ -998,7 +999,7 @@ export default function PathfindersView({
                                 onClick={() =>
                                   onOpenRequirementDetail(activePf, req)
                                 }
-                                className="p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                className="pdf-item p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                               >
                                 <div className="space-y-1">
                                   <div className="flex flex-wrap items-center gap-2">
@@ -1083,12 +1084,14 @@ export default function PathfindersView({
 
                                 <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
                                   {req.status === 'PENDENTE' ? (
-                                    <span
-                                      className="inline-flex items-center justify-center w-6 h-6 rounded-full border-2 border-slate-300 bg-white"
-                                      title="Pendente — Espaço para visto ou data"
-                                    >
-                                      <span className="w-2 h-2 rounded-full border border-dashed border-slate-300" />
-                                    </span>
+                                    <>
+                                      <span
+                                        className={`print-hidden px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
+                                      >
+                                        {cfg.label}
+                                      </span>
+                                      <span className="hidden print-block text-transparent select-none w-8 text-center">&nbsp;</span>
+                                    </>
                                   ) : (
                                     <span
                                       className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}

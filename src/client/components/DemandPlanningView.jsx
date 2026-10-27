@@ -490,7 +490,7 @@ export default function DemandPlanningView({
             return (
               <div
                 key={group.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-break-inside-avoid"
+                className="pdf-item bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-break-inside-avoid"
               >
                 <div className="p-4 sm:p-5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
@@ -617,7 +617,7 @@ export default function DemandPlanningView({
               return (
                 <div
                   key={req.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition overflow-hidden print-break-inside-avoid"
+                  className="pdf-item bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition overflow-hidden print-break-inside-avoid"
                 >
                   <div className="p-4 sm:p-5">
                     <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">

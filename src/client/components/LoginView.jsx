@@ -12,11 +12,19 @@ import {
   Send,
   HelpCircle,
   Award,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 import { apiRequest, getAssetUrl, isTestMode, getTestModeUrl } from '../api';
 import { ROLE_CONFIG } from '../constants';
 
-export default function LoginView({ onLoginSuccess }) {
+export default function LoginView({
+  onLoginSuccess,
+  deferredPrompt,
+  isAppInstalled,
+  onInstallApp,
+  onOpenInstallGuide,
+}) {
   const testMode = isTestMode();
   // MODES: LOGIN | SETUP_DIRECTOR | VERIFY_EMAIL | FORGOT_PASSWORD | RESET_PASSWORD | ACCEPT_INVITE
   const [mode, setMode] = useState('LOGIN');
@@ -975,6 +983,34 @@ export default function LoginView({ onLoginSuccess }) {
               </form>
             )}
           </div>
+
+          {/* Botão de Instalação do Aplicativo (PWA) na Tela de Login */}
+          {!isAppInstalled && (
+            <div className="mt-5 p-3.5 bg-gradient-to-r from-indigo-50/90 to-amber-50/90 border border-indigo-100 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 leading-tight">
+                    Instalar Aplicativo SGC Classes
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    Adicione à tela de início do seu celular ou PC
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onInstallApp || onOpenInstallGuide}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                title="Instalar aplicativo"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Instalar App</span>
+              </button>
+            </div>
+          )}
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
             <span>Catálogo Oficial DSA (12 Classes • 212 Requisitos)</span>
