@@ -1,0 +1,19 @@
+{
+  "short_name": "SGC Classes",
+  "name": "SGC Classes — Gestão de Classes dos Desbravadores",
+  "description": "Sistema de Gestão de Classes Oficiais DSA, Cartão Virtual e Planejamento Anual de Investidura dos Desbravadores",
+  "icons": [
+    {
+      "src": "/desbravadores-classes/assets/logo_amigo-CSkmGumt.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/desbravadores-classes/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR"
+}
