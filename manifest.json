@@ -2,25 +2,39 @@
   "short_name": "SGC Classes",
   "name": "SGC Classes — Gestão de Classes dos Desbravadores",
   "description": "Sistema de Gestão de Classes Oficiais DSA, Cartão Virtual e Planejamento Anual de Investidura dos Desbravadores",
+  "id": "/desbravadores-classes/",
+  "start_url": "/desbravadores-classes/",
+  "scope": "/desbravadores-classes/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "pt-BR",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/desbravadores-classes/icons/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/desbravadores-classes/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
     },
     {
       "src": "/desbravadores-classes/icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/desbravadores-classes/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
-  ],
-  "start_url": "/desbravadores-classes/",
-  "scope": "/desbravadores-classes/",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "lang": "pt-BR"
+  ]
 }
