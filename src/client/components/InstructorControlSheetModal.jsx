@@ -37,18 +37,17 @@ export default function InstructorControlSheetModal({
   const [exporting, setExporting] = useState(false);
   const sheetRef = useRef(null);
 
-  if (!isOpen) return null;
-
   const currentClassCfg = BASE_CLASSES.find((c) => c.baseSlug === currentBaseSlug) || BASE_CLASSES[0];
-  const regularClass = (catalog.classes || []).find(
+  const regularClass = (catalog?.classes || []).find(
     (c) => c.base_slug === currentBaseSlug && c.type === 'REGULAR'
   );
-  const advancedClass = (catalog.classes || []).find(
+  const advancedClass = (catalog?.classes || []).find(
     (c) => c.base_slug === currentBaseSlug && c.type === 'AVANCADA'
   );
 
   // Desbravadores matriculados nesta classe (até 8 colunas para caber perfeitamente na folha)
   const enrolledPathfinders = useMemo(() => {
+    if (!pathfinders) return [];
     const list = pathfinders.filter((pf) => {
       if (!pf.active) return false;
       if (unitFilter !== 'ALL' && pf.unit_id !== unitFilter) return false;
@@ -74,10 +73,10 @@ export default function InstructorControlSheetModal({
 
   // Requisitos da classe
   const classRequirements = useMemo(() => {
-    return (catalog.requirements || []).filter(
+    return (catalog?.requirements || []).filter(
       (r) => r.base_class_slug === currentBaseSlug
     );
-  }, [catalog.requirements, currentBaseSlug]);
+  }, [catalog?.requirements, currentBaseSlug]);
 
   // Agrupamento por seção
   const groupedSections = useMemo(() => {
@@ -90,7 +89,7 @@ export default function InstructorControlSheetModal({
         groups.push({
           key,
           classType: req.class_type,
-          className: classesMap[req.class_slug]?.name || req.class_slug,
+          className: classesMap?.[req.class_slug]?.name || req.class_slug,
           section: req.section,
           items: [],
         });
@@ -104,7 +103,7 @@ export default function InstructorControlSheetModal({
     if (!sheetRef.current) return;
     setExporting(true);
     try {
-      const unitObj = units.find((u) => u.id === unitFilter);
+      const unitObj = (units || []).find((u) => u.id === unitFilter);
       const unitLabel = unitObj ? unitObj.name : 'geral';
       await exportElementToPdf(sheetRef.current, {
         filenamePrefix: `controle_instrutor_${currentBaseSlug}_${unitLabel}`,
@@ -120,6 +119,8 @@ export default function InstructorControlSheetModal({
       setExporting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
