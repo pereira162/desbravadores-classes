@@ -17,10 +17,12 @@ if (!fs.existsSync(DATA_DIR)) {
 const prodDb = new DatabaseSync(PROD_DB_PATH);
 prodDb.exec('PRAGMA journal_mode = WAL;');
 prodDb.exec('PRAGMA foreign_keys = ON;');
+prodDb.exec('PRAGMA busy_timeout = 5000;');
 
 const testDb = new DatabaseSync(TEST_DB_PATH);
 testDb.exec('PRAGMA journal_mode = WAL;');
 testDb.exec('PRAGMA foreign_keys = ON;');
+testDb.exec('PRAGMA busy_timeout = 5000;');
 
 const dbStorage = new AsyncLocalStorage();
 

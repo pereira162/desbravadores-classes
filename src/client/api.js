@@ -56,16 +56,37 @@ export async function apiRequest(path, options = {}) {
     ? path
     : `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const timeoutMs = options.timeoutMs || 15000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.error || `Erro na requisição (${response.status})`);
-    error.status = response.status;
-    throw error;
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: options.signal || controller.signal,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.error || `Erro na requisição (${response.status})`);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeoutError = new Error('Tempo limite de conexão esgotado (15s). O servidor demorou a responder.');
+      timeoutError.status = 408;
+      throw timeoutError;
+    }
+    if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+      const netError = new Error('Sem conexão com o servidor. Verifique sua internet e tente novamente.');
+      netError.status = 0;
+      throw netError;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data;
 }

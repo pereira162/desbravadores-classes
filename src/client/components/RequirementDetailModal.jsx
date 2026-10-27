@@ -17,6 +17,8 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { STATUS_CONFIG, EXECUTION_CONTEXT_LABELS, formatDateBR } from '../constants';
+import DateInput from './DateInput';
+import { apiRequest } from '../api';
 
 // Comprime imagens no navegador para envio rápido e leve
 function compressImageFile(file, maxDimension = 1200, quality = 0.8) {
@@ -94,14 +96,28 @@ export default function RequirementDetailModal({
     setCompletedSubItems(progressRecord?.completed_sub_items || []);
     setNotes(progressRecord?.notes || '');
     setSubmissionText(progressRecord?.submission_text || '');
-    setAttachments(Array.isArray(progressRecord?.attachments) ? progressRecord.attachments : []);
+    const initialAtts = Array.isArray(progressRecord?.attachments)
+      ? progressRecord.attachments
+      : [];
+    setAttachments(initialAtts);
     setReviewNotes(progressRecord?.review_notes || '');
     setCompletedAt(
       progressRecord?.completed_at || new Date().toISOString().slice(0, 10)
     );
     setError('');
     setPreviewAttachment(null);
-  }, [isOpen, requirement, progressRecord]);
+
+    // Otimização: Carrega anexos pesados (fotos Base64) sob demanda
+    if (pathfinder && initialAtts.some((a) => a.has_data && !a.data_url)) {
+      apiRequest(`/api/progress/${pathfinder.id}/${requirement.id}/attachments`)
+        .then((res) => {
+          if (Array.isArray(res.attachments) && res.attachments.length > 0) {
+            setAttachments(res.attachments);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, requirement, pathfinder, progressRecord]);
 
   if (!isOpen || !requirement) return null;
 
@@ -431,16 +447,12 @@ export default function RequirementDetailModal({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Quando fez? (Data) *
                     </label>
-                    <div className="relative">
-                      <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                      <input
-                        type="date"
-                        disabled={isPathfinderUser && isAlreadyApproved}
-                        value={completedAt}
-                        onChange={(e) => setCompletedAt(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white outline-none"
-                      />
-                    </div>
+                    <DateInput
+                      disabled={isPathfinderUser && isAlreadyApproved}
+                      value={completedAt}
+                      onChange={(newDate) => setCompletedAt(newDate)}
+                      className="px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white outline-none"
+                    />
                   </div>
 
                   <div className="sm:col-span-2">

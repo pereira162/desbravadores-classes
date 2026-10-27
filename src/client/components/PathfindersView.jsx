@@ -29,6 +29,7 @@ import {
   formatDateBR,
   EXECUTION_CONTEXT_LABELS,
 } from '../constants';
+import DateInput from './DateInput';
 
 export default function PathfindersView({
   catalog,
@@ -1002,18 +1003,16 @@ export default function PathfindersView({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Data de Nascimento *
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     required
                     value={pfBirthDate}
-                    onChange={(e) => {
-                      const newDate = e.target.value;
+                    onChange={(newDate) => {
                       setPfBirthDate(newDate);
                       if (!editingPf && newDate) {
                         applyAgeSuggestedClasses(pfIsGrouped, newDate);
                       }
                     }}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <span className="text-[11px] text-slate-500 mt-0.5 block">
                     Idade calculada em 2026: <strong>{calculateAge(pfBirthDate)} anos</strong>

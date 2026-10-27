@@ -13,6 +13,7 @@ import {
   Search,
 } from 'lucide-react';
 import { formatDateBR } from '../constants';
+import DateInput from './DateInput';
 
 const EVENT_TYPES = [
   { id: 'ACAMPAMENTO', label: 'Acampamento / Pernoite', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
@@ -354,12 +355,11 @@ export default function EventsBatchView({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Data Prevista *
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     required
                     value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    onChange={(newDate) => setEventDate(newDate)}
+                    className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
                   />
                 </div>
               </div>

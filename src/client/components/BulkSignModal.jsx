@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, CheckSquare, Square, Users, CheckCircle2, Calendar, FileText } from 'lucide-react';
 import { STATUS_CONFIG } from '../constants';
+import DateInput from './DateInput';
 
 export default function BulkSignModal({
   isOpen,
@@ -234,15 +235,11 @@ export default function BulkSignModal({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Data de Realização
               </label>
-              <div className="relative">
-                <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="date"
-                  value={completedAt}
-                  onChange={(e) => setCompletedAt(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 outline-none"
-                />
-              </div>
+              <DateInput
+                value={completedAt}
+                onChange={(newDate) => setCompletedAt(newDate)}
+                className="px-3 py-2 text-xs rounded-lg border border-slate-300 outline-none"
+              />
             </div>
           </div>
 

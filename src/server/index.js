@@ -903,11 +903,22 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     } catch {
       attachments = [];
     }
+    // Otimização de payload: remove data_url pesado do bootstrap geral
+    const lightAttachments = attachments.map((att) => ({
+      id: att.id,
+      name: att.name,
+      type: att.type,
+      size: att.size,
+      uploaded_by: att.uploaded_by,
+      uploaded_at: att.uploaded_at,
+      has_data: Boolean(att.data_url),
+    }));
+
     return {
       ...pr,
       completed_sub_items: JSON.parse(pr.completed_sub_items_json || '[]'),
       submission_text: pr.submission_text || '',
-      attachments,
+      attachments: lightAttachments,
       submitted_by_pathfinder: Boolean(pr.submitted_by_pathfinder),
       submitted_at: pr.submitted_at || null,
       review_notes: pr.review_notes || '',
@@ -1057,7 +1068,11 @@ app.post('/api/progress/update', requireAuth, (req, res) => {
   }
 
   const now = new Date().toISOString();
-  const todayDate = completed_at || now.slice(0, 10);
+  const todayStr = now.slice(0, 10);
+  if (completed_at && String(completed_at) > todayStr) {
+    return res.status(400).json({ error: 'A data de conclusão não pode ser posterior ao dia de hoje.' });
+  }
+  const todayDate = completed_at || todayStr;
   const finalNotes = notes !== undefined ? String(notes) : existing ? existing.notes || '' : '';
   const finalSubmissionText =
     submission_text !== undefined
@@ -1245,7 +1260,11 @@ app.post('/api/progress/bulk', requireAuth, (req, res) => {
 
   const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get();
   const now = new Date().toISOString();
-  const dateStr = completed_at || now.slice(0, 10);
+  const todayStr = now.slice(0, 10);
+  if (completed_at && String(completed_at) > todayStr) {
+    return res.status(400).json({ error: 'A data de realização não pode ser posterior ao dia de hoje.' });
+  }
+  const dateStr = completed_at || todayStr;
   const batchId = `batch-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
 
   let updatedCount = 0;
@@ -1395,6 +1414,9 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
   }
 
   const now = new Date().toISOString();
+  if (String(birth_date) > now.slice(0, 10)) {
+    return res.status(400).json({ error: 'A data de nascimento não pode ser futura.' });
+  }
   const pfId = `dbv-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
   const inviteToken = `dbv-inv-${crypto.randomUUID()}`;
   const cleanEmail = email ? String(email).trim().toLowerCase() : '';
@@ -1562,6 +1584,9 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
   } = req.body || {};
 
   const now = new Date().toISOString();
+  if (birth_date && String(birth_date) > now.slice(0, 10)) {
+    return res.status(400).json({ error: 'A data de nascimento não pode ser futura.' });
+  }
   const prevEnrollments = db
     .prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?')
     .all(pfId)
@@ -2536,6 +2561,153 @@ app.post('/api/audit/:id/revert', requireAuth, (req, res) => {
     db.exec('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
+});
+
+// ============================================================================
+// 10. ATTACHMENTS ON-DEMAND, BACKUP & EXPORT ENDPOINTS
+// ============================================================================
+
+// Busca sob demanda a lista completa de anexos com Base64 (data_url) apenas quando o modal for aberto
+app.get(
+  '/api/progress/:pathfinderId/:requirementId/attachments',
+  requireAuth,
+  (req, res) => {
+    const { pathfinderId, requirementId } = req.params;
+    const row = db
+      .prepare(
+        'SELECT attachments_json FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?'
+      )
+      .get(pathfinderId, requirementId);
+
+    if (!row || !row.attachments_json) {
+      return res.json({ attachments: [] });
+    }
+    try {
+      const atts = JSON.parse(row.attachments_json);
+      return res.json({ attachments: Array.isArray(atts) ? atts : [] });
+    } catch {
+      return res.json({ attachments: [] });
+    }
+  }
+);
+
+// Backup Completo do Clube em formato JSON estruturado
+app.get('/api/export/backup', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas a liderança do clube pode exportar backups.' });
+  }
+
+  const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+  const units = db.prepare('SELECT * FROM units ORDER BY name ASC').all();
+  const pathfinders = db.prepare('SELECT * FROM pathfinders ORDER BY name ASC').all();
+  const enrollments = db.prepare('SELECT * FROM class_enrollments').all();
+  const progress = db.prepare('SELECT * FROM progress_records').all();
+  const events = db.prepare('SELECT * FROM activity_events').all();
+  const eventReqs = db.prepare('SELECT * FROM activity_event_requirements').all();
+  const eventAtts = db.prepare('SELECT * FROM activity_event_attendees').all();
+  const audit = db.prepare('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 500').all();
+
+  const backupData = {
+    system: 'SGC Classes Desbravadores',
+    version: '1.0.0',
+    exported_at: new Date().toISOString(),
+    exported_by: req.user.name,
+    club_settings: clubSettings,
+    units,
+    pathfinders,
+    class_enrollments: enrollments,
+    progress_records: progress,
+    activity_events: events,
+    activity_event_requirements: eventReqs,
+    activity_event_attendees: eventAtts,
+    audit_logs: audit,
+  };
+
+  const nowStr = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Disposition', `attachment; filename="backup-clube-${nowStr}.json"`);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.send(JSON.stringify(backupData, null, 2));
+});
+
+// Relatório Geral de Investidura em formato CSV (compatível com Excel / UTF-8)
+app.get('/api/export/investiture-csv', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO', 'INSTRUTOR', 'CONSELHEIRO'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para exportar relatórios.' });
+  }
+
+  const pathfinders = db.prepare(`
+    SELECT p.*, u.name as unit_name
+    FROM pathfinders p
+    LEFT JOIN units u ON u.id = p.unit_id
+    WHERE p.active = 1
+    ORDER BY u.name ASC, p.name ASC
+  `).all();
+
+  const enrollments = db.prepare(`
+    SELECT ce.pathfinder_id, cc.name as class_name, cc.slug as class_slug
+    FROM class_enrollments ce
+    JOIN classes_catalog cc ON cc.slug = ce.class_slug
+  `).all();
+
+  const enrollMap = {};
+  for (const enr of enrollments) {
+    if (!enrollMap[enr.pathfinder_id]) enrollMap[enr.pathfinder_id] = [];
+    enrollMap[enr.pathfinder_id].push(enr.class_name);
+  }
+
+  const reqCountByClass = {};
+  const allReqs = db.prepare('SELECT class_slug FROM requirements_catalog').all();
+  for (const r of allReqs) {
+    reqCountByClass[r.class_slug] = (reqCountByClass[r.class_slug] || 0) + 1;
+  }
+
+  const enrSlugList = db.prepare('SELECT pathfinder_id, class_slug FROM class_enrollments').all();
+  const totalReqsByPf = {};
+  for (const es of enrSlugList) {
+    totalReqsByPf[es.pathfinder_id] = (totalReqsByPf[es.pathfinder_id] || 0) + (reqCountByClass[es.class_slug] || 0);
+  }
+
+  const progressRows = db.prepare('SELECT pathfinder_id, status FROM progress_records').all();
+  const progStatsByPf = {};
+  for (const pr of progressRows) {
+    if (!progStatsByPf[pr.pathfinder_id]) {
+      progStatsByPf[pr.pathfinder_id] = { totalDone: 0, approved: 0 };
+    }
+    if (pr.status === 'CONCLUIDO' || pr.status === 'APROVADO') {
+      progStatsByPf[pr.pathfinder_id].totalDone++;
+    }
+    if (pr.status === 'APROVADO') {
+      progStatsByPf[pr.pathfinder_id].approved++;
+    }
+  }
+
+  const currentYear = 2026;
+  const csvLines = [
+    'Nome do Desbravador;Data de Nascimento;Idade;Unidade;Classes Matriculadas;Total de Requisitos;Concluídos;Assinados / Aprovados;% Concluído;Apto p/ Investidura (>=85%)'
+  ];
+
+  for (const pf of pathfinders) {
+    const birthYear = pf.birth_date ? parseInt(pf.birth_date.slice(0, 4), 10) : 2016;
+    const age = currentYear - birthYear;
+    const classesStr = (enrollMap[pf.id] || []).join(' + ') || 'Sem matrícula';
+    const totalReqs = totalReqsByPf[pf.id] || 0;
+    const stats = progStatsByPf[pf.id] || { totalDone: 0, approved: 0 };
+    const pct = totalReqs > 0 ? Math.round((stats.approved / totalReqs) * 100) : 0;
+    const ready = pct >= 85 ? 'SIM' : 'NÃO';
+
+    const cleanName = `"${(pf.name || '').replace(/"/g, '""')}"`;
+    const cleanUnit = `"${(pf.unit_name || 'Sem Unidade').replace(/"/g, '""')}"`;
+    const cleanClasses = `"${classesStr.replace(/"/g, '""')}"`;
+
+    csvLines.push(
+      `${cleanName};${pf.birth_date || ''};${age};${cleanUnit};${cleanClasses};${totalReqs};${stats.totalDone};${stats.approved};${pct}%;${ready}`
+    );
+  }
+
+  const nowStr = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Disposition', `attachment; filename="relatorio-investidura-${nowStr}.csv"`);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.send('\uFEFF' + csvLines.join('\r\n'));
 });
 
 // ============================================================================

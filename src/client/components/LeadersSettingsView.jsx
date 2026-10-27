@@ -14,8 +14,13 @@ import {
   HelpCircle,
   Sparkles,
   ExternalLink,
+  Download,
+  Database,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { ROLE_CONFIG } from '../constants';
+import DateInput from './DateInput';
+import { API_BASE_URL, getStoredToken, isTestMode } from '../api';
 
 export default function LeadersSettingsView({
   catalog,
@@ -85,6 +90,66 @@ export default function LeadersSettingsView({
   const [sendingInviteId, setSendingInviteId] = useState(null);
   const [inviteLinksMap, setInviteLinksMap] = useState({});
   const [copiedLeaderId, setCopiedLeaderId] = useState(null);
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
+
+  const handleDownloadBackup = async () => {
+    try {
+      setDownloadingBackup(true);
+      const token = getStoredToken();
+      const testMode = isTestMode();
+      const url = `${API_BASE_URL}/api/export/backup`;
+      const res = await fetch(url, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(testMode ? { 'X-Test-Mode': 'true' } : {}),
+        },
+      });
+      if (!res.ok) throw new Error('Falha ao gerar arquivo de backup.');
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `backup-clube-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      alert(err.message || 'Erro ao baixar arquivo de backup.');
+    } finally {
+      setDownloadingBackup(false);
+    }
+  };
+
+  const handleDownloadCsv = async () => {
+    try {
+      setDownloadingCsv(true);
+      const token = getStoredToken();
+      const testMode = isTestMode();
+      const url = `${API_BASE_URL}/api/export/investiture-csv`;
+      const res = await fetch(url, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(testMode ? { 'X-Test-Mode': 'true' } : {}),
+        },
+      });
+      if (!res.ok) throw new Error('Falha ao gerar planilha CSV.');
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `relatorio-investidura-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      alert(err.message || 'Erro ao exportar planilha CSV.');
+    } finally {
+      setDownloadingCsv(false);
+    }
+  };
 
   const canManageLeaders = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(
     currentUser?.role
@@ -434,12 +499,11 @@ export default function LeadersSettingsView({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Data da Investidura
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     disabled={!canManageLeaders}
                     value={investitureDate}
-                    onChange={(e) => setInvestitureDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    onChange={(newDate) => setInvestitureDate(newDate)}
+                    className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
                   />
                 </div>
               </div>
@@ -592,6 +656,67 @@ export default function LeadersSettingsView({
                 </button>
               )}
             </form>
+          </div>
+
+          {/* Card de Backup & Exportação de Dados do Clube */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
+              <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-700">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Backup & Exportação de Dados
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Exporte cópias dos dados para segurança ou prestação de contas à Igreja e Associação.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block">
+                    Planilha Geral de Investidura (.CSV / Excel)
+                  </span>
+                  <span className="text-[11px] text-slate-500 block">
+                    Lista todos os desbravadores, percentual de conclusão e aptidão para investidura.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={downloadingCsv}
+                  onClick={handleDownloadCsv}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer disabled:opacity-50 shadow-xs"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  {downloadingCsv ? 'Exportando...' : 'Exportar Planilha CSV'}
+                </button>
+              </div>
+
+              {canManageLeaders && (
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Backup Completo do Clube (.JSON)
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      Cópia de segurança com desbravadores, cartões, unidades, eventos e trilha de auditoria.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={downloadingBackup}
+                    onClick={handleDownloadBackup}
+                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer disabled:opacity-50 shadow-xs"
+                  >
+                    <Download className="w-4 h-4" />
+                    {downloadingBackup ? 'Baixando...' : 'Baixar Backup JSON'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
