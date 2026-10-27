@@ -388,22 +388,45 @@ export default function LoginView({ onLoginSuccess }) {
           } p-6 sm:p-8 flex flex-col justify-between bg-white`}
         >
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
-                <img
-                  src={getAssetUrl('/data/cartoes-oficiais/logos/logo_guia.png')}
-                  alt="Emblema Classes"
-                  className="w-9 h-9 object-contain"
-                />
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+                  <img
+                    src={getAssetUrl('/data/cartoes-oficiais/logos/logo_guia.png')}
+                    alt="Emblema Classes"
+                    className="w-9 h-9 object-contain"
+                  />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block">
+                    {clubName} — DSA
+                  </span>
+                  <h1 className="text-xl font-extrabold text-slate-900 leading-tight">
+                    Gestão de Classes & Cartão Virtual
+                  </h1>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block">
-                  {clubName} — DSA
-                </span>
-                <h1 className="text-xl font-extrabold text-slate-900 leading-tight">
-                  Gestão de Classes & Cartão Virtual
-                </h1>
-              </div>
+
+              {testMode ? (
+                <a
+                  href={getTestModeUrl(false)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] font-extrabold flex items-center gap-1 shadow-xs transition"
+                  title="Clique para ir ao Clube Oficial de Produção"
+                >
+                  <span>🧪 Modo Testes</span>
+                  <span className="text-[10px] opacity-75 hidden sm:inline">(Ir p/ Oficial →)</span>
+                </a>
+              ) : (
+                <a
+                  href={getTestModeUrl(true)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-[11px] font-bold flex items-center gap-1 transition"
+                  title="Clique para acessar o Ambiente de Testes e Simulação"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Clube Oficial</span>
+                  <span className="text-[10px] text-indigo-600 font-semibold hidden sm:inline">(Ver Testes)</span>
+                </a>
+              )}
             </div>
 
             {error && (

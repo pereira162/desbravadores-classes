@@ -3,3 +3,7 @@ dist/
 .DS_Store
 *.local
 .env
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/*_teste.sqlite*
+data/backups/

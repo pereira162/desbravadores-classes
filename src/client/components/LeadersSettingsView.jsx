@@ -17,10 +17,14 @@ import {
   Download,
   Database,
   FileSpreadsheet,
+  RotateCcw,
+  HardDrive,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import { ROLE_CONFIG } from '../constants';
 import DateInput from './DateInput';
-import { API_BASE_URL, getStoredToken, isTestMode } from '../api';
+import { API_BASE_URL, getStoredToken, isTestMode, apiRequest } from '../api';
 
 export default function LeadersSettingsView({
   catalog,
@@ -92,6 +96,120 @@ export default function LeadersSettingsView({
   const [copiedLeaderId, setCopiedLeaderId] = useState(null);
   const [downloadingBackup, setDownloadingBackup] = useState(false);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
+
+  // Estado dos Backups Automáticos do Servidor (.sqlite)
+  const [serverBackups, setServerBackups] = useState([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [creatingSnapshot, setCreatingSnapshot] = useState(false);
+  const [restoringFilename, setRestoringFilename] = useState(null);
+  const [cloningTest, setCloningTest] = useState(false);
+  const [backupSuccessMsg, setBackupSuccessMsg] = useState(null);
+  const [backupErrorMsg, setBackupErrorMsg] = useState(null);
+  const [restoreModalFile, setRestoreModalFile] = useState(null);
+  const [cloneModalOpen, setCloneModalOpen] = useState(false);
+
+  const fetchServerBackups = async () => {
+    if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role)) return;
+    setLoadingBackups(true);
+    try {
+      const res = await apiRequest('/api/backups');
+      setServerBackups(res.backups || []);
+    } catch (err) {
+      console.warn('Erro ao carregar backups do servidor:', err.message);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServerBackups();
+  }, []);
+
+  const handleCreateSnapshotNow = async () => {
+    setCreatingSnapshot(true);
+    setBackupSuccessMsg(null);
+    setBackupErrorMsg(null);
+    try {
+      const res = await apiRequest('/api/backups/create', {
+        method: 'POST',
+        body: JSON.stringify({ label: 'manual', db_type: isTestMode() ? 'test' : 'prod' }),
+      });
+      setBackupSuccessMsg(`Ponto de restauração "${res.backup?.filename}" gerado com sucesso!`);
+      await fetchServerBackups();
+    } catch (err) {
+      setBackupErrorMsg(err.message || 'Erro ao gerar ponto de restauração.');
+    } finally {
+      setCreatingSnapshot(false);
+    }
+  };
+
+  const handleDownloadSqlite = async (filename) => {
+    try {
+      const token = getStoredToken();
+      const testParam = isTestMode() ? '?teste=1' : '';
+      const url = `${API_BASE_URL}/api/backups/${encodeURIComponent(filename)}/download${testParam}`;
+      const response = await fetch(url, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(isTestMode() ? { 'X-Test-Mode': 'true' } : {}),
+        },
+      });
+      if (!response.ok) throw new Error('Falha no download do backup.');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert(`Erro ao baixar backup: ${err.message}`);
+    }
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!restoreModalFile) return;
+    setRestoringFilename(restoreModalFile.filename);
+    setBackupSuccessMsg(null);
+    setBackupErrorMsg(null);
+    try {
+      const res = await apiRequest(`/api/backups/${encodeURIComponent(restoreModalFile.filename)}/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ target_db_type: isTestMode() ? 'test' : 'prod' }),
+      });
+      setRestoreModalFile(null);
+      setBackupSuccessMsg(res.message || 'Banco restaurado com sucesso! Recarregando sistema...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setBackupErrorMsg(err.message || 'Erro ao restaurar backup.');
+    } finally {
+      setRestoringFilename(null);
+    }
+  };
+
+  const handleConfirmCloneTest = async () => {
+    setCloningTest(true);
+    setBackupSuccessMsg(null);
+    setBackupErrorMsg(null);
+    try {
+      const res = await apiRequest('/api/backups/clone-test-to-prod', {
+        method: 'POST',
+      });
+      setCloneModalOpen(false);
+      setBackupSuccessMsg(res.message || 'Ambiente de teste clonado com sucesso para a produção oficial!');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setBackupErrorMsg(err.message || 'Erro ao clonar dados.');
+    } finally {
+      setCloningTest(false);
+    }
+  };
 
   const handleDownloadBackup = async () => {
     try {
@@ -716,6 +834,176 @@ export default function LeadersSettingsView({
                   </button>
                 </div>
               )}
+
+              {/* Seção Sistema de Backup Automático & Pontos de Restauração (.sqlite) */}
+              {canManageLeaders && (
+                <div className="mt-4 pt-4 border-t border-slate-200 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-extrabold border border-emerald-200">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Backup Automático Ativo
+                      </span>
+                      <span className="text-xs font-bold text-slate-700">
+                        Pontos de Restauração do Servidor (.sqlite)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={fetchServerBackups}
+                        disabled={loadingBackups}
+                        className="px-2.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                        title="Atualizar lista"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loadingBackups ? 'animate-spin text-amber-500' : ''}`} />
+                        Atualizar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreateSnapshotNow}
+                        disabled={creatingSnapshot}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        <HardDrive className="w-3.5 h-3.5" />
+                        {creatingSnapshot ? 'Criando Snapshot...' : 'Criar Ponto Agora'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    O servidor cria automaticamente um snapshot de segurança antes de cada reinício/manutenção e periodicamente a cada 6 horas. Os dados nunca são perdidos após atualizações.
+                  </p>
+
+                  {/* Feedback Mensagens */}
+                  {backupSuccessMsg && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{backupSuccessMsg}</span>
+                    </div>
+                  )}
+
+                  {backupErrorMsg && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{backupErrorMsg}</span>
+                    </div>
+                  )}
+
+                  {/* Tabela de Backups do Servidor */}
+                  <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50/50">
+                    {loadingBackups ? (
+                      <div className="p-6 text-center text-xs text-slate-500 font-medium">
+                        Carregando backups do servidor...
+                      </div>
+                    ) : serverBackups.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-500 font-medium">
+                        Nenhum ponto de restauração gravado ainda. Clique em &quot;Criar Ponto Agora&quot;.
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto divide-y divide-slate-200">
+                        {serverBackups.slice(0, 10).map((b) => {
+                          const dateObj = new Date(b.created_at);
+                          const dateFormatted = !isNaN(dateObj)
+                            ? `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                            : b.created_at;
+                          const sizeKb = Math.round((b.size_bytes || 0) / 1024);
+
+                          let triggerBadge = 'bg-slate-200 text-slate-800';
+                          let triggerLabel = b.trigger || 'AUTO';
+                          if (b.trigger === 'STARTUP') {
+                            triggerBadge = 'bg-blue-100 text-blue-800 border-blue-200';
+                            triggerLabel = 'INICIALIZAÇÃO';
+                          } else if (b.trigger === 'SCHEDULED') {
+                            triggerBadge = 'bg-purple-100 text-purple-800 border-purple-200';
+                            triggerLabel = 'ROTINA 6H';
+                          } else if (b.trigger === 'MANUAL') {
+                            triggerBadge = 'bg-amber-100 text-amber-800 border-amber-200';
+                            triggerLabel = 'MANUAL';
+                          } else if (b.trigger === 'HISTORICO') {
+                            triggerBadge = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+                            triggerLabel = 'HISTÓRICO';
+                          } else if (b.trigger === 'EMERGENCY_PRE_RESTORE') {
+                            triggerBadge = 'bg-rose-100 text-rose-800 border-rose-200';
+                            triggerLabel = 'SEGURANÇA';
+                          }
+
+                          return (
+                            <div
+                              key={b.filename}
+                              className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-white transition"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border ${triggerBadge}`}>
+                                    {triggerLabel}
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-900 truncate" title={b.filename}>
+                                    {b.filename}
+                                  </span>
+                                  <span className="text-[10px] text-slate-500 font-mono">
+                                    {sizeKb} KB
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 mt-0.5">
+                                  <span>{dateFormatted}</span>
+                                  {b.stats && (
+                                    <span className="ml-2 font-medium text-slate-600">
+                                      • {b.stats.pathfinders} desbravadores, {b.stats.progress_records} requisitos
+                                    </span>
+                                  )}
+                                  {b.reason && (
+                                    <span className="ml-2 text-slate-400 italic hidden md:inline">
+                                      ({b.reason})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadSqlite(b.filename)}
+                                  className="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+                                  title="Baixar arquivo SQLite"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  Baixar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRestoreModalFile(b)}
+                                  disabled={restoringFilename === b.filename}
+                                  className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
+                                  title="Restaurar este ponto de restauração"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  Restaurar
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Botão de Clonagem do Teste para Produção (Apenas visível se no clube oficial e com permissão) */}
+                  {!isTestMode() && (
+                    <div className="pt-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setCloneModalOpen(true)}
+                        className="text-[11px] text-indigo-700 hover:text-indigo-900 font-bold flex items-center gap-1.5 cursor-pointer underline"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Deseja importar os dados de simulação do Modo Teste para este Clube Oficial?
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -938,6 +1226,118 @@ export default function LeadersSettingsView({
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Restauração */}
+      {restoreModalFile && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-rose-100 text-rose-700">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Restaurar Ponto de Segurança?
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Confirme para reverter o banco para este estado.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 text-slate-700">
+                <div className="font-bold text-slate-900">
+                  Arquivo selecionado:
+                </div>
+                <div className="font-mono text-[11px] text-indigo-700 break-all">
+                  {restoreModalFile.filename}
+                </div>
+                {restoreModalFile.stats && (
+                  <div className="text-[11px] text-slate-600">
+                    Contém: <strong>{restoreModalFile.stats.pathfinders} desbravadores</strong> e <strong>{restoreModalFile.stats.progress_records} requisitos</strong>.
+                  </div>
+                )}
+                <div className="text-[11px] text-emerald-700 font-semibold pt-1 border-t border-slate-200">
+                  🛡️ Proteção Ativa: Um backup de emergência do estado atual será salvo automaticamente antes de aplicar a restauração.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRestoreModalFile(null)}
+                  disabled={Boolean(restoringFilename)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRestore}
+                  disabled={Boolean(restoringFilename)}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  {restoringFilename ? 'Restaurando...' : 'Sim, Restaurar Banco'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Clonagem de Dados de Teste */}
+      {cloneModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-indigo-100 text-indigo-700">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Importar Simulação para Produção?
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Copia os 7 desbravadores e 213 requisitos do teste para o clube oficial.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200 text-xs space-y-2 text-indigo-950 leading-relaxed">
+                <div>
+                  Isso preencherá seu Clube Oficial com os <strong>7 desbravadores</strong> de exemplo (todas as 6 classes regulares e avançadas) e seus <strong>213 requisitos assinados</strong>.
+                </div>
+                <div>
+                  Sua conta de Gestor atual será preservada integralmente e um <strong>snapshot de emergência</strong> será salvo no servidor antes da importação.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCloneModalOpen(false)}
+                  disabled={cloningTest}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCloneTest}
+                  disabled={cloningTest}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {cloningTest ? 'Importando...' : 'Confirmar Importação'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

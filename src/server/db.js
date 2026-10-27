@@ -420,10 +420,10 @@ function syncOfficialCatalogOn(targetDb) {
 }
 
 /**
- * Garante que o banco de PRODUÇÃO REAL (clube_desbravadores.sqlite)
- * não tenha nenhum dado falso/inventado (remove qualquer seed anterior se o Diretor ainda não configurou).
+ * Garante que o registro inicial de configurações (id=1) exista no banco oficial,
+ * preservando integralmente todos os usuários, desbravadores e registros já criados.
  */
-function ensureCleanProductionDatabase(targetDb) {
+function ensureProductionSettings(targetDb) {
   const now = new Date().toISOString();
   const settings = targetDb.prepare('SELECT * FROM club_settings WHERE id = 1').get();
 
@@ -436,73 +436,6 @@ function ensureCleanProductionDatabase(targetDb) {
         ) VALUES (1, '', '', 2026, '2026-11-28', 0, 0, 0, ?)`
       )
       .run(now);
-  }
-
-  // Remove todos os registros fictícios que haviam sido criados pelo seed antigo no banco de produção
-  const fakeUserCount = targetDb
-    .prepare("SELECT COUNT(*) as c FROM users WHERE email LIKE '%@clube.org' OR is_demo = 1")
-    .get().c;
-
-  const fakePathfinderCount = targetDb
-    .prepare("SELECT COUNT(*) as c FROM pathfinders WHERE id IN ('dbv-01','dbv-02','dbv-03','dbv-04','dbv-05','dbv-06','dbv-07','dbv-08','dbv-09','dbv-10','dbv-11','dbv-12','dbv-13','dbv-14','dbv-15','dbv-16','dbv-17','dbv-18')")
-    .get().c;
-
-  if (fakeUserCount > 0 || fakePathfinderCount > 0) {
-    targetDb.exec('BEGIN');
-    try {
-      // Remove eventos fictícios
-      targetDb
-        .prepare(
-          "DELETE FROM activity_events WHERE id IN ('evt-acamp-inverno', 'evt-domingo-caminhada', 'evt-sabado-comunidade')"
-        )
-        .run();
-
-      // Remove desbravadores fictícios (CASCADE remove matrículas e progressos deles)
-      targetDb
-        .prepare(
-          "DELETE FROM pathfinders WHERE id IN ('dbv-01','dbv-02','dbv-03','dbv-04','dbv-05','dbv-06','dbv-07','dbv-08','dbv-09','dbv-10','dbv-11','dbv-12','dbv-13','dbv-14','dbv-15','dbv-16','dbv-17','dbv-18')"
-        )
-        .run();
-
-      // Remove líderes fictícios
-      targetDb
-        .prepare("DELETE FROM users WHERE email LIKE '%@clube.org' OR is_demo = 1")
-        .run();
-
-      // Remove unidades fictícias se não houver desbravadores reais vinculados a elas
-      targetDb
-        .prepare(
-          "DELETE FROM units WHERE id IN ('unit-aguias', 'unit-leoes', 'unit-estrelas', 'unit-sentinelas') AND id NOT IN (SELECT DISTINCT unit_id FROM pathfinders WHERE unit_id IS NOT NULL)"
-        )
-        .run();
-
-      // Remove logs de auditoria fictícios dos usuários demo
-      targetDb
-        .prepare(
-          "DELETE FROM audit_logs WHERE user_id IN ('usr-diretor', 'usr-cons-aguias', 'usr-inst-amigo-comp')"
-        )
-        .run();
-
-      // Se o nome do clube ainda era o fictício 'Clube Pioneiros da Colina', limpa para que o Diretor preencha
-      const currSettings = targetDb.prepare('SELECT * FROM club_settings WHERE id = 1').get();
-      const realUsersRemaining = targetDb.prepare('SELECT COUNT(*) as c FROM users').get().c;
-      if (currSettings && currSettings.club_name === 'Clube Pioneiros da Colina' && realUsersRemaining === 0) {
-        targetDb
-          .prepare(
-            "UPDATE club_settings SET club_name = '', club_region = '', setup_completed = 0, demo_mode_enabled = 0 WHERE id = 1"
-          )
-          .run();
-      } else {
-        targetDb
-          .prepare('UPDATE club_settings SET demo_mode_enabled = 0 WHERE id = 1')
-          .run();
-      }
-
-      targetDb.exec('COMMIT');
-    } catch (err) {
-      targetDb.exec('ROLLBACK');
-      throw err;
-    }
   }
 }
 
@@ -747,7 +680,7 @@ function initDatabase() {
   createSchemaOn(prodDb);
   ensureAuthAndEmailColumnsOn(prodDb, false);
   syncOfficialCatalogOn(prodDb);
-  ensureCleanProductionDatabase(prodDb);
+  ensureProductionSettings(prodDb);
 
   // 2. Inicializa o Banco Isolado para a Página Temporária de Teste (?teste=1)
   createSchemaOn(testDb);

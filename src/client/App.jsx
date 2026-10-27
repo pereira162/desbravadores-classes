@@ -678,17 +678,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
-      {/* Aviso de Página Temporária de Teste (?teste=1) */}
-      {isTestMode() && (
+      {/* Banner de Identificação de Ambiente (Oficial vs Teste) */}
+      {isTestMode() ? (
         <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-extrabold flex flex-wrap items-center justify-between gap-2 border-b border-amber-500 no-print">
-          <span>
-            ⚠️ PÁGINA TEMPORÁRIA DE TESTE E VISUALIZAÇÃO (?teste=1) — Os dados fictícios desta página são isolados e NÃO afetam o banco oficial do seu clube.
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-1.5 py-0.5 rounded bg-slate-950 text-amber-400 font-black text-[10px]">
+              MODO TESTE (?teste=1)
+            </span>
+            <span>
+              Exibindo <strong>Ambiente de Testes e Simulação</strong> (7 desbravadores, 213 requisitos). O banco oficial está 100% isolado e protegido.
+            </span>
+          </div>
           <a
             href={getTestModeUrl(false)}
-            className="px-3 py-1 rounded-lg bg-slate-950 text-white hover:bg-slate-800 transition shrink-0"
+            className="px-3 py-1 rounded-lg bg-slate-950 text-white hover:bg-slate-800 transition shrink-0 font-bold"
           >
-            Ir para o Site Oficial de Produção →
+            Ir para o Clube Oficial de Produção →
+          </a>
+        </div>
+      ) : (
+        <div className="bg-slate-900 text-slate-300 px-4 py-1.5 text-xs font-medium flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 no-print">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>
+              <strong className="text-white">Clube Oficial:</strong> {normalizedData.settings?.club_name || 'Clube de Desbravadores'} — Sistema com backup automático contínuo ativo.
+            </span>
+          </div>
+          <a
+            href={getTestModeUrl(true)}
+            className="text-[11px] font-bold text-amber-300 hover:text-amber-200 transition shrink-0 underline flex items-center gap-1"
+          >
+            🧪 Acessar Ambiente de Demonstração / Teste (?teste=1) →
           </a>
         </div>
       )}
@@ -775,8 +795,27 @@ export default function App() {
             </div>
           </div>
 
-          {/* Perfil Logado + Atualizar + Sair */}
-          <div className="flex items-center gap-3">
+          {/* Perfil Logado + Ambiente + Atualizar + Sair */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {isTestMode() ? (
+              <a
+                href={getTestModeUrl(false)}
+                className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] font-extrabold flex items-center gap-1 shadow-xs transition"
+                title="Você está no Ambiente de Testes. Clique para ir ao Clube Oficial."
+              >
+                <span>🧪 Modo Teste</span>
+              </a>
+            ) : (
+              <a
+                href={getTestModeUrl(true)}
+                className="px-2.5 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-400 border border-emerald-700/60 text-[11px] font-bold flex items-center gap-1 transition"
+                title="Você está no Clube Oficial. Clique para abrir o Ambiente de Teste."
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Clube Oficial</span>
+              </a>
+            )}
+
             <button
               onClick={fetchBootstrapData}
               disabled={loadingData}

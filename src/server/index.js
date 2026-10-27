@@ -3,7 +3,14 @@ const cors = require('cors');
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { db, dbContextMiddleware, initDatabase, loadCardsMetadata, recordAudit } = require('./db');
+const { db, prodDb, testDb, dbContextMiddleware, initDatabase, loadCardsMetadata, recordAudit } = require('./db');
+const {
+  initAutoBackup,
+  createSnapshot,
+  listBackups,
+  restoreSnapshot,
+  BACKUP_DIR,
+} = require('./backup');
 const {
   hashPassword,
   verifyPassword,
@@ -22,6 +29,7 @@ const {
 } = require('./mailer');
 
 initDatabase();
+initAutoBackup({ prodDb, testDb });
 
 const app = express();
 app.use(cors());
@@ -2708,6 +2716,186 @@ app.get('/api/export/investiture-csv', requireAuth, (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="relatorio-investidura-${nowStr}.csv"`);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.send('\uFEFF' + csvLines.join('\r\n'));
+});
+
+// ============================================================================
+// 10.1. AUTOMATIC BACKUP & RESTORATION MANAGEMENT
+// ============================================================================
+
+// Lista todos os pontos de restauração e backups disponíveis no servidor
+app.get('/api/backups', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Gestor ou Diretor pode visualizar backups do servidor.' });
+  }
+
+  const backups = listBackups();
+  res.json({ backups });
+});
+
+// Cria um ponto de restauração imediato manual com label customizada
+app.post('/api/backups/create', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para criar pontos de restauração.' });
+  }
+
+  const { label = '', db_type = 'prod' } = req.body || {};
+  const targetDbInstance = db_type === 'test' ? testDb : prodDb;
+
+  try {
+    const backupMeta = createSnapshot({
+      dbInstance: targetDbInstance,
+      dbType: db_type === 'test' ? 'test' : 'prod',
+      trigger: 'MANUAL',
+      label,
+      reason: `Ponto de restauração manual solicitado por ${req.user.name} (${req.user.email})`,
+    });
+
+    recordAudit({
+      user: req.user,
+      action: 'BACKUP_CREATE',
+      entityType: 'BACKUP',
+      entityId: backupMeta.filename,
+      summary: `${req.user.name} criou manualmente o ponto de restauração "${backupMeta.filename}".`,
+      newState: backupMeta,
+    });
+
+    res.json({ success: true, backup: backupMeta });
+  } catch (err) {
+    res.status(500).json({ error: `Falha ao gerar ponto de restauração: ${err.message}` });
+  }
+});
+
+// Download do arquivo SQLite de backup direto pelo navegador
+app.get('/api/backups/:filename/download', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para baixar backups.' });
+  }
+
+  const filename = path.basename(req.params.filename);
+  if (!filename.endsWith('.sqlite')) {
+    return res.status(400).json({ error: 'Formato de arquivo inválido.' });
+  }
+
+  const fullPath = path.join(BACKUP_DIR, filename);
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ error: 'Arquivo de backup não encontrado no servidor.' });
+  }
+
+  res.download(fullPath, filename);
+});
+
+// Restaura o banco de dados a partir de um ponto de restauração selecionado
+app.post('/api/backups/:filename/restore', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Gestor ou Administrador tem permissão para restaurar a base de dados.' });
+  }
+
+  const filename = path.basename(req.params.filename);
+  const { target_db_type = 'prod' } = req.body || {};
+  const targetDbInstance = target_db_type === 'test' ? testDb : prodDb;
+
+  try {
+    const result = restoreSnapshot({
+      filename,
+      targetDbType: target_db_type,
+      targetDbInstance,
+    });
+
+    recordAudit({
+      user: req.user,
+      action: 'BACKUP_RESTORE',
+      entityType: 'BACKUP',
+      entityId: filename,
+      summary: `${req.user.name} restaurou o banco ${target_db_type === 'test' ? 'de testes' : 'oficial'} a partir do arquivo "${filename}".`,
+      newState: result.stats,
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Erro na restauração: ${err.message}` });
+  }
+});
+
+// Clona com segurança os dados de simulação do banco de testes (?teste=1) para a base oficial
+app.post('/api/backups/clone-test-to-prod', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Gestor ou Administrador pode clonar o ambiente de testes para a produção.' });
+  }
+
+  try {
+    // 1. Snapshot de emergência da produção ANTES do clone
+    createSnapshot({
+      dbInstance: prodDb,
+      dbType: 'prod',
+      trigger: 'EMERGENCY_PRE_RESTORE',
+      label: 'before_clone_test',
+      reason: 'Snapshot de emergência gerado antes de clonar ambiente de teste para produção',
+    });
+
+    // 2. Transfere dados de testDb para prodDb preservando a conta do usuário atual
+    const currentUser = req.user;
+    prodDb.exec('PRAGMA foreign_keys = OFF;');
+    prodDb.exec('BEGIN TRANSACTION;');
+
+    const testDbPathEscaped = path.join(DATA_DIR, 'clube_desbravadores_teste.sqlite').replace(/'/g, "''");
+    prodDb.exec(`ATTACH DATABASE '${testDbPathEscaped}' AS clone_src;`);
+
+    const tables = [
+      'progress_records',
+      'activity_event_attendees',
+      'activity_event_requirements',
+      'activity_events',
+      'class_enrollments',
+      'pathfinders',
+      'units',
+    ];
+
+    for (const t of tables) {
+      prodDb.exec(`DELETE FROM main.${t};`);
+      prodDb.exec(`INSERT OR REPLACE INTO main.${t} SELECT * FROM clone_src.${t};`);
+    }
+
+    // Copia líderes do teste mas garante que o usuário gestor atual continue existindo
+    prodDb.exec(`INSERT OR REPLACE INTO main.users SELECT * FROM clone_src.users;`);
+    
+    // Assegura integridade do usuário logado
+    const curUserRow = prodDb.prepare('SELECT * FROM main.users WHERE id = ?').get(currentUser.id);
+    if (!curUserRow && currentUser.email) {
+      prodDb.prepare(`
+        INSERT OR REPLACE INTO main.users (
+          id, name, email, password_hash, role, unit_id, assigned_classes_json, active, created_at
+        ) VALUES (?, ?, ?, 'NOPASS', 'GESTOR', NULL, '["*"]', 1, ?)
+      `).run(currentUser.id, currentUser.name, currentUser.email, new Date().toISOString());
+    }
+
+    prodDb.exec('COMMIT;');
+    prodDb.exec('PRAGMA foreign_keys = ON;');
+    prodDb.exec('DETACH DATABASE clone_src;');
+    prodDb.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+
+    const pfs = prodDb.prepare('SELECT count(*) as c FROM pathfinders;').get()?.c || 0;
+    const progs = prodDb.prepare('SELECT count(*) as c FROM progress_records;').get()?.c || 0;
+
+    recordAudit({
+      user: req.user,
+      action: 'CLONE_TEST_TO_PROD',
+      entityType: 'DATABASE',
+      entityId: 'prod',
+      summary: `${req.user.name} clonou o ambiente de teste para o banco de produção oficial (${pfs} desbravadores, ${progs} requisitos).`,
+      newState: { pathfinders: pfs, progress_records: progs },
+    });
+
+    res.json({
+      success: true,
+      message: `Ambiente de teste clonado com sucesso para a base oficial! (${pfs} desbravadores e ${progs} requisitos importados).`,
+      stats: { pathfinders: pfs, progress_records: progs },
+    });
+  } catch (err) {
+    try { prodDb.exec('ROLLBACK;'); } catch (e) {}
+    try { prodDb.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}
+    try { prodDb.exec('DETACH DATABASE clone_src;'); } catch (e) {}
+    res.status(500).json({ error: `Erro ao clonar dados de teste: ${err.message}` });
+  }
 });
 
 // ============================================================================
