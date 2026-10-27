@@ -280,37 +280,39 @@ export default function InstructorControlSheetModal({
                       REQUISITOS OFICIAIS DA CLASSE
                     </th>
                     {columnsData.map((pf, idx) => {
-                      const shortName = pf
-                        ? pf.name.split(' ').slice(0, 2).join(' ')
-                        : '';
+                      const parts = pf ? pf.name.replace(/\(.*\)/g, '').trim().split(/\s+/) : [];
+                      const shortName =
+                        parts.length > 2 && /^\d+$/.test(parts[2])
+                          ? parts.slice(0, 3).join(' ')
+                          : parts.slice(0, 2).join(' ');
                       return (
                         <th
                           key={idx}
-                          className="border border-slate-400 p-0 text-center w-8 min-w-[32px] max-w-[32px] h-28 font-extrabold align-middle bg-slate-100 relative overflow-hidden"
+                          className="border border-slate-400 p-0 text-center w-8 min-w-[32px] max-w-[32px] h-32 font-extrabold align-middle bg-slate-100 relative overflow-hidden"
                         >
                           {pf ? (
-                            <div className="w-8 h-28 flex items-center justify-center relative">
-                              <span
-                                style={{
-                                  display: 'block',
-                                  width: '104px',
-                                  transform: 'rotate(-90deg)',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  textAlign: 'left',
-                                  fontSize: '9.5px',
-                                  fontWeight: 800,
-                                  color: '#0f172a',
-                                  lineHeight: '1.1',
-                                }}
-                              >
-                                {shortName}
-                              </span>
-                            </div>
+                            <span
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                width: '116px',
+                                transform: 'translate(-50%, -50%) rotate(-90deg)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'left',
+                                fontSize: '9px',
+                                fontWeight: 800,
+                                color: '#0f172a',
+                                lineHeight: '1.1',
+                              }}
+                            >
+                              {shortName}
+                            </span>
                           ) : (
                             /* Espaço em branco caso haja menos desbravadores, para o instrutor escrever um novo nome à mão */
-                            <div className="w-8 h-28" />
+                            <div className="w-8 h-32" />
                           )}
                         </th>
                       );
