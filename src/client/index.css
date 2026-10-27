@@ -39,3 +39,19 @@
     break-inside: avoid;
   }
 }
+
+/* Regras exclusivas ativadas durante a exportação de PDF via html2canvas */
+.pdf-export-active .no-print,
+.pdf-export-active .print-hidden,
+.pdf-export-active .pdf-hide {
+  display: none !important;
+}
+.pdf-export-active .print-only,
+.pdf-export-active .pdf-show-block {
+  display: block !important;
+}
+.pdf-export-active .print-block,
+.pdf-export-active .pdf-show {
+  display: inline-flex !important;
+}
+

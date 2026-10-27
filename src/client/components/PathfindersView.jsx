@@ -657,471 +657,495 @@ export default function PathfindersView({
             </div>
           ) : (
             <>
-              {/* Cabeçalho do Cartão Virtual Individual */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-extrabold text-slate-900">
-                        {activePf.name}
-                      </h2>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
-                        {activePf.unit_name || 'Sem Unidade'}
-                      </span>
-                      {activePf.age && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                          {activePf.age} anos (Nasc: {formatDateBR(activePf.birth_date)})
+              {/* Container Geral do Cartão Virtual Individual (Incluindo Cabeçalho para Ficha Completa) */}
+              <div id="card-container" ref={cardContainerRef} className="space-y-4">
+                <div className="pdf-item bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                  {/* Cabeçalho Oficial adicional visível no topo do PDF da Ficha Completa */}
+                  <div className="hidden pdf-show-block border-b-2 border-slate-900 pb-3 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                          MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA
+                        </div>
+                        <h1 className="text-lg font-black uppercase text-slate-950">
+                          FICHA INDIVIDUAL DETALHADA DE CLASSES — 2026
+                        </h1>
+                      </div>
+                      <div className="text-right text-xs font-bold text-slate-700">
+                        <div>Clube: {settings?.club_name || 'Clube de Desbravadores'}</div>
+                        <div>
+                          Concluído: {activePf.pct}% ({activePf.approvedReqs}/{activePf.totalReqs} requisitos)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-xl font-extrabold text-slate-900">
+                          {activePf.name}
+                        </h2>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+                          {activePf.unit_name || 'Sem Unidade'}
                         </span>
-                      )}
-                      {activePf.has_account && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          Conta do Desbravador Ativa
-                        </span>
+                        {activePf.age && (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                            {activePf.age} anos (Nasc: {formatDateBR(activePf.birth_date)})
+                          </span>
+                        )}
+                        {activePf.has_account && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1 no-print">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            Conta do Desbravador Ativa
+                          </span>
+                        )}
+                      </div>
+                      {activePf.notes && (
+                        <p className="text-xs text-slate-500 mt-1">{activePf.notes}</p>
                       )}
                     </div>
-                    {activePf.notes && (
-                      <p className="text-xs text-slate-500 mt-1">{activePf.notes}</p>
-                    )}
+
+                    <div className="flex flex-wrap items-center gap-2 no-print">
+                      {canManageRegistry && (
+                        <>
+                          <button
+                            onClick={() => openPathfinderInviteModal(activePf)}
+                            className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-300 text-xs font-bold text-teal-900 flex items-center gap-1.5 cursor-pointer"
+                            title="Gerar ou copiar o link individual para este desbravador criar a conta dele"
+                          >
+                            <Link2 className="w-3.5 h-3.5 text-teal-700" />
+                            {activePf.has_account
+                              ? 'Conta / Link Individual'
+                              : 'Link de Conta Individual'}
+                          </button>
+                          <button
+                            onClick={() => openEditPfModal(activePf)}
+                            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Editar Matrícula
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCompactOnePageMode(!compactOnePageMode)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
+                          compactOnePageMode
+                            ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                        }`}
+                        title="Alternar entre a ficha detalhada e o modelo simplificado de 1 página A4"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        {compactOnePageMode ? 'Ver Ficha Completa' : 'Versão Simplificada (1 Página)'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const targetEl = compactOnePageMode
+                            ? (compactCardRef.current || document.getElementById('compact-card-container'))
+                            : (cardContainerRef.current || document.getElementById('card-container'));
+                          if (!targetEl) return;
+                          setExportingCardPdf(true);
+                          try {
+                            await exportElementToPdf(targetEl, {
+                              filenamePrefix: `ficha_${compactOnePageMode ? 'simplificada_1_pag' : 'completa'}_${activePf.name}`,
+                              orientation: 'portrait',
+                              singlePage: compactOnePageMode,
+                              scale: 2,
+                              marginMm: compactOnePageMode ? 4 : 6,
+                            });
+                          } catch (err) {
+                            console.error('Erro ao gerar PDF da ficha:', err);
+                            alert('Não foi possível gerar o PDF da ficha. Tente novamente.');
+                          } finally {
+                            setExportingCardPdf(false);
+                          }
+                        }}
+                        disabled={exportingCardPdf}
+                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                        {exportingCardPdf
+                          ? 'Gerando PDF...'
+                          : compactOnePageMode
+                          ? 'Baixar PDF (1 Página)'
+                          : 'Baixar PDF da Ficha'}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 no-print">
-                    {canManageRegistry && (
-                      <>
-                        <button
-                          onClick={() => openPathfinderInviteModal(activePf)}
-                          className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-300 text-xs font-bold text-teal-900 flex items-center gap-1.5 cursor-pointer"
-                          title="Gerar ou copiar o link individual para este desbravador criar a conta dele"
-                        >
-                          <Link2 className="w-3.5 h-3.5 text-teal-700" />
-                          {activePf.has_account
-                            ? 'Conta / Link Individual'
-                            : 'Link de Conta Individual'}
-                        </button>
-                        <button
-                          onClick={() => openEditPfModal(activePf)}
-                          className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Editar Matrícula
-                        </button>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setCompactOnePageMode(!compactOnePageMode)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
-                        compactOnePageMode
-                          ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                      }`}
-                      title="Alternar entre a ficha detalhada e o modelo simplificado de 1 página A4"
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                      {compactOnePageMode ? 'Ver Ficha Completa' : 'Versão Simplificada (1 Página)'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const targetEl = compactOnePageMode
-                          ? (compactCardRef.current || document.getElementById('compact-card-container'))
-                          : (cardContainerRef.current || document.getElementById('card-container'));
-                        if (!targetEl) return;
-                        setExportingCardPdf(true);
-                        try {
-                          await exportElementToPdf(targetEl, {
-                            filenamePrefix: `ficha_${compactOnePageMode ? 'simplificada_1_pag' : 'completa'}_${activePf.name}`,
-                            orientation: 'portrait',
-                            singlePage: compactOnePageMode,
-                            scale: 2,
-                            marginMm: compactOnePageMode ? 4 : 6,
-                          });
-                        } catch (err) {
-                          console.error('Erro ao gerar PDF da ficha:', err);
-                          alert('Não foi possível gerar o PDF da ficha. Tente novamente.');
-                        } finally {
-                          setExportingCardPdf(false);
+                  {/* Resumo por Classe Matriculada */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {activePf.byClass.map((bc) => (
+                      <div
+                        key={bc.slug}
+                        onClick={() =>
+                          setCardSelectedClassSlug(
+                            cardSelectedClassSlug === bc.slug ? 'ALL' : bc.slug
+                          )
                         }
-                      }}
-                      disabled={exportingCardPdf}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      <FileDown className="w-3.5 h-3.5" />
-                      {exportingCardPdf
-                        ? 'Gerando PDF...'
-                        : compactOnePageMode
-                        ? 'Baixar PDF (1 Página)'
-                        : 'Baixar PDF da Ficha'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Resumo por Classe Matriculada */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  {activePf.byClass.map((bc) => (
-                    <div
-                      key={bc.slug}
-                      onClick={() =>
-                        setCardSelectedClassSlug(
-                          cardSelectedClassSlug === bc.slug ? 'ALL' : bc.slug
-                        )
-                      }
-                      className={`p-3.5 rounded-xl border transition cursor-pointer ${
-                        cardSelectedClassSlug === bc.slug
-                          ? 'ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/20'
-                          : 'border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={bc.classInfo?.logo_file}
-                            alt={bc.classInfo?.name}
-                            className="w-7 h-7 object-contain"
-                          />
-                          <div>
-                            <div className="text-xs font-extrabold text-slate-900">
-                              {bc.classInfo?.name}
-                            </div>
-                            <div className="text-[11px] text-slate-500">
-                              {bc.approved} de {bc.total} aprovados (Faltam{' '}
-                              <strong>{bc.remaining}</strong>)
+                        className={`p-3.5 rounded-xl border transition cursor-pointer ${
+                          cardSelectedClassSlug === bc.slug
+                            ? 'ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/20'
+                            : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={bc.classInfo?.logo_file}
+                              alt={bc.classInfo?.name}
+                              className="w-7 h-7 object-contain"
+                            />
+                            <div>
+                              <div className="text-xs font-extrabold text-slate-900">
+                                {bc.classInfo?.name}
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {bc.approved} de {bc.total} aprovados (Faltam{' '}
+                                <strong>{bc.remaining}</strong>)
+                              </div>
                             </div>
                           </div>
+                          <span
+                            className="text-sm font-extrabold"
+                            style={{ color: bc.classInfo?.color || '#0f172a' }}
+                          >
+                            {bc.pct}%
+                          </span>
                         </div>
-                        <span
-                          className="text-sm font-extrabold"
-                          style={{ color: bc.classInfo?.color || '#0f172a' }}
-                        >
-                          {bc.pct}%
-                        </span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mt-2">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${bc.pct}%`,
-                            backgroundColor: bc.classInfo?.color || '#4f46e5',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Barra de Filtro: "O que falta para a Investidura?" */}
-                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 no-print">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCardOnlyPending(false)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                        !cardOnlyPending
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      Cartão Completo ({activePf.totalReqs})
-                    </button>
-                    <button
-                      onClick={() => setCardOnlyPending(true)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                        cardOnlyPending
-                          ? 'bg-rose-600 text-white shadow-xs'
-                          : 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
-                      }`}
-                    >
-                      <Award className="w-3.5 h-3.5" />O que falta para a Investidura? (
-                      {activePf.remainingReqs})
-                    </button>
-                  </div>
-
-                  {cardSelectedClassSlug !== 'ALL' && (
-                    <button
-                      onClick={() => setCardSelectedClassSlug('ALL')}
-                      className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
-                    >
-                      Mostrar todas as classes matriculadas
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Visualização: Modo Compacto 1 Página OU Modo Detalhado */}
-              {compactOnePageMode ? (
-                <div
-                  id="compact-card-container"
-                  ref={compactCardRef}
-                  className="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm font-sans"
-                  style={{ minHeight: '1080px' }}
-                >
-                  {/* Cabeçalho Compacto Oficial 1 Página */}
-                  <div className="border-b-2 border-slate-900 pb-3 mb-3 flex items-center justify-between">
-                    <div>
-                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                        CLUBE DE DESBRAVADORES • DIVISÃO SUL-AMERICANA
-                      </div>
-                      <h1 className="text-lg font-black text-slate-950 uppercase">
-                        FICHA INDIVIDUAL DE PROGRESSO EM CLASSES (1 PÁGINA)
-                      </h1>
-                      <div className="text-xs font-bold text-slate-700">
-                        Clube: {settings?.club_name || 'Clube de Desbravadores'} • Ano: 2026
-                      </div>
-                    </div>
-                    <div className="text-right text-xs">
-                      <div className="text-sm font-black text-slate-950">{activePf.name}</div>
-                      <div className="text-slate-600 font-semibold">
-                        Unidade: {activePf.unit_name || 'Sem Unidade'} • {activePf.age} anos ({formatDateBR(activePf.birth_date)})
-                      </div>
-                      <div className="text-amber-700 font-extrabold text-[11px] mt-0.5">
-                        Concluído: {activePf.pct}% ({activePf.approvedReqs}/{activePf.totalReqs} itens)
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Grid de Requisitos em 2 Colunas Densas */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
-                    {activePfRequirementsByClass.map((clsBlock) => (
-                      <div key={clsBlock.slug} className="border border-slate-200 rounded p-2 bg-slate-50/50">
-                        <div
-                          className="font-black text-white px-2 py-0.5 rounded text-[10px] uppercase mb-1.5 flex items-center justify-between"
-                          style={{ backgroundColor: clsBlock.classInfo?.color || '#0f172a' }}
-                        >
-                          <span>{clsBlock.classInfo?.name}</span>
-                          <span>{clsBlock.pct}%</span>
-                        </div>
-
-                        <div className="space-y-1">
-                          {clsBlock.requirements.map((req) => {
-                            const isApproved = req.status === 'APROVADO';
-                            const isDone = req.status === 'CONCLUIDO';
-                            return (
-                              <div
-                                key={req.id}
-                                className="flex items-start justify-between gap-1.5 py-0.5 border-b border-slate-100 last:border-0 leading-tight"
-                              >
-                                <div className="min-w-0 pr-1">
-                                  <span className="font-extrabold text-slate-900 mr-1">
-                                    {req.code}
-                                  </span>
-                                  <span className="text-slate-700 font-medium">
-                                    {req.title}
-                                  </span>
-                                  {req.subitems?.length > 0 && (
-                                    <div className="mt-0.5 pl-1.5 space-y-0.5 text-[9px] text-slate-500 font-normal leading-tight">
-                                      {req.subitems.map((s) => (
-                                        <div key={s.key}>
-                                          <strong className="font-bold text-slate-700">{s.key})</strong> {s.text}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="shrink-0 text-center w-6">
-                                  {isApproved ? (
-                                    <span className="text-emerald-700 font-black text-xs">✓</span>
-                                  ) : isDone ? (
-                                    <span className="text-teal-700 font-bold text-[9px]">F</span>
-                                  ) : (
-                                    <span className="inline-block w-full text-center text-transparent select-none">&nbsp;</span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mt-2">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${bc.pct}%`,
+                              backgroundColor: bc.classInfo?.color || '#4f46e5',
+                            }}
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Rodapé Oficial com Assinaturas */}
-                  <div className="mt-6 pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-700">
-                    <div className="w-56 text-center">
-                      <div className="border-b border-slate-500 mb-1 h-5"></div>
-                      <div className="font-bold">Instrutor(a) / Conselheiro(a)</div>
+                  {/* Barra de Filtro: "O que falta para a Investidura?" */}
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 no-print">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCardOnlyPending(false)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                          !cardOnlyPending
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        Cartão Completo ({activePf.totalReqs})
+                      </button>
+                      <button
+                        onClick={() => setCardOnlyPending(true)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                          cardOnlyPending
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        <Award className="w-3.5 h-3.5" />O que falta para a Investidura? (
+                        {activePf.remainingReqs})
+                      </button>
                     </div>
-                    <div className="w-56 text-center">
-                      <div className="border-b border-slate-500 mb-1 h-5"></div>
-                      <div className="font-bold">Diretor(a) do Clube</div>
-                    </div>
-                    <div className="w-48 text-center">
-                      <div className="border-b border-slate-500 mb-1 h-5"></div>
-                      <div className="font-bold">Data da Avaliação</div>
-                    </div>
+
+                    {cardSelectedClassSlug !== 'ALL' && (
+                      <button
+                        onClick={() => setCardSelectedClassSlug('ALL')}
+                        className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                      >
+                        Mostrar todas as classes matriculadas
+                      </button>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div id="card-container" ref={cardContainerRef} className="space-y-4">
-                  {/* Lista dos Requisitos do Cartão do Desbravador */}
-                  {activePfRequirementsByClass.map((clsBlock) => (
-                    <div
-                      key={clsBlock.slug}
-                      className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
-                    >
-                      <div
-                        className="px-5 py-3 text-white flex items-center justify-between"
-                        style={{
-                          backgroundColor: clsBlock.classInfo?.color || '#334155',
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-extrabold">
-                            {clsBlock.classInfo?.name}
-                          </span>
-                          <span className="text-xs bg-black/25 px-2 py-0.5 rounded-full font-semibold">
-                            {clsBlock.requirements.length} itens exibidos
-                          </span>
+
+                {/* Visualização: Modo Compacto 1 Página OU Modo Detalhado */}
+                {compactOnePageMode ? (
+                  <div
+                    id="compact-card-container"
+                    ref={compactCardRef}
+                    className="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm font-sans"
+                    style={{ minHeight: '1080px' }}
+                  >
+                    {/* Cabeçalho Compacto Oficial 1 Página */}
+                    <div className="border-b-2 border-slate-900 pb-3 mb-3 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                          CLUBE DE DESBRAVADORES • DIVISÃO SUL-AMERICANA
                         </div>
-                        <span className="text-xs font-bold">
-                          Concluído: {clsBlock.pct}%
-                        </span>
+                        <h1 className="text-lg font-black text-slate-950 uppercase">
+                          FICHA INDIVIDUAL DE PROGRESSO EM CLASSES (1 PÁGINA)
+                        </h1>
+                        <div className="text-xs font-bold text-slate-700">
+                          Clube: {settings?.club_name || 'Clube de Desbravadores'} • Ano: 2026
+                        </div>
                       </div>
-
-                      {clsBlock.requirements.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-emerald-700 font-semibold">
-                          Parabéns! Todos os requisitos desta classe já foram aprovados!
+                      <div className="text-right text-xs">
+                        <div className="text-sm font-black text-slate-950">{activePf.name}</div>
+                        <div className="text-slate-600 font-semibold">
+                          Unidade: {activePf.unit_name || 'Sem Unidade'} • {activePf.age} anos ({formatDateBR(activePf.birth_date)})
                         </div>
-                      ) : (
-                        <div className="divide-y divide-slate-100">
-                          {clsBlock.requirements.map((req) => {
-                            const cfg =
-                              STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDENTE;
-                            const ctxBadge =
-                              EXECUTION_CONTEXT_LABELS[req.execution_context];
-                            const subCount = req.subitems?.length || 0;
-                            const attachCount = req.progress?.attachments?.length || 0;
-                            const hasSubmissionText = Boolean(req.progress?.submission_text);
-                            const hasReviewNotes = Boolean(req.progress?.review_notes);
+                        <div className="text-amber-700 font-extrabold text-[11px] mt-0.5">
+                          Concluído: {activePf.pct}% ({activePf.approvedReqs}/{activePf.totalReqs} itens)
+                        </div>
+                      </div>
+                    </div>
 
-                            return (
-                              <div
-                                key={req.id}
-                                onClick={() =>
-                                  onOpenRequirementDetail(activePf, req)
-                                }
-                                className="pdf-item p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                              >
-                                <div className="space-y-1">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-xs font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                    {/* Grid de Requisitos em 2 Colunas Densas (Exatamente igual ao layout original de 1 página) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
+                      {activePfRequirementsByClass.map((clsBlock) => (
+                        <div key={clsBlock.slug} className="border border-slate-200 rounded p-2 bg-slate-50/50">
+                          <div
+                            className="font-black text-white px-2 py-0.5 rounded text-[10px] uppercase mb-1.5 flex items-center justify-between"
+                            style={{ backgroundColor: clsBlock.classInfo?.color || '#0f172a' }}
+                          >
+                            <span>{clsBlock.classInfo?.name}</span>
+                            <span>{clsBlock.pct}%</span>
+                          </div>
+
+                          <div className="space-y-1">
+                            {clsBlock.requirements.map((req) => {
+                              const isApproved = req.status === 'APROVADO';
+                              const isDone = req.status === 'CONCLUIDO';
+                              return (
+                                <div
+                                  key={req.id}
+                                  data-pdf-state={req.status}
+                                  className="flex items-start justify-between gap-1.5 py-0.5 border-b border-slate-100 last:border-0 leading-tight"
+                                >
+                                  <div className="min-w-0 pr-1">
+                                    <span className="font-extrabold text-slate-900 mr-1">
                                       {req.code}
                                     </span>
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase">
-                                      {req.section}
+                                    <span className="text-slate-700 font-medium">
+                                      {req.title}
                                     </span>
-                                    {ctxBadge && (
-                                      <span
-                                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
-                                      >
-                                        {ctxBadge.label}
-                                      </span>
-                                    )}
-                                    {attachCount > 0 && (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
-                                        <Paperclip className="w-3 h-3" />
-                                        {attachCount} {attachCount === 1 ? 'anexo/foto' : 'anexos/fotos'}
-                                      </span>
-                                    )}
-                                    {hasSubmissionText && (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex items-center gap-1">
-                                        <MessageSquare className="w-3 h-3" />
-                                        Relato enviado
+                                    {req.subitems?.length > 0 && (
+                                      <span className="text-slate-400 ml-1">
+                                        ({req.subitems.map((s) => s.key).join(',')})
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
-                                    <strong className="font-bold mr-1">
-                                      {req.marker}
-                                    </strong>
-                                    {req.title}
-                                  </p>
-                                  {subCount > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 pt-1">
-                                      {req.subitems.map((sub) => {
-                                        const done =
-                                          req.status === 'APROVADO' ||
-                                          Boolean(
-                                            req.progress?.completed_subitems?.[
-                                              sub.key
-                                            ]
-                                          );
-                                        return (
-                                          <span
-                                            key={sub.key}
-                                            className={`text-[10px] px-2 py-0.5 rounded border ${
-                                              done
-                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                                            }`}
-                                          >
-                                            {sub.key}) {sub.text}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                  {hasSubmissionText && (
-                                    <p className="text-[11px] text-teal-800 bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 rounded-lg mt-1">
-                                      <strong>Como fez:</strong> &ldquo;{req.progress.submission_text}&rdquo;
-                                      {req.progress.completed_at && (
-                                        <span className="ml-1.5 text-slate-500">
-                                          (em {formatDateBR(req.progress.completed_at)})
+                                  <div className="shrink-0 text-center w-6">
+                                    {isApproved ? (
+                                      <span className="text-emerald-700 font-black text-xs">✓</span>
+                                    ) : isDone ? (
+                                      <span className="text-teal-700 font-bold text-[9px]">F</span>
+                                    ) : (
+                                      <span className="inline-block w-3.5 h-3.5 rounded-full border border-slate-400" />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Rodapé Oficial com Assinaturas */}
+                    <div className="mt-6 pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-700">
+                      <div className="w-56 text-center">
+                        <div className="border-b border-slate-500 mb-1 h-5"></div>
+                        <div className="font-bold">Instrutor(a) / Conselheiro(a)</div>
+                      </div>
+                      <div className="w-56 text-center">
+                        <div className="border-b border-slate-500 mb-1 h-5"></div>
+                        <div className="font-bold">Diretor(a) do Clube</div>
+                      </div>
+                      <div className="w-48 text-center">
+                        <div className="border-b border-slate-500 mb-1 h-5"></div>
+                        <div className="font-bold">Data da Avaliação</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Lista dos Requisitos do Cartão do Desbravador */}
+                    {activePfRequirementsByClass.map((clsBlock) => (
+                      <div
+                        key={clsBlock.slug}
+                        className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+                      >
+                        <div
+                          className="pdf-item px-5 py-3 text-white flex items-center justify-between"
+                          style={{
+                            backgroundColor: clsBlock.classInfo?.color || '#334155',
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-extrabold">
+                              {clsBlock.classInfo?.name}
+                            </span>
+                            <span className="text-xs bg-black/25 px-2 py-0.5 rounded-full font-semibold">
+                              {clsBlock.requirements.length} itens exibidos
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold">
+                            Concluído: {clsBlock.pct}%
+                          </span>
+                        </div>
+
+                        {clsBlock.requirements.length === 0 ? (
+                          <div className="pdf-item p-6 text-center text-xs text-emerald-700 font-semibold">
+                            Parabéns! Todos os requisitos desta classe já foram aprovados!
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-100">
+                            {clsBlock.requirements.map((req) => {
+                              const cfg =
+                                STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDENTE;
+                              const ctxBadge =
+                                EXECUTION_CONTEXT_LABELS[req.execution_context];
+                              const subCount = req.subitems?.length || 0;
+                              const attachCount = req.progress?.attachments?.length || 0;
+                              const hasSubmissionText = Boolean(req.progress?.submission_text);
+                              const hasReviewNotes = Boolean(req.progress?.review_notes);
+
+                              return (
+                                <div
+                                  key={req.id}
+                                  data-pdf-state={req.status}
+                                  onClick={() =>
+                                    onOpenRequirementDetail(activePf, req)
+                                  }
+                                  className="pdf-item p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                >
+                                  <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-xs font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                                        {req.code}
+                                      </span>
+                                      <span className="text-[11px] font-bold text-slate-500 uppercase">
+                                        {req.section}
+                                      </span>
+                                      {ctxBadge && (
+                                        <span
+                                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
+                                        >
+                                          {ctxBadge.label}
                                         </span>
                                       )}
+                                      {attachCount > 0 && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
+                                          <Paperclip className="w-3 h-3" />
+                                          {attachCount} {attachCount === 1 ? 'anexo/foto' : 'anexos/fotos'}
+                                        </span>
+                                      )}
+                                      {hasSubmissionText && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex items-center gap-1">
+                                          <MessageSquare className="w-3 h-3" />
+                                          Relato enviado
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
+                                      <strong className="font-bold mr-1">
+                                        {req.marker}
+                                      </strong>
+                                      {req.title}
                                     </p>
-                                  )}
-                                  {hasReviewNotes && (
-                                    <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg mt-1">
-                                      <strong>Feedback do Líder:</strong> &ldquo;{req.progress.review_notes}&rdquo;
-                                    </p>
-                                  )}
-                                  {req.progress?.notes && (
-                                    <p className="text-[11px] text-indigo-700 italic">
-                                      Obs: &ldquo;{req.progress.notes}&rdquo;
-                                    </p>
-                                  )}
-                                </div>
+                                    {subCount > 0 && (
+                                      <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {req.subitems.map((sub) => {
+                                          const done =
+                                            req.status === 'APROVADO' ||
+                                            Boolean(
+                                              req.progress?.completed_subitems?.[
+                                                sub.key
+                                              ]
+                                            );
+                                          return (
+                                            <span
+                                              key={sub.key}
+                                              className={`text-[10px] px-2 py-0.5 rounded border ${
+                                                done
+                                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
+                                                  : 'bg-slate-50 text-slate-600 border-slate-200'
+                                              }`}
+                                            >
+                                              {sub.key}) {sub.text}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    {hasSubmissionText && (
+                                      <p className="text-[11px] text-teal-800 bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 rounded-lg mt-1">
+                                        <strong>Como fez:</strong> &ldquo;{req.progress.submission_text}&rdquo;
+                                        {req.progress.completed_at && (
+                                          <span className="ml-1.5 text-slate-500">
+                                            (em {formatDateBR(req.progress.completed_at)})
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
+                                    {hasReviewNotes && (
+                                      <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg mt-1">
+                                        <strong>Feedback do Líder:</strong> &ldquo;{req.progress.review_notes}&rdquo;
+                                      </p>
+                                    )}
+                                    {req.progress?.notes && (
+                                      <p className="text-[11px] text-indigo-700 italic">
+                                        Obs: &ldquo;{req.progress.notes}&rdquo;
+                                      </p>
+                                    )}
+                                  </div>
 
-                                <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
-                                  {req.status === 'PENDENTE' ? (
-                                    <>
+                                  <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
+                                    {req.status === 'PENDENTE' ? (
+                                      <>
+                                        {/* Visível na tela do site, mas oculto no PDF */}
+                                        <span
+                                          className={`pdf-hide px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
+                                        >
+                                          {cfg.label}
+                                        </span>
+                                        {/* Visível apenas no PDF: espaço limpo sem texto para o instrutor marcar/assinar */}
+                                        <span className="hidden pdf-show w-20 h-6 rounded-lg border border-slate-300 bg-white text-transparent select-none">
+                                          &nbsp;
+                                        </span>
+                                      </>
+                                    ) : (
                                       <span
-                                        className={`print-hidden px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
+                                        className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
                                       >
                                         {cfg.label}
                                       </span>
-                                      <span className="hidden print-block text-transparent select-none w-8 text-center">&nbsp;</span>
-                                    </>
-                                  ) : (
-                                    <span
-                                      className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
-                                    >
-                                      {cfg.label}
-                                    </span>
-                                  )}
-                                  {isPathfinderUser && req.status !== 'APROVADO' && (
-                                    <span className="text-[10px] font-bold text-teal-700 flex items-center gap-1">
-                                      <Camera className="w-3 h-3" />
-                                      {req.status === 'CONCLUIDO'
-                                        ? 'Editar envio / fotos'
-                                        : 'Marcar & anexar fotos'}
-                                    </span>
-                                  )}
-                                  {req.progress?.updated_at && (
-                                    <span className="text-[10px] text-slate-400">
-                                      {formatDateBR(req.progress.updated_at)}
-                                    </span>
-                                  )}
+                                    )}
+                                    {isPathfinderUser && req.status !== 'APROVADO' && (
+                                      <span className="text-[10px] font-bold text-teal-700 flex items-center gap-1 no-print">
+                                        <Camera className="w-3 h-3" />
+                                        {req.status === 'CONCLUIDO'
+                                          ? 'Editar envio / fotos'
+                                          : 'Marcar & anexar fotos'}
+                                      </span>
+                                    )}
+                                    {req.progress?.updated_at && (
+                                      <span className="text-[10px] text-slate-400">
+                                        {formatDateBR(req.progress.updated_at)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

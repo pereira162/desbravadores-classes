@@ -483,6 +483,27 @@ export default function DemandPlanningView({
           CONTEÚDO DO PLANEJAMENTO (CAPTURADO PARA PDF)
          ===================================================================== */}
       <div id="planning-content-container" ref={planningRef} className="space-y-4">
+        {/* Cabeçalho exclusivo para o PDF do Planejamento Anual */}
+        <div className="hidden pdf-show-block pdf-item bg-white rounded-2xl border-b-2 border-slate-900 p-4 mb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA
+              </div>
+              <h1 className="text-lg font-black uppercase text-slate-950">
+                PLANEJAMENTO ANUAL DE CLASSES —{' '}
+                {viewMode === 'EQUIVALENCE'
+                  ? `UNIFICAÇÕES ENTRE CLASSES (${equivalenceGroupsData.length} GRUPOS)`
+                  : `MAPA DE DEMANDAS POR ATIVIDADE (${filteredRequirements.length} ATIVIDADES)`}
+              </h1>
+            </div>
+            <div className="text-right text-xs font-bold text-slate-700">
+              <div>Ano Curricular: 2026</div>
+              <div>{totalPendingParticipations} pendências de desbravadores mapeadas</div>
+            </div>
+          </div>
+        </div>
+
         {viewMode === 'EQUIVALENCE' ? (
           <div className="space-y-4">
           {equivalenceGroupsData.map((group) => {
