@@ -271,10 +271,11 @@ export default function DemandPlanningView({
           <button
             type="button"
             onClick={async () => {
-              if (!planningRef.current) return;
+              const targetEl = planningRef.current || document.getElementById('planning-content-container');
+              if (!targetEl) return;
               setExportingPdf(true);
               try {
-                await exportElementToPdf(planningRef.current, {
+                await exportElementToPdf(targetEl, {
                   filenamePrefix: `planejamento_demanda_${viewMode.toLowerCase()}`,
                   orientation: 'portrait',
                   scale: 2,
@@ -481,7 +482,7 @@ export default function DemandPlanningView({
       {/* =====================================================================
           CONTEÚDO DO PLANEJAMENTO (CAPTURADO PARA PDF)
          ===================================================================== */}
-      <div ref={planningRef} className="space-y-4">
+      <div id="planning-content-container" ref={planningRef} className="space-y-4">
         {viewMode === 'EQUIVALENCE' ? (
           <div className="space-y-4">
           {equivalenceGroupsData.map((group) => {

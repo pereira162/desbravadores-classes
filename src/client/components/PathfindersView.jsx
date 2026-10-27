@@ -725,8 +725,8 @@ export default function PathfindersView({
                       type="button"
                       onClick={async () => {
                         const targetEl = compactOnePageMode
-                          ? compactCardRef.current
-                          : cardContainerRef.current;
+                          ? (compactCardRef.current || document.getElementById('compact-card-container'))
+                          : (cardContainerRef.current || document.getElementById('card-container'));
                         if (!targetEl) return;
                         setExportingCardPdf(true);
                         try {
@@ -850,6 +850,7 @@ export default function PathfindersView({
               {/* Visualização: Modo Compacto 1 Página OU Modo Detalhado */}
               {compactOnePageMode ? (
                 <div
+                  id="compact-card-container"
                   ref={compactCardRef}
                   className="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm font-sans"
                   style={{ minHeight: '1080px' }}
@@ -949,7 +950,7 @@ export default function PathfindersView({
                   </div>
                 </div>
               ) : (
-                <div ref={cardContainerRef} className="space-y-4">
+                <div id="card-container" ref={cardContainerRef} className="space-y-4">
                   {/* Lista dos Requisitos do Cartão do Desbravador */}
                   {activePfRequirementsByClass.map((clsBlock) => (
                     <div

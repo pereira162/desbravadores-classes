@@ -296,11 +296,12 @@ export default function ClassMatrixView({
             <button
               type="button"
               onClick={async () => {
-                if (!matrixTableRef.current) return;
+                const targetEl = matrixTableRef.current || document.getElementById('matrix-table-container');
+                if (!targetEl) return;
                 setExportingMatrix(true);
                 try {
-                  await exportElementToPdf(matrixTableRef.current, {
-                    filenamePrefix: `matriz_${selectedBaseSlug}_${selectedMode}`,
+                  await exportElementToPdf(targetEl, {
+                    filenamePrefix: `matriz_${selectedBaseSlug}_${selectedMode || 'todas'}`,
                     orientation: 'landscape',
                     scale: 2,
                     marginMm: 5,
@@ -437,6 +438,7 @@ export default function ClassMatrixView({
         </div>
       ) : (
         <div
+          id="matrix-table-container"
           ref={matrixTableRef}
           className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
         >
