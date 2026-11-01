@@ -3252,7 +3252,7 @@ app.delete('/api/equivalences/:code', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 10.3. BETA FEEDBACK & BROWSER LOGS REPORTER (DB + EMAIL TO luckpereirac@gmail.com)
+// 10.3. BETA FEEDBACK & BROWSER LOGS REPORTER (DB + EMAIL TO CLUB / GESTAODBV)
 // ============================================================================
 app.post('/api/feedback', async (req, res) => {
   try {
@@ -3332,7 +3332,7 @@ app.post('/api/feedback', async (req, res) => {
         prodDb.prepare('UPDATE feedback_reports SET email_sent = 1 WHERE id = ?').run(id);
       }
     } catch (e) {
-      console.warn('[Feedback Email] Aviso ao enviar para luckpereirac@gmail.com:', e.message);
+      console.warn('[Feedback Email] Aviso ao enviar feedback por e-mail:', e.message);
     }
 
     res.json({
@@ -3340,7 +3340,7 @@ app.post('/api/feedback', async (req, res) => {
       id,
       email_sent: Boolean(mailRes.sent),
       message:
-        'Obrigado! Seu feedback e os logs de diagnóstico foram salvos e encaminhados para a equipe técnica (luckpereirac@gmail.com).',
+        'Obrigado! Seu feedback e os logs de diagnóstico foram salvos e encaminhados para a equipe do clube.',
     });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Erro ao registrar feedback.' });

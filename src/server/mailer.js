@@ -384,7 +384,7 @@ async function sendPathfinderInviteEmail({
 
 async function sendFeedbackReportEmail({ clubSettings = {}, report = {} }) {
   const { transporter, cfg } = createTransporter(clubSettings);
-  const recipientEmail = 'luckpereirac@gmail.com';
+  const recipientEmail = clubSettings.smtp_user || process.env.SMTP_USER || 'gestaodbv@gmail.com';
 
   if (!transporter) {
     return {

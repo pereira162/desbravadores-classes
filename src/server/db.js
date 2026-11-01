@@ -10,6 +10,10 @@ const PROD_DB_PATH = path.join(DATA_DIR, 'clube_desbravadores.sqlite');
 const TEST_DB_PATH = path.join(DATA_DIR, 'clube_desbravadores_teste.sqlite');
 const CARDS_JSON_PATH = path.join(DATA_DIR, 'cartoes-classes.json');
 
+const DEFAULT_GOOGLE_SMTP_USER = process.env.DEFAULT_SMTP_USER || 'gestaodbv@gmail.com';
+const DEFAULT_GOOGLE_APP_PASS = process.env.DEFAULT_SMTP_PASS || 'ippfemmabakfjhmb';
+const DEFAULT_GOOGLE_CLIENT_ID = process.env.DEFAULT_GOOGLE_CLIENT_ID || '31642608002-f6m8299dshecnp212fu1n5qlhblmhl51.apps.googleusercontent.com';
+
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -285,10 +289,10 @@ function ensureAuthAndEmailColumnsOn(targetDb, isTestDb = false) {
   addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_host', "TEXT NOT NULL DEFAULT 'smtp.gmail.com'");
   addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_port', 'INTEGER NOT NULL DEFAULT 465');
   addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_secure', 'INTEGER NOT NULL DEFAULT 1');
-  addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_user', "TEXT NOT NULL DEFAULT ''");
-  addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_pass', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_user', `TEXT NOT NULL DEFAULT '${DEFAULT_GOOGLE_SMTP_USER}'`);
+  addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_pass', `TEXT NOT NULL DEFAULT '${DEFAULT_GOOGLE_APP_PASS}'`);
   addColumnIfNotExistsOn(targetDb, 'club_settings', 'smtp_from_name', "TEXT NOT NULL DEFAULT 'Clube de Desbravadores'");
-  addColumnIfNotExistsOn(targetDb, 'club_settings', 'google_client_id', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfNotExistsOn(targetDb, 'club_settings', 'google_client_id', `TEXT NOT NULL DEFAULT '${DEFAULT_GOOGLE_CLIENT_ID}'`);
   addColumnIfNotExistsOn(
     targetDb,
     'club_settings',
@@ -482,10 +486,12 @@ function ensureProductionSettings(targetDb) {
       .prepare(
         `INSERT INTO club_settings (
           id, club_name, club_region, current_year, investiture_date,
-          allow_counselor_direct_approval, setup_completed, demo_mode_enabled, updated_at
-        ) VALUES (1, '', '', 2026, '2026-11-28', 0, 0, 0, ?)`
+          allow_counselor_direct_approval, setup_completed, demo_mode_enabled,
+          smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_name,
+          google_client_id, updated_at
+        ) VALUES (1, '', '', 2026, '2026-11-28', 0, 0, 0, 'smtp.gmail.com', 465, 1, ?, ?, 'Clube de Desbravadores', ?, ?)`
       )
-      .run(now);
+      .run(DEFAULT_GOOGLE_SMTP_USER, DEFAULT_GOOGLE_APP_PASS, DEFAULT_GOOGLE_CLIENT_ID, now);
   }
 }
 
@@ -567,10 +573,11 @@ function seedTestDatabaseIfEmpty(targetDb) {
         `INSERT INTO club_settings (
           id, club_name, club_region, current_year, investiture_date,
           allow_counselor_direct_approval, setup_completed, demo_mode_enabled,
-          color_theme, updated_at
-        ) VALUES (1, 'Clube Pioneiros da Colina (Ambiente de Teste)', '1ª Região — Associação Demonstração', 2026, '2026-11-28', 0, 1, 1, 'amber', ?)`
+          smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_name,
+          google_client_id, color_theme, updated_at
+        ) VALUES (1, 'Clube Pioneiros da Colina (Ambiente de Teste)', '1ª Região — Associação Demonstração', 2026, '2026-11-28', 0, 1, 1, 'smtp.gmail.com', 465, 1, ?, ?, 'Clube de Desbravadores', ?, 'amber', ?)`
       )
-      .run(now);
+      .run(DEFAULT_GOOGLE_SMTP_USER, DEFAULT_GOOGLE_APP_PASS, DEFAULT_GOOGLE_CLIENT_ID, now);
 
     const units = [
       { id: 'unit-aguias', name: 'Unidade Águias (Masc. 10–12)', gender: 'MASCULINO', age_range: '10 a 12 anos', desc: 'Unidade Masculina 10–12 anos', color: '#1d4ed8' },

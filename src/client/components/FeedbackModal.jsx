@@ -109,8 +109,7 @@ export default function FeedbackModal({ isOpen, onClose, user }) {
               Feedback Beta Enviado com Sucesso!
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-300">
-              Seu relato e o diagnóstico técnico foram registrados e encaminhados para{' '}
-              <strong>luckpereirac@gmail.com</strong>. Muito obrigado por ajudar a aperfeiçoar o SGC Classes!
+              Seu relato e o diagnóstico técnico foram registrados e encaminhados diretamente para a equipe técnica e diretoria do clube. Muito obrigado por ajudar a aperfeiçoar o SGC Classes!
             </p>
             <div className="pt-2 flex justify-center gap-2">
               <button
