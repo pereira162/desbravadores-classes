@@ -40,6 +40,8 @@ function normalizePdfParams(docType, rawParams = {}) {
     delete p.classSlug;
   } else if (docType === 'PF_CARD') {
     p.mode = p.mode || 'simplified';
+    p.classSlug = p.classSlug || p.baseSlug || 'ALL';
+    delete p.baseSlug;
   }
   return p;
 }
@@ -369,6 +371,7 @@ async function resolvePdfRecord({ docType, params = {}, dbInstance }) {
     await generatePathfinderCardPdf({
       pathfinderId: normalized.pathfinderId,
       mode: normalized.mode || 'simplified',
+      classSlug: normalized.classSlug || 'ALL',
       outputPath: filePath,
       dbInstance,
     });

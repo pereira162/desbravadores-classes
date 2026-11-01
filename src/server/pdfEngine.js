@@ -113,10 +113,11 @@ function partitionPathfindersIntoSheets(enrolledPfs, dbInstance, classSlug, inst
   }
 
   // Quando "TODOS" os desbravadores da classe estiverem selecionados:
+  // Considera estritamente líderes/instrutores reais (exclui contas de desbravadores)
   const leaders = dbInstance.prepare(`
-    SELECT id, name, assigned_classes_json, assigned_pathfinders_json
+    SELECT id, name, role, assigned_classes_json, assigned_pathfinders_json
     FROM users
-    WHERE active = 1
+    WHERE active = 1 AND role IN ('INSTRUTOR', 'DIRETOR', 'GESTOR', 'ADMIN', 'SECRETARIO')
     ORDER BY name ASC
   `).all();
 
@@ -144,7 +145,7 @@ function partitionPathfindersIntoSheets(enrolledPfs, dbInstance, classSlug, inst
     if (Array.isArray(assignedPfIds) && !assignedPfIds.includes('*') && assignedPfIds.length > 0) {
       const myPfs = [];
       for (const id of assignedPfIds) {
-        if (pfMap.has(id)) {
+        if (pfMap.has(id) && !assignedPfIdsSet.has(id)) {
           myPfs.push(pfMap.get(id));
           assignedPfIdsSet.add(id);
         }
@@ -413,7 +414,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
 /**
  * 2. FICHA DO DESBRAVADOR (Simplificada 1 Página OU Completa Multi-páginas)
  */
-async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', outputPath, dbInstance }) {
+async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', classSlug = 'ALL', outputPath, dbInstance }) {
   const pf = dbInstance.prepare(`
     SELECT p.*, u.name as unit_name
     FROM pathfinders p
@@ -427,13 +428,17 @@ async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', ou
   const clubName = settings.club_name || 'Clube de Desbravadores';
 
   // Classes matriculadas
-  const enrollments = dbInstance.prepare(`
+  let enrollments = dbInstance.prepare(`
     SELECT ce.class_slug, c.name, c.color_hex, c.base_slug, c.class_type
     FROM class_enrollments ce
     JOIN classes_catalog c ON c.slug = ce.class_slug
     WHERE ce.pathfinder_id = ?
     ORDER BY c.display_order ASC
   `).all(pathfinderId);
+
+  if (classSlug && classSlug !== 'ALL') {
+    enrollments = enrollments.filter((e) => e.base_slug === classSlug || e.class_slug === classSlug || e.class_slug === `${classSlug}-avancado`);
+  }
 
   // Requisitos das classes matriculadas
   const enrolledSlugs = enrollments.map((e) => e.class_slug);
@@ -1015,8 +1020,9 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
           doc.rect(cellX, y, colPfW, headerTableH).fillAndStroke(pf ? '#f1f5f9' : '#ffffff', '#94a3b8');
 
           if (pf) {
+            const cleanName = pf.name.replace(/\s*\([^)]*\)/g, '').trim();
             doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
-              .text(pf.name, cellX + 3, y + 8, {
+              .text(cleanName, cellX + 3, y + 8, {
                 width: colPfW - 6,
                 align: 'center',
                 height: headerTableH - 12,
