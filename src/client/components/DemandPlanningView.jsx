@@ -16,9 +16,15 @@ import {
   Printer,
   Sparkles,
   RotateCcw,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  Wand2,
 } from 'lucide-react';
 import { STATUS_CONFIG, EXECUTION_CONTEXT_LABELS } from '../constants';
-import { exportElementToPdf } from '../utils/pdfExport';
+import PdfActionGroup from './PdfActionGroup';
+import { apiRequest } from '../api';
 
 export default function DemandPlanningView({
   catalog,
@@ -26,6 +32,9 @@ export default function DemandPlanningView({
   units,
   progressMap,
   classesMap,
+  currentUser,
+  onRefresh,
+  showToast,
   onOpenRequirementDetail,
   onOpenBulkSign,
   onCreateEventFromDemand,
@@ -42,6 +51,22 @@ export default function DemandPlanningView({
   const [expandedIds, setExpandedIds] = useState({});
   const [exportingPdf, setExportingPdf] = useState(false);
   const planningRef = useRef(null);
+
+  // Modal de Criar / Editar Unificação (Equivalence Group)
+  const [eqModalOpen, setEqModalOpen] = useState(false);
+  const [editingEqCode, setEditingEqCode] = useState(null);
+  const [eqCodeInput, setEqCodeInput] = useState('');
+  const [eqTitleInput, setEqTitleInput] = useState('');
+  const [eqDescInput, setEqDescInput] = useState('');
+  const [eqSelectedReqIds, setEqSelectedReqIds] = useState([]);
+  const [eqModalSearch, setEqModalSearch] = useState('');
+  const [eqSmartCluster, setEqSmartCluster] = useState('ALL');
+  const [eqClassFilter, setEqClassFilter] = useState('ALL');
+  const [savingEq, setSavingEq] = useState(false);
+
+  const canEditEquivalences =
+    ['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role) ||
+    Boolean(currentUser?.permissions?.can_edit_equivalences);
 
   const activePathfinders = useMemo(
     () =>
@@ -168,9 +193,15 @@ export default function DemandPlanningView({
   // Agrupamento por Grupos de Equivalência Inter-classes
   const equivalenceGroupsData = useMemo(() => {
     const groupsMap = {};
-    for (const eq of catalog.equivalenceGroups || []) {
-      groupsMap[eq.id] = {
+    const rawEq = catalog.equivalenceGroups || [];
+    const eqList = Array.isArray(rawEq) ? rawEq : Object.values(rawEq);
+    for (const eq of eqList) {
+      const eqId = eq.id || eq.code;
+      if (!eqId) continue;
+      groupsMap[eqId] = {
         ...eq,
+        id: eqId,
+        code: eqId,
         requirements: [],
         uniquePendingPathfinders: new Map(),
         totalPendingInstances: 0,
@@ -183,6 +214,7 @@ export default function DemandPlanningView({
       if (!groupsMap[gid]) {
         groupsMap[gid] = {
           id: gid,
+          code: gid,
           title: gid,
           description: '',
           requirements: [],
@@ -201,6 +233,182 @@ export default function DemandPlanningView({
       .filter((g) => g.requirements.length > 0)
       .sort((a, b) => b.totalPendingInstances - a.totalPendingInstances);
   }, [filteredRequirements, catalog.equivalenceGroups]);
+
+  const openCreateEqModal = () => {
+    setEditingEqCode(null);
+    setEqCodeInput(`EQ-CUSTOM-${Math.floor(100 + Math.random() * 900)}`);
+    setEqTitleInput('');
+    setEqDescInput('');
+    setEqSelectedReqIds([]);
+    setEqModalSearch('');
+    setEqSmartCluster('ALL');
+    setEqClassFilter('ALL');
+    setEqModalOpen(true);
+  };
+
+  const openEditEqModal = (group) => {
+    setEditingEqCode(group.id);
+    setEqCodeInput(group.id);
+    setEqTitleInput(group.title || '');
+    setEqDescInput(group.description || '');
+    const allInGroup = (catalog.requirements || [])
+      .filter((r) => r.equivalence_group === group.id)
+      .map((r) => r.id);
+    setEqSelectedReqIds(
+      allInGroup.length > 0 ? allInGroup : group.requirements.map((r) => r.id)
+    );
+    setEqModalSearch('');
+    setEqSmartCluster('ALL');
+    setEqClassFilter('ALL');
+    setEqModalOpen(true);
+  };
+
+  const toggleEqRequirement = (reqId) => {
+    setEqSelectedReqIds((prev) =>
+      prev.includes(reqId) ? prev.filter((id) => id !== reqId) : [...prev, reqId]
+    );
+  };
+
+  const handleSaveEqSubmit = async (e) => {
+    e.preventDefault();
+    if (!eqCodeInput.trim() || !eqTitleInput.trim()) return;
+    setSavingEq(true);
+    try {
+      await apiRequest('/api/equivalences', {
+        method: 'PUT',
+        body: JSON.stringify({
+          code: eqCodeInput.trim(),
+          title: eqTitleInput.trim(),
+          description: eqDescInput.trim(),
+          requirement_ids: eqSelectedReqIds,
+        }),
+      });
+      setEqModalOpen(false);
+      if (onRefresh) await onRefresh();
+      if (showToast) {
+        showToast(
+          `Grupo de unificação "${eqTitleInput.trim()}" salvo com ${eqSelectedReqIds.length} requisitos!`
+        );
+      }
+    } catch (err) {
+      if (showToast) showToast(err.message || 'Erro ao salvar unificação.', 'error');
+    } finally {
+      setSavingEq(false);
+    }
+  };
+
+  const handleDeleteEqGroup = async (group) => {
+    if (
+      !window.confirm(
+        `Tem certeza que deseja excluir o grupo de unificação "${group.title}"? Os requisitos deixarão de estar agrupados.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiRequest(`/api/equivalences/${encodeURIComponent(group.id)}`, {
+        method: 'DELETE',
+      });
+      if (onRefresh) await onRefresh();
+      if (showToast) showToast(`Grupo "${group.title}" removido.`);
+    } catch (err) {
+      if (showToast) showToast(err.message || 'Erro ao remover unificação.', 'error');
+    }
+  };
+
+  // Lista de requisitos filtrados + recomendações inteligentes para o Modal de Unificação
+  const eqCandidateRequirements = useMemo(() => {
+    const allReqs = (catalog.requirements || []).filter(
+      (r) => !isNonPlanningRequirement(r)
+    );
+    const selectedObjs = allReqs.filter((r) => eqSelectedReqIds.includes(r.id));
+    const selectedWords = new Set();
+    for (const sr of selectedObjs) {
+      const txt = `${sr.title || ''} ${sr.description || ''}`
+        .toLowerCase()
+        .replace(/[^a-záàâãéêíóôõúç0-9\s]/gi, ' ');
+      for (const w of txt.split(/\s+/)) {
+        if (w.length >= 5 && !['completar', 'especialidade', 'requisito', 'seguintes', 'sobre', 'entre'].includes(w)) {
+          selectedWords.add(w);
+        }
+      }
+    }
+
+    const q = eqModalSearch.trim().toLowerCase();
+
+    return allReqs
+      .filter((r) => {
+        if (eqClassFilter !== 'ALL' && r.base_class_slug !== eqClassFilter) {
+          return false;
+        }
+        const hay = `${r.code} ${r.title || ''} ${r.description || ''} ${(r.sub_items || r.subitems || []).map((s) => s.text).join(' ')}`.toLowerCase();
+        if (q && !hay.includes(q)) return false;
+
+        if (eqSmartCluster === 'SELECTED_ONLY') {
+          return eqSelectedReqIds.includes(r.id);
+        }
+        if (eqSmartCluster === 'SIMILAR_TO_SELECTED') {
+          if (eqSelectedReqIds.includes(r.id)) return true;
+          if (selectedWords.size === 0) return true;
+          for (const w of selectedWords) {
+            if (hay.includes(w)) return true;
+          }
+          return false;
+        }
+        if (eqSmartCluster === 'SPECIALTIES') {
+          return hay.includes('especialidade') || (r.tags || []).includes('especialidade');
+        }
+        if (eqSmartCluster === 'CAMPING_HIKING') {
+          return (
+            hay.includes('acamp') ||
+            hay.includes('pernoite') ||
+            hay.includes('caminh') ||
+            hay.includes('fogueira') ||
+            hay.includes('barraca') ||
+            hay.includes('bússola') ||
+            hay.includes('nós')
+          );
+        }
+        if (eqSmartCluster === 'BIBLE_VERSES') {
+          return (
+            hay.includes('memorizar') ||
+            hay.includes('versículo') ||
+            hay.includes('bíblia') ||
+            hay.includes('leitura bíblica') ||
+            hay.includes('salmo') ||
+            hay.includes('bem-aventuranças')
+          );
+        }
+        if (eqSmartCluster === 'BOOKS_READING') {
+          return (
+            hay.includes('livro') ||
+            hay.includes('curso de leitura') ||
+            hay.includes('ler ')
+          );
+        }
+        if (eqSmartCluster === 'COMMUNITY_HEALTH') {
+          return (
+            hay.includes('comunidade') ||
+            hay.includes('projeto') ||
+            hay.includes('primeiros socorros') ||
+            hay.includes('temperança')
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const aSel = eqSelectedReqIds.includes(a.id) ? 0 : 1;
+        const bSel = eqSelectedReqIds.includes(b.id) ? 0 : 1;
+        if (aSel !== bSel) return aSel - bSel;
+        return (a.display_order || 0) - (b.display_order || 0);
+      });
+  }, [
+    catalog.requirements,
+    eqSelectedReqIds,
+    eqModalSearch,
+    eqSmartCluster,
+    eqClassFilter,
+  ]);
 
   const toggleExpand = (id) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -268,32 +476,30 @@ export default function DemandPlanningView({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={async () => {
-              const targetEl = planningRef.current || document.getElementById('planning-content-container');
-              if (!targetEl) return;
-              setExportingPdf(true);
-              try {
-                await exportElementToPdf(targetEl, {
-                  filenamePrefix: `planejamento_demanda_${viewMode.toLowerCase()}`,
-                  orientation: 'portrait',
-                  scale: 2,
-                  marginMm: 5,
-                });
-              } catch (err) {
-                console.error('Erro ao gerar PDF do planejamento:', err);
-                alert('Não foi possível gerar o PDF. Tente novamente.');
-              } finally {
-                setExportingPdf(false);
-              }
+          {canEditEquivalences && (
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('EQUIVALENCE');
+                openCreateEqModal();
+              }}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Nova Unificação
+            </button>
+          )}
+
+          <PdfActionGroup
+            docType="PLANNING"
+            params={{
+              mode: viewMode === 'EQUIVALENCE' ? 'equivalences' : 'activities',
+              tag: tagFilter,
+              unitId: unitFilter,
             }}
-            disabled={exportingPdf}
-            className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <FileDown className="w-4 h-4" />
-            {exportingPdf ? 'Gerando PDF...' : 'Baixar PDF do Planejamento'}
-          </button>
+            label={viewMode === 'EQUIVALENCE' ? 'Baixar Unificações (PDF)' : 'Baixar Planejamento (PDF)'}
+            colorScheme="white"
+          />
         </div>
       </div>
 
@@ -526,6 +732,27 @@ export default function DemandPlanningView({
                     <span className="px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-400/30 text-rose-200 text-xs font-extrabold">
                       {uniquePfs.length} desbravador(es) precisam
                     </span>
+                    {canEditEquivalences && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openEditEqModal(group)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                          title="Editar quais requisitos fazem parte desta unificação"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                          Editar Unificação
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEqGroup(group)}
+                          className="p-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-700/50 text-rose-300 transition cursor-pointer"
+                          title="Remover este grupo de unificação"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       onClick={() => onOpenBulkSign(group.requirements)}
@@ -833,6 +1060,233 @@ export default function DemandPlanningView({
         </div>
       )}
       </div>
+
+      {/* Modal Criar / Editar Unificação entre Requisitos com Recomendações Inteligentes */}
+      {eqModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Layers className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="text-base font-extrabold">
+                    {editingEqCode
+                      ? `Editar Grupo de Unificação (${editingEqCode})`
+                      : 'Criar Nova Unificação de Requisitos'}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    Una requisitos (da mesma classe ou de classes diferentes) que são cumpridos juntos ao realizar uma única atividade.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEqModalOpen(false)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSaveEqSubmit}
+              className="flex-1 overflow-hidden flex flex-col"
+            >
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Código do Grupo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      disabled={Boolean(editingEqCode)}
+                      value={eqCodeInput}
+                      onChange={(e) => setEqCodeInput(e.target.value)}
+                      placeholder="Ex: EQ-CAMINHADA"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-slate-50"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Título da Atividade Unificada *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={eqTitleInput}
+                      onChange={(e) => setEqTitleInput(e.target.value)}
+                      placeholder="Ex: Especialidade de Estudo da Natureza / Caminhada 10km"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Orientação Pedagógica / Regra de Equivalência
+                  </label>
+                  <input
+                    type="text"
+                    value={eqDescInput}
+                    onChange={(e) => setEqDescInput(e.target.value)}
+                    placeholder="Explique como uma única atividade cumpre todos os requisitos selecionados abaixo..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  />
+                </div>
+
+                {/* Barra de Recomendações Inteligentes */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-emerald-950 flex items-center gap-1.5">
+                      <Wand2 className="w-4 h-4 text-emerald-600" />
+                      Filtro de Recomendações Inteligentes para Unificação:
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-800">
+                      {eqSelectedReqIds.length} requisito(s) selecionado(s)
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'ALL', label: 'Todos os Requisitos' },
+                      {
+                        id: 'SELECTED_ONLY',
+                        label: `Selecionados (${eqSelectedReqIds.length})`,
+                      },
+                      {
+                        id: 'SIMILAR_TO_SELECTED',
+                        label: '✨ Similares aos Selecionados',
+                      },
+                      { id: 'SPECIALTIES', label: '🏅 Especialidades Compatíveis' },
+                      { id: 'CAMPING_HIKING', label: '⛺ Acampamento, Caminhada & Nós' },
+                      { id: 'BIBLE_VERSES', label: '📖 Versículos & Leitura Bíblica' },
+                      { id: 'BOOKS_READING', label: '📚 Curso de Leitura & Livros' },
+                      { id: 'COMMUNITY_HEALTH', label: '🤝 Comunidade & Socorros' },
+                    ].map((chip) => (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        onClick={() => setEqSmartCluster(chip.id)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition cursor-pointer ${
+                          eqSmartCluster === chip.id
+                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                            : 'bg-white hover:bg-emerald-100/60 text-slate-700 border-emerald-200'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    <div className="sm:col-span-2 relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={eqModalSearch}
+                        onChange={(e) => setEqModalSearch(e.target.value)}
+                        placeholder="Buscar por código, especialidade, palavra-chave..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs"
+                      />
+                    </div>
+                    <select
+                      value={eqClassFilter}
+                      onChange={(e) => setEqClassFilter(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold"
+                    >
+                      <option value="ALL">Todas as Classes</option>
+                      <option value="amigo">Amigo</option>
+                      <option value="companheiro">Companheiro</option>
+                      <option value="pesquisador">Pesquisador</option>
+                      <option value="pioneiro">Pioneiro</option>
+                      <option value="excursionista">Excursionista</option>
+                      <option value="guia">Guia</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Lista de Requisitos Candidatos */}
+                <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto">
+                  {eqCandidateRequirements.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-500">
+                      Nenhum requisito encontrado com este filtro.
+                    </div>
+                  ) : (
+                    eqCandidateRequirements.map((req) => {
+                      const checked = eqSelectedReqIds.includes(req.id);
+                      const cls = classesMap[req.class_slug];
+                      return (
+                        <label
+                          key={req.id}
+                          className={`p-3 flex items-start gap-3 cursor-pointer transition ${
+                            checked ? 'bg-emerald-50/70' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleEqRequirement(req.id)}
+                            className="mt-1 rounded text-emerald-600"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span
+                                className="px-2 py-0.5 rounded text-[10px] font-bold text-white"
+                                style={{
+                                  backgroundColor:
+                                    cls?.color || cls?.color_hex || '#334155',
+                                }}
+                              >
+                                {cls?.name || req.class_slug}
+                              </span>
+                              <span className="text-xs font-extrabold text-slate-900">
+                                {req.code} — {req.title}
+                              </span>
+                              {req.equivalence_group &&
+                                req.equivalence_group !== eqCodeInput && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                                    Já em: {req.equivalence_group}
+                                  </span>
+                                )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5">
+                              {req.description}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+                <span className="text-xs font-bold text-slate-600">
+                  {eqSelectedReqIds.length} requisito(s) serão unificados neste grupo
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEqModalOpen(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEq || !eqTitleInput.trim()}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
+                  >
+                    {savingEq ? 'Salvando...' : 'Salvar Unificação'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

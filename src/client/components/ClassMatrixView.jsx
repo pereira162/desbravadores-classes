@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Search,
   CheckCircle2,
@@ -8,13 +8,15 @@ import {
   Printer,
   Zap,
   CheckSquare,
-  BookOpen,
   Filter,
   Info,
+  Users,
+  X,
+  Save,
 } from 'lucide-react';
 import { STATUS_CONFIG, OFFICIAL_PDF_BY_BASE_SLUG } from '../constants';
-import { getAssetUrl } from '../api';
-import { exportElementToPdf } from '../utils/pdfExport';
+import { apiRequest, getAssetUrl } from '../api';
+import PdfActionGroup from './PdfActionGroup';
 import InstructorControlSheetModal from './InstructorControlSheetModal';
 
 const BASE_CLASSES = [
@@ -30,6 +32,7 @@ export default function ClassMatrixView({
   catalog,
   pathfinders,
   units,
+  leaders = [],
   progressMap,
   classesMap,
   selectedBaseSlug,
@@ -38,6 +41,8 @@ export default function ClassMatrixView({
   onSelectMode,
   currentUser,
   settings,
+  onRefresh,
+  showToast,
   onOpenRequirementDetail,
   onOpenBulkSign,
   onQuickToggleCell,
@@ -45,12 +50,39 @@ export default function ClassMatrixView({
 }) {
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [unitFilter, setUnitFilter] = useState('ALL');
+  const [instructorFilter, setInstructorFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [fastClickMode, setFastClickMode] = useState(false);
   const [busyCellKey, setBusyCellKey] = useState(null);
   const [instructorModalOpen, setInstructorModalOpen] = useState(false);
-  const [exportingMatrix, setExportingMatrix] = useState(false);
+  const [distributionModalOpen, setDistributionModalOpen] = useState(false);
+  const [distributionDraft, setDistributionDraft] = useState({});
+  const [savingDistribution, setSavingDistribution] = useState(false);
   const matrixTableRef = useRef(null);
+
+  // Instrutores vinculados a esta classe base
+  const classInstructors = useMemo(() => {
+    return (leaders || []).filter(
+      (l) =>
+        l.active !== false &&
+        (l.assigned_classes || []).some(
+          (slug) => slug === selectedBaseSlug || slug === `${selectedBaseSlug}_avancado`
+        )
+    );
+  }, [leaders, selectedBaseSlug]);
+
+  // Se o usuário logado for instrutor desta classe com turma dividida, seleciona a turma dele por padrão
+  useEffect(() => {
+    if (
+      currentUser?.role === 'INSTRUTOR' &&
+      classInstructors.some((i) => i.id === currentUser.id) &&
+      (currentUser.assigned_pathfinders || []).length > 0
+    ) {
+      setInstructorFilter(currentUser.id);
+    } else {
+      setInstructorFilter('ALL');
+    }
+  }, [selectedBaseSlug, currentUser?.id, classInstructors.length]);
 
   const regularClass = useMemo(
     () =>
@@ -68,11 +100,34 @@ export default function ClassMatrixView({
     [catalog.classes, selectedBaseSlug]
   );
 
-  // Desbravadores matriculados na classe regular ou avançada selecionada
+  // Todos os desbravadores da classe (antes do filtro de instrutor) para o modal de divisão de turmas
+  const allClassPathfinders = useMemo(() => {
+    return pathfinders.filter((pf) => {
+      if (!pf.active) return false;
+      const slugs = (pf.enrollments || []).map((e) => e.class_slug);
+      return (
+        (regularClass && slugs.includes(regularClass.slug)) ||
+        (advancedClass && slugs.includes(advancedClass.slug))
+      );
+    });
+  }, [pathfinders, regularClass, advancedClass]);
+
+  // Desbravadores matriculados na classe regular ou avançada selecionada (filtrados por unidade e instrutor)
   const enrolledPathfinders = useMemo(() => {
+    const selectedInstructor =
+      instructorFilter !== 'ALL'
+        ? classInstructors.find((i) => i.id === instructorFilter)
+        : null;
+    const instructorPfSet =
+      selectedInstructor && (selectedInstructor.assigned_pathfinders || []).length > 0
+        ? new Set(selectedInstructor.assigned_pathfinders)
+        : null;
+
     return pathfinders.filter((pf) => {
       if (!pf.active) return false;
       if (unitFilter !== 'ALL' && pf.unit_id !== unitFilter) return false;
+      if (instructorPfSet && !instructorPfSet.has(pf.id)) return false;
+
       const slugs = (pf.enrollments || []).map((e) => e.class_slug);
       if (selectedMode === 'REGULAR') {
         return regularClass && slugs.includes(regularClass.slug);
@@ -85,7 +140,58 @@ export default function ClassMatrixView({
         (advancedClass && slugs.includes(advancedClass.slug))
       );
     });
-  }, [pathfinders, unitFilter, selectedMode, regularClass, advancedClass]);
+  }, [
+    pathfinders,
+    unitFilter,
+    instructorFilter,
+    classInstructors,
+    selectedMode,
+    regularClass,
+    advancedClass,
+  ]);
+
+  const handleOpenDistributionModal = () => {
+    const draft = {};
+    for (const inst of classInstructors) {
+      const classPfIds = new Set(allClassPathfinders.map((p) => p.id));
+      draft[inst.id] = (inst.assigned_pathfinders || []).filter((id) => classPfIds.has(id));
+    }
+    setDistributionDraft(draft);
+    setDistributionModalOpen(true);
+  };
+
+  const handleToggleInstructorPf = (instructorId, pfId) => {
+    setDistributionDraft((prev) => {
+      const currentList = prev[instructorId] || [];
+      const exists = currentList.includes(pfId);
+      return {
+        ...prev,
+        [instructorId]: exists
+          ? currentList.filter((id) => id !== pfId)
+          : [...currentList, pfId],
+      };
+    });
+  };
+
+  const handleSaveDistribution = async (e) => {
+    e.preventDefault();
+    setSavingDistribution(true);
+    try {
+      await apiRequest(`/api/classes/${selectedBaseSlug}/instructor-distribution`, {
+        method: 'PUT',
+        body: JSON.stringify({ distribution: distributionDraft }),
+      });
+      setDistributionModalOpen(false);
+      if (onRefresh) await onRefresh();
+      if (showToast) {
+        showToast('Divisão de desbravadores entre instrutores salva com sucesso!');
+      }
+    } catch (err) {
+      if (showToast) showToast(err.message || 'Erro ao salvar divisão de turmas.', 'error');
+    } finally {
+      setSavingDistribution(false);
+    }
+  };
 
   // Requisitos da classe (Regular, Avançada ou Ambas)
   const classRequirements = useMemo(() => {
@@ -187,13 +293,23 @@ export default function ClassMatrixView({
     }
   };
 
-  const pdfUrl = getAssetUrl(OFFICIAL_PDF_BY_BASE_SLUG[selectedBaseSlug]);
+  const canManageDistribution =
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(currentUser?.role) ||
+    Boolean(currentUser?.permissions?.can_approve_all) ||
+    classInstructors.some((i) => i.id === currentUser?.id);
+
+  // Classes base visíveis conforme o escopo do usuário
+  const visibleBaseClasses = useMemo(() => {
+    const availableBaseSlugs = new Set((catalog.classes || []).map((c) => c.base_slug));
+    const filtered = BASE_CLASSES.filter((bc) => availableBaseSlugs.has(bc.baseSlug));
+    return filtered.length > 0 ? filtered : BASE_CLASSES;
+  }, [catalog.classes]);
 
   return (
     <div className="space-y-5">
-      {/* Seletor das 6 Classes Base */}
+      {/* Seletor das Classes Base */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 no-print">
-        {BASE_CLASSES.map((bc) => {
+        {visibleBaseClasses.map((bc) => {
           const isSelected = selectedBaseSlug === bc.baseSlug;
           return (
             <button
@@ -231,7 +347,7 @@ export default function ClassMatrixView({
         })}
       </div>
 
-      {/* Cabeçalho da Classe Selecionada + Links Oficiais + Modo Clique Rápido */}
+      {/* Cabeçalho da Classe Selecionada + Links Oficiais + PDFs Separados por Instrutor */}
       {regularClass && (
         <div
           className="rounded-2xl p-5 text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
@@ -256,32 +372,27 @@ export default function ClassMatrixView({
                 </span>
               </div>
               <p className="text-xs text-white/85 mt-1">
-                {enrolledPathfinders.length} desbravadores matriculados •{' '}
-                {filteredRequirements.length} requisitos exibidos
+                {enrolledPathfinders.length} desbravadores exibidos •{' '}
+                {filteredRequirements.length} requisitos •{' '}
+                {classInstructors.length > 0
+                  ? `${classInstructors.length} instrutor(es) vinculado(s)`
+                  : 'Sem instrutor específico'}
               </p>
-              {regularClass.book_info && (
-                <div className="mt-2 inline-flex flex-wrap items-center gap-2 bg-black/25 px-3 py-1 rounded-lg text-[11px] text-white/95">
-                  <BookOpen className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                  <span>
-                    <strong>Livro do Curso de Leitura:</strong>{' '}
-                    {regularClass.book_info.current_dsa_book} (ou{' '}
-                    {regularClass.book_info.pdf_2018_book})
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 no-print">
-            <button
-              type="button"
-              onClick={() => setInstructorModalOpen(true)}
-              className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-md transition cursor-pointer"
-              title="Abrir o Controle Oficial do Instrutor em 1 única folha oficial pronta para imprimir ou baixar"
-            >
-              <FileDown className="w-4 h-4" />
-              PDF Controle do Instrutor (1 Página)
-            </button>
+            <PdfActionGroup
+              docType="INSTRUCTOR_CONTROL"
+              params={{
+                classSlug: selectedBaseSlug,
+                baseSlug: selectedBaseSlug,
+                unitId: unitFilter,
+                instructorId: instructorFilter,
+              }}
+              label="Controle do Instrutor (1 Pág)"
+              colorScheme="amber"
+            />
             {regularClass.source_url && (
               <a
                 href={regularClass.source_url}
@@ -293,32 +404,18 @@ export default function ClassMatrixView({
                 Cartão Oficial DSA
               </a>
             )}
-            <button
-              type="button"
-              onClick={async () => {
-                const targetEl = matrixTableRef.current || document.getElementById('matrix-table-container');
-                if (!targetEl) return;
-                setExportingMatrix(true);
-                try {
-                  await exportElementToPdf(targetEl, {
-                    filenamePrefix: `matriz_${selectedBaseSlug}_${selectedMode || 'todas'}`,
-                    orientation: 'landscape',
-                    scale: 2,
-                    marginMm: 5,
-                  });
-                } catch (err) {
-                  console.error('Erro ao gerar PDF da matriz:', err);
-                  alert('Não foi possível gerar o PDF. Tente novamente.');
-                } finally {
-                  setExportingMatrix(false);
-                }
+            <PdfActionGroup
+              docType="MATRIX"
+              params={{
+                classSlug: selectedBaseSlug,
+                baseSlug: selectedBaseSlug,
+                mode: selectedMode,
+                unitId: unitFilter,
+                instructorId: instructorFilter,
               }}
-              disabled={exportingMatrix}
-              className="px-3 py-2 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-            >
-              <FileDown className="w-4 h-4" />
-              {exportingMatrix ? 'Gerando PDF...' : 'Baixar PDF da Matriz'}
-            </button>
+              label="PDF da Matriz"
+              colorScheme="white"
+            />
           </div>
         </div>
       )}
@@ -349,6 +446,44 @@ export default function ClassMatrixView({
               </button>
             ))}
           </div>
+
+          {/* Filtro por Instrutor / Turma (quando houver instrutores na classe) */}
+          {classInstructors.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-slate-800 border border-amber-300 dark:border-slate-700 rounded-xl px-3 py-1.5">
+              <Users className="w-3.5 h-3.5 text-amber-600" />
+              <select
+                value={instructorFilter}
+                onChange={(e) => setInstructorFilter(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
+                title="Filtrar matriz e PDFs por instrutor da classe"
+              >
+                <option value="ALL">
+                  Todos os Instrutores ({allClassPathfinders.length} desbravadores)
+                </option>
+                {classInstructors.map((inst) => {
+                  const count = (inst.assigned_pathfinders || []).filter((id) =>
+                    allClassPathfinders.some((p) => p.id === id)
+                  ).length;
+                  return (
+                    <option key={inst.id} value={inst.id}>
+                      {inst.name} {count > 0 ? `(${count} na turma)` : '(Turma completa)'}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {canManageDistribution && (
+                <button
+                  type="button"
+                  onClick={handleOpenDistributionModal}
+                  className="ml-1 px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-extrabold transition cursor-pointer"
+                  title="Dividir desbravadores desta classe entre os instrutores"
+                >
+                  Dividir Turmas
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Filtro de Seção */}
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
@@ -677,6 +812,127 @@ export default function ClassMatrixView({
         classesMap={classesMap}
         settings={settings}
       />
+
+      {/* Modal de Divisão de Desbravadores entre Múltiplos Instrutores da Classe */}
+      {distributionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold">
+                    Dividir Turmas • Classe {regularClass?.name || selectedBaseSlug}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Distribua os desbravadores entre os instrutores desta classe para gerar listas e PDFs separados
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDistributionModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDistribution} className="flex-1 overflow-y-auto p-6 space-y-5">
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Selecione abaixo quais desbravadores pertencem à turma de cada instrutor. Se um instrutor ficar sem nenhum desbravador marcado, ele continuará visualizando a classe completa.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {classInstructors.map((inst) => {
+                  const selectedIds = distributionDraft[inst.id] || [];
+                  return (
+                    <div
+                      key={inst.id}
+                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-3"
+                    >
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                        <div>
+                          <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                            {inst.name}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {inst.custom_role_title || inst.role} • {selectedIds.length} selecionado(s)
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDistributionDraft((prev) => ({
+                              ...prev,
+                              [inst.id]:
+                                selectedIds.length === allClassPathfinders.length
+                                  ? []
+                                  : allClassPathfinders.map((p) => p.id),
+                            }))
+                          }
+                          className="text-[11px] font-bold text-amber-600 hover:underline cursor-pointer"
+                        >
+                          {selectedIds.length === allClassPathfinders.length
+                            ? 'Limpar todos'
+                            : 'Marcar todos'}
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        {allClassPathfinders.map((pf) => {
+                          const checked = selectedIds.includes(pf.id);
+                          return (
+                            <label
+                              key={pf.id}
+                              className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition ${
+                                checked
+                                  ? 'bg-amber-50 dark:bg-slate-900 border-amber-400 font-bold text-slate-900 dark:text-white'
+                                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => handleToggleInstructorPf(inst.id, pf.id)}
+                                  className="rounded text-amber-500"
+                                />
+                                <span>{pf.name}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400">{pf.unit_name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setDistributionModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingDistribution}
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {savingDistribution ? 'Salvando...' : 'Salvar Divisão de Turmas'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,6 +17,12 @@ const {
   createToken,
   verifyToken,
   checkProgressPermission,
+  getUserPermissions,
+  getUserAssignedClasses,
+  getUserAssignedUnits,
+  getUserAssignedPathfinders,
+  hasClassAccess,
+  hasUnitAccess,
 } = require('./auth');
 const {
   getSmtpConfig,
@@ -25,8 +31,18 @@ const {
   sendPathfinderInviteEmail,
   sendPasswordResetEmail,
   sendTestSmtpEmail,
+  sendFeedbackReportEmail,
   verifyGoogleIdToken,
 } = require('./mailer');
+const {
+  MCP_TOOLS,
+  hashMcpApiKey,
+  getEffectiveEquivalenceData,
+  computeUnificationAlerts,
+  executeMcpTool,
+  processMcpChatCommand,
+  handleMcpJsonRpcRequest,
+} = require('./mcpHandler');
 
 initDatabase();
 initAutoBackup({ prodDb, testDb });
@@ -58,20 +74,22 @@ function isClubSetupCompleted() {
 // Helper to format user row
 function formatUser(row) {
   if (!row) return null;
-  let assignedClasses = [];
-  try {
-    assignedClasses = JSON.parse(row.assigned_classes_json || '[]');
-  } catch {
-    assignedClasses = [];
-  }
+  const assignedClasses = getUserAssignedClasses(row);
+  const assignedUnits = getUserAssignedUnits(row);
+  const assignedPathfinders = getUserAssignedPathfinders(row);
+  const permissions = getUserPermissions(row);
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     role: row.role,
+    custom_role_title: row.custom_role_title || '',
     unit_id: row.unit_id,
     pathfinder_id: row.pathfinder_id || null,
     assigned_classes: assignedClasses,
+    assigned_units: assignedUnits,
+    assigned_pathfinders: assignedPathfinders,
+    permissions,
     active: Boolean(row.active),
     is_demo: Boolean(row.is_demo),
     email_verified: row.email_verified === undefined ? true : Boolean(row.email_verified),
@@ -108,17 +126,17 @@ app.get('/api/auth/demo-accounts', (req, res) => {
   const rows = demoEnabled
     ? db
         .prepare(
-          `SELECT u.id, u.name, u.email, u.role, u.unit_id, u.assigned_classes_json, u.is_demo, un.name as unit_name
+          `SELECT u.*, un.name as unit_name
            FROM users u
            LEFT JOIN units un ON un.id = u.unit_id
            WHERE u.active = 1 AND u.is_demo = 1
            ORDER BY CASE u.role
-             WHEN 'ADMIN' THEN 1
+             WHEN 'DIRETOR' THEN 1
              WHEN 'GESTOR' THEN 2
-             WHEN 'DIRETOR' THEN 3
-             WHEN 'SECRETARIO' THEN 4
-             WHEN 'INSTRUTOR' THEN 5
-             WHEN 'CONSELHEIRO' THEN 6
+             WHEN 'SECRETARIO' THEN 3
+             WHEN 'INSTRUTOR' THEN 4
+             WHEN 'CONSELHEIRO' THEN 5
+             WHEN 'DESBRAVADOR' THEN 6
              ELSE 7 END, u.name ASC`
         )
         .all()
@@ -128,18 +146,15 @@ app.get('/api/auth/demo-accounts', (req, res) => {
 
   res.json({
     club_name: settings.club_name || 'Clube de Desbravadores',
+    club_logo_url: settings.club_logo_url || '',
+    color_theme: settings.color_theme || 'amber',
     setup_completed: isClubSetupCompleted(),
     demo_mode_enabled: demoEnabled,
     smtp_configured: smtpCfg.isConfigured,
     google_client_id: settings.google_client_id || process.env.GOOGLE_CLIENT_ID || '',
     accounts: rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      email: r.email,
-      role: r.role,
-      unit_id: r.unit_id,
+      ...formatUser(r),
       unit_name: r.unit_name,
-      assigned_classes: JSON.parse(r.assigned_classes_json || '[]'),
     })),
   });
 });
@@ -373,6 +388,8 @@ app.post('/api/auth/setup-director', async (req, res) => {
       password,
       club_name,
       club_region,
+      club_logo_url = '',
+      color_theme = 'amber',
       is_director = false,
       role,
       smtp_user,
@@ -399,6 +416,10 @@ app.post('/api/auth/setup-director', async (req, res) => {
     const prevSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
     const finalClubName = club_name ? String(club_name).trim() : prevSettings.club_name;
     const finalClubRegion = club_region ? String(club_region).trim() : prevSettings.club_region;
+    const finalClubLogo =
+      club_logo_url !== undefined ? String(club_logo_url).trim() : prevSettings.club_logo_url || '';
+    const finalColorTheme =
+      color_theme !== undefined ? String(color_theme).trim() : prevSettings.color_theme || 'amber';
     const finalSmtpUser =
       smtp_user !== undefined && String(smtp_user).trim() !== ''
         ? String(smtp_user).trim()
@@ -419,12 +440,15 @@ app.post('/api/auth/setup-director', async (req, res) => {
     try {
       db.prepare(`
         UPDATE club_settings
-        SET club_name = ?, club_region = ?, smtp_user = ?, smtp_pass = ?, smtp_from_name = ?,
+        SET club_name = ?, club_region = ?, club_logo_url = ?, color_theme = ?,
+            smtp_user = ?, smtp_pass = ?, smtp_from_name = ?,
             google_client_id = ?, demo_mode_enabled = ?, setup_completed = 1, updated_at = ?
         WHERE id = 1
       `).run(
         finalClubName,
         finalClubRegion,
+        finalClubLogo,
+        finalColorTheme,
         finalSmtpUser,
         finalSmtpPass,
         finalClubName || 'Clube de Desbravadores',
@@ -828,44 +852,49 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 });
 
 // ============================================================================
-// 2. BOOTSTRAP & FULL DATA QUERY
+// 2. BOOTSTRAP & FULL DATA QUERY (PLUS EPHEMERAL TEST SEED ENDPOINT)
 // ============================================================================
 const cardsMeta = loadCardsMetadata();
 
-app.get('/api/bootstrap', requireAuth, (req, res) => {
-  const clubSettings = db.prepare('SELECT * FROM club_settings WHERE id = 1').get();
+function buildBootstrapPayloadFromDb(targetDb) {
+  const clubSettings = targetDb.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+  const { mergedGroups, reqMapOverrides } = getEffectiveEquivalenceData(targetDb);
 
-  const classes = db
+  const classes = targetDb
     .prepare('SELECT * FROM classes_catalog ORDER BY display_order ASC')
     .all();
 
-  const rawRequirements = db
+  const rawRequirements = targetDb
     .prepare('SELECT * FROM requirements_catalog ORDER BY display_order ASC')
     .all();
 
-  const requirements = rawRequirements.map((r) => ({
-    id: r.id,
-    class_slug: r.class_slug,
-    base_class_slug: r.base_class_slug,
-    class_type: r.class_type,
-    section_code: r.section_code,
-    section_name: r.section_name,
-    code: r.code,
-    title: r.title,
-    description: r.description,
-    category: r.category,
-    execution_context: r.execution_context,
-    tags: JSON.parse(r.tags_json || '[]'),
-    equivalence_group: r.equivalence_group,
-    selection_rule: r.selection_rule,
-    sub_items: JSON.parse(r.sub_items_json || '[]'),
-    book_info: r.book_info_json ? JSON.parse(r.book_info_json) : null,
-    display_order: r.display_order,
-  }));
+  const requirements = rawRequirements.map((r) => {
+    const eqGroup =
+      reqMapOverrides[r.id] !== undefined ? reqMapOverrides[r.id] : r.equivalence_group;
+    return {
+      id: r.id,
+      class_slug: r.class_slug,
+      base_class_slug: r.base_class_slug,
+      class_type: r.class_type,
+      section_code: r.section_code,
+      section_name: r.section_name,
+      code: r.code,
+      title: r.title,
+      description: r.description,
+      category: r.category,
+      execution_context: r.execution_context,
+      tags: JSON.parse(r.tags_json || '[]'),
+      equivalence_group: eqGroup || '',
+      selection_rule: r.selection_rule,
+      sub_items: JSON.parse(r.sub_items_json || '[]'),
+      book_info: r.book_info_json ? JSON.parse(r.book_info_json) : null,
+      display_order: r.display_order,
+    };
+  });
 
-  const units = db.prepare('SELECT * FROM units ORDER BY name ASC').all();
+  const units = targetDb.prepare('SELECT * FROM units ORDER BY name ASC').all();
 
-  const rawPathfinders = db
+  const rawPathfinders = targetDb
     .prepare(
       `SELECT p.*, u.name as unit_name, u.color_hex as unit_color
        FROM pathfinders p
@@ -874,7 +903,7 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     )
     .all();
 
-  const enrollments = db
+  const enrollments = targetDb
     .prepare(
       `SELECT ce.*, cc.name as class_name, cc.class_type, cc.color_hex, cc.min_age, cc.base_slug
        FROM class_enrollments ce
@@ -903,7 +932,7 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     enrollments: enrollmentsByPathfinder[p.id] || [],
   }));
 
-  const rawProgress = db.prepare('SELECT * FROM progress_records').all();
+  const rawProgress = targetDb.prepare('SELECT * FROM progress_records').all();
   const progressRecords = rawProgress.map((pr) => {
     let attachments = [];
     try {
@@ -911,7 +940,6 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     } catch {
       attachments = [];
     }
-    // Otimização de payload: remove data_url pesado do bootstrap geral
     const lightAttachments = attachments.map((att) => ({
       id: att.id,
       name: att.name,
@@ -933,11 +961,11 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     };
   });
 
-  const rawEvents = db
+  const rawEvents = targetDb
     .prepare('SELECT * FROM activity_events ORDER BY scheduled_date DESC, created_at DESC')
     .all();
-  const eventReqs = db.prepare('SELECT * FROM activity_event_requirements').all();
-  const eventAtts = db.prepare('SELECT * FROM activity_event_attendees').all();
+  const eventReqs = targetDb.prepare('SELECT * FROM activity_event_requirements').all();
+  const eventAtts = targetDb.prepare('SELECT * FROM activity_event_attendees').all();
 
   const reqsByEvent = {};
   for (const er of eventReqs) {
@@ -956,7 +984,7 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     attendee_ids: attsByEvent[ev.id] || [],
   }));
 
-  const rawLeaders = db
+  const rawLeaders = targetDb
     .prepare(
       `SELECT u.*, un.name as unit_name
        FROM users u
@@ -974,7 +1002,7 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
       : null,
   }));
 
-  const recentLogs = db
+  const recentLogs = targetDb
     .prepare('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 120')
     .all()
     .map((log) => ({
@@ -984,10 +1012,14 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
       new_state: log.new_state_json ? JSON.parse(log.new_state_json) : null,
     }));
 
-  res.json({
+  const unificationAlerts = computeUnificationAlerts(targetDb);
+
+  return {
     clubSettings: {
       ...clubSettings,
-      smtp_pass: '', // never expose raw secret in bootstrap
+      club_logo_url: clubSettings.club_logo_url || '',
+      color_theme: clubSettings.color_theme || 'amber',
+      smtp_pass: '',
       smtp_configured: smtpCfg.isConfigured,
       smtp_pass_configured: Boolean(clubSettings.smtp_pass),
       allow_counselor_direct_approval: Boolean(clubSettings.allow_counselor_direct_approval),
@@ -999,7 +1031,7 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     catalog: {
       categories: cardsMeta.categories,
       contextTags: cardsMeta.context_tags,
-      equivalenceGroups: cardsMeta.equivalence_groups,
+      equivalenceGroups: mergedGroups,
       classes,
       requirements,
     },
@@ -1008,7 +1040,42 @@ app.get('/api/bootstrap', requireAuth, (req, res) => {
     progressRecords,
     events,
     leaders,
+    unificationAlerts,
     auditLogs: recentLogs,
+  };
+}
+
+app.get('/api/bootstrap', requireAuth, (req, res) => {
+  res.json(buildBootstrapPayloadFromDb(db));
+});
+
+// Endpoint somente-leitura para inicializar o Sandbox Efêmero de Teste (?teste=1) no navegador do usuário
+app.get('/api/test-seed', (req, res) => {
+  const payload = buildBootstrapPayloadFromDb(testDb);
+  const allDemoUsers = testDb
+    .prepare(
+      `SELECT u.*, un.name as unit_name
+       FROM users u
+       LEFT JOIN units un ON un.id = u.unit_id
+       WHERE u.active = 1
+       ORDER BY CASE u.role
+         WHEN 'DIRETOR' THEN 1
+         WHEN 'GESTOR' THEN 2
+         WHEN 'SECRETARIO' THEN 3
+         WHEN 'INSTRUTOR' THEN 4
+         WHEN 'CONSELHEIRO' THEN 5
+         WHEN 'DESBRAVADOR' THEN 6
+         ELSE 7 END, u.name ASC`
+    )
+    .all()
+    .map((u) => ({
+      ...formatUser(u),
+      unit_name: u.unit_name || null,
+    }));
+
+  res.json({
+    ...payload,
+    demoAccounts: allDemoUsers,
   });
 });
 
@@ -1400,12 +1467,6 @@ app.post('/api/progress/bulk', requireAuth, (req, res) => {
 // 5. PATHFINDERS, INDIVIDUAL INVITES & CLASS ENROLLMENTS
 // ============================================================================
 app.post('/api/pathfinders', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
-    return res
-      .status(403)
-      .json({ error: 'Apenas Gestor, Diretor, Admin ou Secretário(a) podem cadastrar desbravadores.' });
-  }
-
   const {
     name,
     email = '',
@@ -1416,6 +1477,25 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
     class_slugs = [],
     use_grouped_classes = false,
   } = req.body || {};
+
+  const perms = getUserPermissions(req.user);
+  const canManageGlobal =
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) ||
+    perms.can_manage_pathfinders;
+  const canManageScopedInstructor =
+    req.user.role === 'INSTRUTOR' &&
+    Array.isArray(class_slugs) &&
+    class_slugs.length > 0 &&
+    class_slugs.every((c) => hasClassAccess(req.user, c));
+  const canManageScopedCounselor =
+    req.user.role === 'CONSELHEIRO' && unit_id && hasUnitAccess(req.user, unit_id);
+
+  if (!canManageGlobal && !canManageScopedInstructor && !canManageScopedCounselor) {
+    return res.status(403).json({
+      error:
+        'Seu perfil só pode cadastrar desbravadores vinculados à sua Classe ou Unidade atribuída (ou solicite permissão extra ao Diretor/Gestor).',
+    });
+  }
 
   if (!name || !birth_date) {
     return res.status(400).json({ error: 'Nome e data de nascimento são obrigatórios.' });
@@ -1461,6 +1541,18 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
       insertEnr.run(crypto.randomUUID(), pfId, slug, use_grouped_classes ? 1 : 0, now);
     }
 
+    // Se o instrutor tem lista restrita de desbravadores atribuídos, já vincula o novo desbravador a ele
+    if (req.user.role === 'INSTRUTOR') {
+      const currentAssigned = getUserAssignedPathfinders(req.user);
+      if (currentAssigned.length > 0 && !currentAssigned.includes('*') && !currentAssigned.includes(pfId)) {
+        const updatedAssigned = [...currentAssigned, pfId];
+        db.prepare('UPDATE users SET assigned_pathfinders_json = ? WHERE id = ?').run(
+          JSON.stringify(updatedAssigned),
+          req.user.id
+        );
+      }
+    }
+
     recordAudit({
       user: req.user,
       action: 'PATHFINDER_CREATE',
@@ -1485,7 +1577,7 @@ app.post('/api/pathfinders', requireAuth, (req, res) => {
 
 // Gerar Link Individual de Convite e/ou Enviar Convite por E-mail para o Desbravador
 app.post('/api/pathfinders/:id/invite', requireAuth, async (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO', 'CONSELHEIRO'].includes(req.user.role)) {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO', 'INSTRUTOR', 'CONSELHEIRO'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Sem permissão para gerar convites de desbravadores.' });
   }
 
@@ -1568,16 +1660,30 @@ app.post('/api/pathfinders/:id/invite', requireAuth, async (req, res) => {
 });
 
 app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
-    return res
-      .status(403)
-      .json({ error: 'Apenas Gestor, Diretor, Admin ou Secretário(a) podem editar dados cadastrais.' });
-  }
-
   const pfId = req.params.id;
   const existing = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pfId);
   if (!existing) {
     return res.status(404).json({ error: 'Desbravador não encontrado.' });
+  }
+
+  const perms = getUserPermissions(req.user);
+  const prevEnrollments = db
+    .prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?')
+    .all(pfId)
+    .map((r) => r.class_slug);
+
+  const canEditGlobal =
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) ||
+    perms.can_manage_pathfinders;
+  const canEditInstructor =
+    req.user.role === 'INSTRUTOR' && prevEnrollments.some((c) => hasClassAccess(req.user, c));
+  const canEditCounselor =
+    req.user.role === 'CONSELHEIRO' && existing.unit_id && hasUnitAccess(req.user, existing.unit_id);
+
+  if (!canEditGlobal && !canEditInstructor && !canEditCounselor) {
+    return res
+      .status(403)
+      .json({ error: 'Sem permissão para editar desbravadores fora da sua Classe ou Unidade.' });
   }
 
   const {
@@ -1595,10 +1701,6 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
   if (birth_date && String(birth_date) > now.slice(0, 10)) {
     return res.status(400).json({ error: 'A data de nascimento não pode ser futura.' });
   }
-  const prevEnrollments = db
-    .prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?')
-    .all(pfId)
-    .map((r) => r.class_slug);
 
   db.exec('BEGIN');
   try {
@@ -1666,10 +1768,14 @@ app.put('/api/pathfinders/:id', requireAuth, (req, res) => {
 });
 
 app.delete('/api/pathfinders/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  const perms = getUserPermissions(req.user);
+  if (
+    !['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) &&
+    !perms.can_manage_pathfinders
+  ) {
     return res
       .status(403)
-      .json({ error: 'Apenas Gestor, Diretor, Admin ou Secretário(a) podem excluir desbravadores.' });
+      .json({ error: 'Apenas Gestor, Diretor, Admin, Secretário(a) ou líder autorizado podem excluir desbravadores.' });
   }
   const pfId = req.params.id;
   const existing = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pfId);
@@ -1707,7 +1813,11 @@ app.delete('/api/pathfinders/:id', requireAuth, (req, res) => {
 // 6. UNITS MANAGEMENT (CREATE, EDIT, DELETE)
 // ============================================================================
 app.post('/api/units', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  const perms = getUserPermissions(req.user);
+  if (
+    !['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) &&
+    !perms.can_manage_units
+  ) {
     return res.status(403).json({ error: 'Sem permissão para criar unidades.' });
   }
   const {
@@ -1740,7 +1850,11 @@ app.post('/api/units', requireAuth, (req, res) => {
 });
 
 app.put('/api/units/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  const perms = getUserPermissions(req.user);
+  if (
+    !['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) &&
+    !perms.can_manage_units
+  ) {
     return res.status(403).json({ error: 'Sem permissão para editar unidades.' });
   }
   const unitId = req.params.id;
@@ -1779,7 +1893,11 @@ app.put('/api/units/:id', requireAuth, (req, res) => {
 });
 
 app.delete('/api/units/:id', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role)) {
+  const perms = getUserPermissions(req.user);
+  if (
+    !['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) &&
+    !perms.can_manage_units
+  ) {
     return res.status(403).json({ error: 'Sem permissão para excluir unidades.' });
   }
   const unitId = req.params.id;
@@ -2099,8 +2217,12 @@ app.post('/api/leaders', requireAuth, async (req, res) => {
       email,
       password,
       role = 'INSTRUTOR',
+      custom_role_title = '',
       unit_id = null,
       assigned_classes = [],
+      assigned_units = [],
+      assigned_pathfinders = [],
+      permissions = {},
       send_invite = true,
     } = req.body || {};
 
@@ -2126,17 +2248,22 @@ app.post('/api/leaders', requireAuth, async (req, res) => {
 
     db.prepare(`
       INSERT INTO users (
-        id, name, email, password_hash, role, unit_id, assigned_classes_json,
+        id, name, email, password_hash, role, custom_role_title, unit_id,
+        assigned_classes_json, assigned_units_json, assigned_pathfinders_json, permissions_json,
         active, is_demo, email_verified, invite_status, invite_token, invite_expires_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, ?)
     `).run(
       id,
       String(name).trim(),
       cleanEmail,
       pwdHash,
       role,
+      String(custom_role_title || '').trim(),
       unit_id || null,
       JSON.stringify(assigned_classes || []),
+      JSON.stringify(assigned_units || []),
+      JSON.stringify(assigned_pathfinders || []),
+      JSON.stringify(permissions || {}),
       send_invite ? 0 : 1,
       inviteStatus,
       inviteToken,
@@ -2165,7 +2292,7 @@ app.post('/api/leaders', requireAuth, async (req, res) => {
           clubSettings,
           toEmail: cleanEmail,
           toName: String(name).trim(),
-          roleLabel: ROLE_LABELS_PT[role] || role,
+          roleLabel: custom_role_title || ROLE_LABELS_PT[role] || role,
           scopeDescription,
           invitedByName: req.user.name,
           inviteToken,
@@ -2180,8 +2307,8 @@ app.post('/api/leaders', requireAuth, async (req, res) => {
       action: 'LEADER_CREATE',
       entityType: 'USER',
       entityId: id,
-      summary: `${req.user.name} cadastrou/convidou o líder "${name}" (${cleanEmail} — ${role}). E-mail enviado: ${mailResult.sent ? 'Sim' : 'Link gerado'}.`,
-      newState: { id, name, email: cleanEmail, role, unit_id, assigned_classes },
+      summary: `${req.user.name} cadastrou/convidou o líder "${name}" (${cleanEmail} — ${custom_role_title || role}). E-mail enviado: ${mailResult.sent ? 'Sim' : 'Link gerado'}.`,
+      newState: { id, name, email: cleanEmail, role, custom_role_title, unit_id, assigned_classes, permissions },
       createdAt: now,
     });
 
@@ -2235,7 +2362,7 @@ app.post('/api/leaders/:id/send-invite', requireAuth, async (req, res) => {
       clubSettings,
       toEmail: row.email,
       toName: row.name,
-      roleLabel: ROLE_LABELS_PT[row.role] || row.role,
+      roleLabel: row.custom_role_title || ROLE_LABELS_PT[row.role] || row.role,
       scopeDescription,
       invitedByName: req.user.name,
       inviteToken,
@@ -2267,8 +2394,12 @@ app.put('/api/leaders/:id', requireAuth, (req, res) => {
     name = existing.name,
     email = existing.email,
     role = existing.role,
+    custom_role_title = existing.custom_role_title || '',
     unit_id = existing.unit_id,
     assigned_classes,
+    assigned_units,
+    assigned_pathfinders,
+    permissions,
     active = Boolean(existing.active),
     new_password,
   } = req.body || {};
@@ -2276,20 +2407,37 @@ app.put('/api/leaders/:id', requireAuth, (req, res) => {
   const finalClasses = Array.isArray(assigned_classes)
     ? assigned_classes
     : JSON.parse(existing.assigned_classes_json || '[]');
+  const finalUnits = Array.isArray(assigned_units)
+    ? assigned_units
+    : JSON.parse(existing.assigned_units_json || '[]');
+  const finalPathfinders = Array.isArray(assigned_pathfinders)
+    ? assigned_pathfinders
+    : JSON.parse(existing.assigned_pathfinders_json || '[]');
+  const finalPermissions =
+    permissions && typeof permissions === 'object'
+      ? permissions
+      : JSON.parse(existing.permissions_json || '{}');
+
   const pwdHash = new_password ? hashPassword(String(new_password)) : existing.password_hash;
   const now = new Date().toISOString();
 
   db.prepare(`
     UPDATE users
-    SET name = ?, email = ?, password_hash = ?, role = ?, unit_id = ?, assigned_classes_json = ?, active = ?
+    SET name = ?, email = ?, password_hash = ?, role = ?, custom_role_title = ?, unit_id = ?,
+        assigned_classes_json = ?, assigned_units_json = ?, assigned_pathfinders_json = ?,
+        permissions_json = ?, active = ?
     WHERE id = ?
   `).run(
     String(name).trim(),
     String(email).trim().toLowerCase(),
     pwdHash,
     role,
+    String(custom_role_title || '').trim(),
     unit_id || null,
     JSON.stringify(finalClasses),
+    JSON.stringify(finalUnits),
+    JSON.stringify(finalPathfinders),
+    JSON.stringify(finalPermissions),
     active ? 1 : 0,
     targetId
   );
@@ -2299,13 +2447,53 @@ app.put('/api/leaders/:id', requireAuth, (req, res) => {
     action: 'USER_PERMISSION_CHANGE',
     entityType: 'USER',
     entityId: targetId,
-    summary: `${req.user.name} atualizou o perfil/permissões de "${name}" (${role}).`,
+    summary: `${req.user.name} atualizou o perfil/permissões de "${name}" (${custom_role_title || role}).`,
     previousState: formatUser(existing),
-    newState: { name, email, role, unit_id, assigned_classes: finalClasses, active },
+    newState: {
+      name,
+      email,
+      role,
+      custom_role_title,
+      unit_id,
+      assigned_classes: finalClasses,
+      assigned_units: finalUnits,
+      assigned_pathfinders: finalPathfinders,
+      permissions: finalPermissions,
+      active,
+    },
     createdAt: now,
   });
 
   res.json({ success: true });
+});
+
+// Distribuir desbravadores de uma classe entre múltiplos instrutores daquela classe
+app.put('/api/classes/:baseSlug/instructor-distribution', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (
+    !['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(req.user.role) &&
+    !perms.can_manage_pathfinders &&
+    !(req.user.role === 'INSTRUTOR' && hasClassAccess(req.user, req.params.baseSlug))
+  ) {
+    return res.status(403).json({ error: 'Sem permissão para distribuir desbravadores entre instrutores.' });
+  }
+
+  const { assignments = {} } = req.body || {};
+  db.exec('BEGIN');
+  try {
+    const upd = db.prepare('UPDATE users SET assigned_pathfinders_json = ? WHERE id = ?');
+    for (const [instructorId, pfIds] of Object.entries(assignments)) {
+      if (Array.isArray(pfIds)) {
+        upd.run(JSON.stringify(pfIds), instructorId);
+      }
+    }
+    db.exec('COMMIT');
+    schedulePdfWarmup(db);
+    res.json({ success: true });
+  } catch (err) {
+    db.exec('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/leaders/:id', requireAuth, (req, res) => {
@@ -2346,6 +2534,8 @@ app.put('/api/settings', requireAuth, (req, res) => {
   const {
     club_name = prev.club_name,
     club_region = prev.club_region,
+    club_logo_url = prev.club_logo_url || '',
+    color_theme = prev.color_theme || 'amber',
     current_year = prev.current_year,
     investiture_date = prev.investiture_date,
     allow_counselor_direct_approval = Boolean(prev.allow_counselor_direct_approval),
@@ -2368,7 +2558,8 @@ app.put('/api/settings', requireAuth, (req, res) => {
   const now = new Date().toISOString();
   db.prepare(`
     UPDATE club_settings
-    SET club_name = ?, club_region = ?, current_year = ?, investiture_date = ?,
+    SET club_name = ?, club_region = ?, club_logo_url = ?, color_theme = ?,
+        current_year = ?, investiture_date = ?,
         allow_counselor_direct_approval = ?, demo_mode_enabled = ?,
         smtp_host = ?, smtp_port = ?, smtp_secure = ?, smtp_user = ?, smtp_pass = ?,
         smtp_from_name = ?, google_client_id = ?, frontend_url = ?, updated_at = ?
@@ -2376,6 +2567,8 @@ app.put('/api/settings', requireAuth, (req, res) => {
   `).run(
     club_name,
     club_region,
+    String(club_logo_url || '').trim(),
+    String(color_theme || 'amber').trim(),
     Number(current_year),
     investiture_date,
     allow_counselor_direct_approval ? 1 : 0,
@@ -2897,6 +3090,503 @@ app.post('/api/backups/clone-test-to-prod', requireAuth, (req, res) => {
     res.status(500).json({ error: `Erro ao clonar dados de teste: ${err.message}` });
   }
 });
+
+// ============================================================================
+// 10.2. EQUIVALENCE GROUPS (UNIFICATIONS) EDITOR ROUTES
+// ============================================================================
+app.put('/api/equivalences', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role) && !perms.can_edit_equivalences) {
+    return res.status(403).json({
+      error: 'Apenas Diretor, Gestor ou líderes autorizados podem criar/editar unificações de classes.',
+    });
+  }
+
+  const { code, title, description = '', requirement_ids = [] } = req.body || {};
+  if (!code || !title) {
+    return res.status(400).json({ error: 'Código e título da unificação são obrigatórios.' });
+  }
+
+  const cleanCode = String(code).trim().toUpperCase().replace(/\s+/g, '-');
+  const { rawOverrides } = getEffectiveEquivalenceData(db);
+
+  rawOverrides.groups[cleanCode] = {
+    code: cleanCode,
+    title: String(title).trim(),
+    description: String(description || '').trim(),
+    is_custom: true,
+  };
+
+  // Remove este código de requisitos que antes pertenciam a ele mas foram desmarcados
+  const prevReqsInGroup = db
+    .prepare('SELECT id FROM requirements_catalog WHERE equivalence_group = ?')
+    .all(cleanCode)
+    .map((r) => r.id);
+
+  for (const prevId of prevReqsInGroup) {
+    if (!requirement_ids.includes(prevId)) {
+      rawOverrides.reqMap[prevId] = '';
+      db.prepare("UPDATE requirements_catalog SET equivalence_group = '' WHERE id = ?").run(prevId);
+    }
+  }
+  for (const [rId, eqC] of Object.entries(rawOverrides.reqMap)) {
+    if (eqC === cleanCode && !requirement_ids.includes(rId)) {
+      rawOverrides.reqMap[rId] = '';
+      db.prepare("UPDATE requirements_catalog SET equivalence_group = '' WHERE id = ?").run(rId);
+    }
+  }
+
+  if (Array.isArray(requirement_ids)) {
+    const updReq = db.prepare('UPDATE requirements_catalog SET equivalence_group = ? WHERE id = ?');
+    for (const rId of requirement_ids) {
+      rawOverrides.reqMap[rId] = cleanCode;
+      updReq.run(cleanCode, rId);
+    }
+  }
+
+  const now = new Date().toISOString();
+  db.prepare('UPDATE club_settings SET equivalences_override_json = ?, updated_at = ? WHERE id = 1').run(
+    JSON.stringify(rawOverrides),
+    now
+  );
+
+  recordAudit({
+    user: req.user,
+    action: 'EQUIVALENCE_UPDATE',
+    entityType: 'EQUIVALENCE_GROUP',
+    entityId: cleanCode,
+    summary: `${req.user.name} atualizou/criou o grupo de unificação "${title}" (${cleanCode}) com ${requirement_ids.length} requisito(s).`,
+    newState: { code: cleanCode, title, description, requirement_ids },
+    createdAt: now,
+  });
+
+  schedulePdfWarmup(db);
+  res.json({ success: true, code: cleanCode });
+});
+
+app.delete('/api/equivalences/:code', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role) && !perms.can_edit_equivalences) {
+    return res.status(403).json({ error: 'Sem permissão para remover grupos de unificação.' });
+  }
+
+  const cleanCode = String(req.params.code || '').trim().toUpperCase();
+  const { rawOverrides } = getEffectiveEquivalenceData(db);
+  rawOverrides.groups[cleanCode] = { code: cleanCode, deleted: true };
+
+  const prevReqs = db
+    .prepare('SELECT id FROM requirements_catalog WHERE equivalence_group = ?')
+    .all(cleanCode)
+    .map((r) => r.id);
+  for (const rId of prevReqs) {
+    rawOverrides.reqMap[rId] = '';
+    db.prepare("UPDATE requirements_catalog SET equivalence_group = '' WHERE id = ?").run(rId);
+  }
+  for (const [rId, eqC] of Object.entries(rawOverrides.reqMap)) {
+    if (eqC === cleanCode) {
+      rawOverrides.reqMap[rId] = '';
+    }
+  }
+
+  db.prepare('UPDATE club_settings SET equivalences_override_json = ?, updated_at = ? WHERE id = 1').run(
+    JSON.stringify(rawOverrides),
+    new Date().toISOString()
+  );
+
+  schedulePdfWarmup(db);
+  res.json({ success: true });
+});
+
+// ============================================================================
+// 10.3. BETA FEEDBACK & BROWSER LOGS REPORTER (DB + EMAIL TO luckpereirac@gmail.com)
+// ============================================================================
+app.post('/api/feedback', async (req, res) => {
+  try {
+    const {
+      category = 'FEEDBACK',
+      message,
+      user_name,
+      user_email,
+      user_role,
+      url = '',
+      user_agent = '',
+      console_logs = [],
+      error_stack = '',
+    } = req.body || {};
+
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ error: 'Descreva o feedback, sugestão ou erro encontrado.' });
+    }
+
+    // Verifica se há usuário autenticado via token opcional
+    let authUser = null;
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const payload = verifyToken(token);
+    if (payload?.id) {
+      authUser = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id);
+    }
+
+    const id = `fb-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
+    const now = new Date().toISOString();
+    const reportObj = {
+      id,
+      user_id: authUser?.id || null,
+      user_name: user_name || authUser?.name || 'Usuário Beta',
+      user_email: user_email || authUser?.email || '',
+      user_role: user_role || authUser?.role || 'VISITANTE',
+      category: String(category).toUpperCase(),
+      message: String(message).trim(),
+      url: String(url || ''),
+      user_agent: String(user_agent || req.headers['user-agent'] || ''),
+      console_logs_json: JSON.stringify(Array.isArray(console_logs) ? console_logs.slice(-40) : []),
+      error_stack: String(error_stack || ''),
+      created_at: now,
+    };
+
+    // Salva sempre no banco oficial de produção para não perder nenhum relato Beta
+    prodDb
+      .prepare(
+        `INSERT INTO feedback_reports (
+          id, user_id, user_name, user_email, user_role, category, message,
+          url, user_agent, console_logs_json, error_stack, status, email_sent, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NOVO', 0, ?)`
+      )
+      .run(
+        reportObj.id,
+        reportObj.user_id,
+        reportObj.user_name,
+        reportObj.user_email,
+        reportObj.user_role,
+        reportObj.category,
+        reportObj.message,
+        reportObj.url,
+        reportObj.user_agent,
+        reportObj.console_logs_json,
+        reportObj.error_stack,
+        reportObj.created_at
+      );
+
+    const prodSettings = prodDb.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+    let mailRes = { sent: false };
+    try {
+      mailRes = await sendFeedbackReportEmail({
+        clubSettings: prodSettings,
+        report: reportObj,
+      });
+      if (mailRes.sent) {
+        prodDb.prepare('UPDATE feedback_reports SET email_sent = 1 WHERE id = ?').run(id);
+      }
+    } catch (e) {
+      console.warn('[Feedback Email] Aviso ao enviar para luckpereirac@gmail.com:', e.message);
+    }
+
+    res.json({
+      success: true,
+      id,
+      email_sent: Boolean(mailRes.sent),
+      message:
+        'Obrigado! Seu feedback e os logs de diagnóstico foram salvos e encaminhados para a equipe técnica (luckpereirac@gmail.com).',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Erro ao registrar feedback.' });
+  }
+});
+
+app.get('/api/feedback', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Diretor e Gestor podem consultar relatórios de feedback.' });
+  }
+  const rows = prodDb
+    .prepare('SELECT * FROM feedback_reports ORDER BY created_at DESC LIMIT 100')
+    .all();
+  res.json({ reports: rows });
+});
+
+// ============================================================================
+// 10.4. MCP SERVER (MODEL CONTEXT PROTOCOL) & AI ASSISTANT ROUTES
+// ============================================================================
+app.get('/api/mcp/tools', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Diretor e Gestor possuem acesso às ferramentas MCP.' });
+  }
+  res.json({ tools: MCP_TOOLS });
+});
+
+app.get('/api/mcp/keys', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Diretor e Gestor podem gerenciar chaves MCP.' });
+  }
+  const rows = db
+    .prepare(
+      `SELECT k.id, k.name, k.user_id, k.api_key_prefix, k.allowed_tools_json, k.scope_json,
+              k.active, k.last_used_at, k.created_at, u.name as user_name, u.email as user_email,
+              u.role as user_role, u.custom_role_title
+       FROM mcp_api_keys k
+       LEFT JOIN users u ON u.id = k.user_id
+       ORDER BY k.created_at DESC`
+    )
+    .all()
+    .map((r) => ({
+      ...r,
+      active: Boolean(r.active),
+      allowed_tools: JSON.parse(r.allowed_tools_json || '["*"]'),
+      scope: JSON.parse(r.scope_json || '{}'),
+    }));
+  res.json({ keys: rows, tools: MCP_TOOLS });
+});
+
+app.post('/api/mcp/keys', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Diretor e Gestor podem criar configurações MCP.' });
+  }
+
+  const { name, user_id, allowed_tools = ['*'], scope = {} } = req.body || {};
+  const targetUserId = user_id || req.user.id;
+  const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+  if (!targetUser) {
+    return res.status(404).json({ error: 'Membro da diretoria selecionado não encontrado.' });
+  }
+
+  const rawKey = `sgc_mcp_${crypto.randomBytes(18).toString('base64url')}`;
+  const keyHash = hashMcpApiKey(rawKey);
+  const keyPrefix = `${rawKey.slice(0, 12)}...`;
+  const id = `mcpk-${Date.now().toString(36)}`;
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO mcp_api_keys (
+      id, name, user_id, api_key_hash, api_key_prefix, allowed_tools_json, scope_json, active, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+  `).run(
+    id,
+    String(name || `MCP — ${targetUser.name}`).trim(),
+    targetUserId,
+    keyHash,
+    keyPrefix,
+    JSON.stringify(Array.isArray(allowed_tools) ? allowed_tools : ['*']),
+    JSON.stringify(scope || {}),
+    now
+  );
+
+  recordAudit({
+    user: req.user,
+    action: 'MCP_KEY_CREATE',
+    entityType: 'MCP_KEY',
+    entityId: id,
+    summary: `${req.user.name} gerou uma chave de integração IA/MCP para "${targetUser.name}".`,
+    createdAt: now,
+  });
+
+  res.json({
+    success: true,
+    id,
+    api_key: rawKey,
+    api_key_prefix: keyPrefix,
+    user_name: targetUser.name,
+  });
+});
+
+app.delete('/api/mcp/keys/:id', requireAuth, (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Diretor e Gestor podem revogar chaves MCP.' });
+  }
+  db.prepare('DELETE FROM mcp_api_keys WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+app.post('/api/mcp/chat', requireAuth, async (req, res) => {
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({
+      error: 'O Assistente de IA e Comandos MCP está disponível exclusivamente para o Diretor e Gestor.',
+    });
+  }
+  try {
+    const { prompt, toolName, toolArgs } = req.body || {};
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || '137.131.209.239.nip.io';
+    const baseUrl = `${proto}://${host}`;
+
+    if (toolName) {
+      const data = await executeMcpTool(
+        toolName,
+        toolArgs || {},
+        { user: req.user, allowedTools: ['*'], baseUrl },
+        db
+      );
+      return res.json({
+        reply: `Ferramenta **${toolName}** executada com sucesso!`,
+        toolUsed: toolName,
+        pdfLinks: toolName === 'get_pdf_link' ? [data] : [],
+        data,
+      });
+    }
+
+    const result = await processMcpChatCommand({
+      prompt,
+      user: req.user,
+      targetDb: db,
+      baseUrl,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Erro ao executar comando IA/MCP.' });
+  }
+});
+
+// Endpoint JSON-RPC 2.0 padrão MCP para agentes externos (Claude Desktop, Cursor, Antigravity, scripts)
+app.post('/api/mcp/rpc', async (req, res) => {
+  try {
+    const apiKeyHeader =
+      req.headers['x-mcp-api-key'] ||
+      (req.headers.authorization?.startsWith('Bearer sgc_mcp_')
+        ? req.headers.authorization.slice(7)
+        : null);
+
+    let authUser = null;
+    let allowedTools = ['*'];
+
+    if (apiKeyHeader) {
+      const keyHash = hashMcpApiKey(apiKeyHeader);
+      const keyRow = db
+        .prepare('SELECT * FROM mcp_api_keys WHERE api_key_hash = ? AND active = 1')
+        .get(keyHash);
+      if (!keyRow) {
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          id: req.body?.id || null,
+          error: { code: -32001, message: 'Chave MCP inválida ou revogada.' },
+        });
+      }
+      db.prepare('UPDATE mcp_api_keys SET last_used_at = ? WHERE id = ?').run(
+        new Date().toISOString(),
+        keyRow.id
+      );
+      const uRow = db.prepare('SELECT * FROM users WHERE id = ? AND active = 1').get(keyRow.user_id);
+      if (!uRow) {
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          id: req.body?.id || null,
+          error: { code: -32001, message: 'Usuário vinculado à chave MCP está inativo.' },
+        });
+      }
+      authUser = formatUser(uRow);
+      allowedTools = JSON.parse(keyRow.allowed_tools_json || '["*"]');
+    } else {
+      const authHeader = req.headers.authorization || '';
+      const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      const payload = verifyToken(jwt);
+      if (payload?.id) {
+        const uRow = db.prepare('SELECT * FROM users WHERE id = ? AND active = 1').get(payload.id);
+        if (uRow && ['ADMIN', 'GESTOR', 'DIRETOR'].includes(uRow.role)) {
+          authUser = formatUser(uRow);
+        }
+      }
+    }
+
+    if (!authUser) {
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        id: req.body?.id || null,
+        error: { code: -32001, message: 'Forneça o header X-MCP-API-Key válido.' },
+      });
+    }
+
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || '137.131.209.239.nip.io';
+    const baseUrl = `${proto}://${host}`;
+
+    const rpcResponse = await handleMcpJsonRpcRequest(
+      req.body,
+      { user: authUser, allowedTools, baseUrl },
+      db
+    );
+    res.json(rpcResponse);
+  } catch (err) {
+    res.status(500).json({
+      jsonrpc: '2.0',
+      id: req.body?.id || null,
+      error: { code: -32603, message: err.message },
+    });
+  }
+});
+
+// ============================================================================
+// 10.5. ROTAS DE PDF ESTRUTURADO EM CÓDIGO COM CACHE E LINKS SEGUROS
+// ============================================================================
+const { resolvePdfRecord, schedulePdfWarmup } = require('./pdfCache');
+
+function findPdfRecordAcrossDbs(token) {
+  let rec = db.prepare('SELECT * FROM pdf_cache_registry WHERE id = ?').get(token);
+  if (!rec) rec = prodDb.prepare('SELECT * FROM pdf_cache_registry WHERE id = ?').get(token);
+  if (!rec) rec = testDb.prepare('SELECT * FROM pdf_cache_registry WHERE id = ?').get(token);
+  return rec;
+}
+
+// Resolve ou garante o token do PDF e dispara compilação rápida caso ainda não exista
+app.post('/api/pdf/resolve', async (req, res) => {
+  try {
+    const { docType, params } = req.body || {};
+    if (!docType) {
+      return res.status(400).json({ error: 'docType é obrigatório' });
+    }
+    const record = await resolvePdfRecord({ docType, params: params || {}, dbInstance: db });
+    res.json({
+      success: true,
+      token: record.id,
+      fileName: record.file_name,
+      viewUrl: `/api/pdf/${record.id}/view${req.query?.teste === '1' ? '?teste=1' : ''}`,
+      downloadUrl: `/api/pdf/${record.id}/download${req.query?.teste === '1' ? '?teste=1' : ''}`,
+    });
+  } catch (err) {
+    console.error('[PDF Resolve] Erro:', err);
+    res.status(500).json({ error: `Erro ao resolver PDF: ${err.message}` });
+  }
+});
+
+// Pré-compilação em segundo plano conforme navegação
+app.post('/api/pdf/ensure', (req, res) => {
+  const { docType, params } = req.body || {};
+  if (docType) {
+    resolvePdfRecord({ docType, params: params || {}, dbInstance: db }).catch((e) =>
+      console.warn('[PDF Ensure] Erro em background:', e.message)
+    );
+  }
+  res.json({ ok: true });
+});
+
+function servePdfView(req, res) {
+  const { token } = req.params;
+  const record = findPdfRecordAcrossDbs(token);
+  if (!record || !fs.existsSync(record.file_path)) {
+    return res.status(404).send('PDF não encontrado ou expirado. Gere novamente pela plataforma.');
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${record.file_name}"`);
+  fs.createReadStream(record.file_path).pipe(res);
+}
+
+function servePdfDownload(req, res) {
+  const { token } = req.params;
+  const record = findPdfRecordAcrossDbs(token);
+  if (!record || !fs.existsSync(record.file_path)) {
+    return res.status(404).send('PDF não encontrado ou expirado. Gere novamente pela plataforma.');
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${record.file_name}"`);
+  fs.createReadStream(record.file_path).pipe(res);
+}
+
+// Visualizar PDF nativo no navegador (inline)
+app.get('/api/pdf/:token/view', servePdfView);
+app.get('/api/pdf/v/:token', servePdfView);
+
+// Baixar PDF diretamente (attachment)
+app.get('/api/pdf/:token/download', servePdfDownload);
+app.get('/api/pdf/d/:token', servePdfDownload);
+
+// Dispara aquecimento inicial dos PDFs essenciais
+schedulePdfWarmup(db);
 
 // ============================================================================
 // 11. SERVE PRODUCTION FRONTEND (OR VITE IN DEV)

@@ -382,6 +382,83 @@ async function sendPathfinderInviteEmail({
   return { sent: true, inviteUrl };
 }
 
+async function sendFeedbackReportEmail({ clubSettings = {}, report = {} }) {
+  const { transporter, cfg } = createTransporter(clubSettings);
+  const recipientEmail = 'luckpereirac@gmail.com';
+
+  if (!transporter) {
+    return {
+      sent: false,
+      reason: 'SMTP_NOT_CONFIGURED',
+    };
+  }
+
+  let logsArray = [];
+  try {
+    logsArray =
+      typeof report.console_logs_json === 'string'
+        ? JSON.parse(report.console_logs_json)
+        : Array.isArray(report.console_logs_json)
+        ? report.console_logs_json
+        : [];
+  } catch {
+    logsArray = [];
+  }
+
+  const logsFormatted =
+    logsArray.length > 0
+      ? logsArray
+          .slice(-30)
+          .map(
+            (l) =>
+              `[${l.timestamp || ''}] [${String(l.level || 'LOG').toUpperCase()}] ${l.message || ''}`
+          )
+          .join('\n')
+      : 'Nenhum log de erro recente capturado.';
+
+  const plainText = `Novo Relatório Beta / Feedback — SGC Classes Desbravadores\n\nCategoria: ${report.category || 'FEEDBACK'}\nUsuário: ${report.user_name || 'Visitante'} (${report.user_email || 'sem e-mail'}) — Cargo: ${report.user_role || 'N/A'}\nURL: ${report.url || ''}\nNavegador: ${report.user_agent || ''}\nData/Hora: ${report.created_at || new Date().toISOString()}\n\nMensagem do Usuário:\n${report.message || ''}\n\nStack de Erro:\n${report.error_stack || 'N/A'}\n\nLogs Recentes do Navegador:\n${logsFormatted}`;
+
+  const html = buildHtmlTemplate({
+    clubName: clubSettings.club_name || 'SGC Classes • Beta Oficial',
+    badge: `Relatório Beta • ${report.category || 'FEEDBACK'}`,
+    title: `Novo Feedback / Relatório de Log Recebido`,
+    preheader: `[${report.category || 'BETA'}] ${String(report.message || '').slice(0, 90)}`,
+    bodyHtml: `
+      <p>Um usuário da versão <strong>Beta</strong> enviou um feedback ou relatório técnico:</p>
+      <ul style="background: #f8fafc; padding: 14px 18px 14px 34px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13px;">
+        <li><strong>Categoria:</strong> ${report.category || 'GERAL'}</li>
+        <li><strong>Usuário:</strong> ${report.user_name || 'Visitante'} (${report.user_email || 'Não informado'})</li>
+        <li><strong>Cargo:</strong> ${report.user_role || 'Visitante'}</li>
+        <li><strong>Página / URL:</strong> ${report.url || 'N/A'}</li>
+        <li><strong>Dispositivo / Browser:</strong> ${report.user_agent || 'N/A'}</li>
+        <li><strong>Horário:</strong> ${report.created_at || new Date().toISOString()}</li>
+      </ul>
+      <div style="margin-top: 14px; padding: 14px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;">
+        <strong style="display:block; margin-bottom: 6px; color: #92400e;">Mensagem / Descrição:</strong>
+        <div style="white-space: pre-wrap; color: #1e293b;">${String(report.message || '').replace(/</g, '&lt;')}</div>
+      </div>
+      ${
+        report.error_stack
+          ? `<div style="margin-top: 14px; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; font-family: monospace; font-size: 11px; white-space: pre-wrap; color: #991b1b;"><strong>Stack Trace:</strong>\n${String(report.error_stack).replace(/</g, '&lt;')}</div>`
+          : ''
+      }
+      <div style="margin-top: 14px; padding: 12px; background: #0f172a; color: #e2e8f0; border-radius: 10px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 280px; overflow-y: auto;"><strong>Logs Recentes do Navegador (${logsArray.length}):</strong>\n${String(logsFormatted).replace(/</g, '&lt;')}</div>
+    `,
+    footerNote: `Relatório salvo automaticamente na tabela feedback_reports e encaminhado para ${recipientEmail}.`,
+  });
+
+  await transporter.sendMail({
+    from: `"${cfg.fromName}" <${cfg.user}>`,
+    to: recipientEmail,
+    replyTo: report.user_email || cfg.user,
+    subject: `[Beta Feedback - ${report.category || 'LOG'}] ${clubSettings.club_name || 'SGC Classes'} — ${report.user_name || 'Usuário'}`,
+    text: plainText,
+    html,
+  });
+
+  return { sent: true };
+}
+
 module.exports = {
   getSmtpConfig,
   sendVerificationEmail,
@@ -389,6 +466,7 @@ module.exports = {
   sendPathfinderInviteEmail,
   sendPasswordResetEmail,
   sendTestSmtpEmail,
+  sendFeedbackReportEmail,
   verifyGoogleIdToken,
 };
 

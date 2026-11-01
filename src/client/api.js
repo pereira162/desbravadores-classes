@@ -1,6 +1,15 @@
 const TOKEN_STORAGE_KEY = 'dbv_gestao_token_v1';
 const TEST_TOKEN_STORAGE_KEY = 'dbv_gestao_token_teste_v1';
 
+import {
+  handleSandboxRequest,
+  resetEphemeralTestSession,
+  setSandboxCurrentUser,
+  getSandboxCurrentUser,
+} from './testSandbox';
+
+export { resetEphemeralTestSession, setSandboxCurrentUser, getSandboxCurrentUser };
+
 // Base URL do backend na VM Oracle ou vazio em desenvolvimento local
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
@@ -29,22 +38,57 @@ export function getAssetUrl(path) {
 }
 
 export function getStoredToken() {
-  const key = isTestMode() ? TEST_TOKEN_STORAGE_KEY : TOKEN_STORAGE_KEY;
-  return localStorage.getItem(key);
+  if (isTestMode()) {
+    return window.sessionStorage.getItem(TEST_TOKEN_STORAGE_KEY) || localStorage.getItem(TEST_TOKEN_STORAGE_KEY);
+  }
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
 export function setStoredToken(token) {
-  const key = isTestMode() ? TEST_TOKEN_STORAGE_KEY : TOKEN_STORAGE_KEY;
+  if (isTestMode()) {
+    if (token) {
+      window.sessionStorage.setItem(TEST_TOKEN_STORAGE_KEY, token);
+      localStorage.setItem(TEST_TOKEN_STORAGE_KEY, token);
+    } else {
+      window.sessionStorage.removeItem(TEST_TOKEN_STORAGE_KEY);
+      localStorage.removeItem(TEST_TOKEN_STORAGE_KEY);
+      setSandboxCurrentUser(null);
+    }
+    return;
+  }
   if (token) {
-    localStorage.setItem(key, token);
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
   } else {
-    localStorage.removeItem(key);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 }
 
 export async function apiRequest(path, options = {}) {
-  const token = getStoredToken();
   const testMode = isTestMode();
+  const method = (options.method || 'GET').toUpperCase();
+
+  // Em ?teste=1, intercepta no Sandbox efêmero (sessionStorage) para que alterações fiquem apenas no navegador
+  if (testMode) {
+    let parsedBody;
+    if (options.body) {
+      try {
+        parsedBody = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+      } catch {
+        parsedBody = {};
+      }
+    }
+    const sandboxResponse = await handleSandboxRequest({
+      path,
+      method,
+      body: parsedBody,
+      apiBaseUrl: API_BASE_URL,
+    });
+    if (sandboxResponse !== null) {
+      return sandboxResponse;
+    }
+  }
+
+  const token = getStoredToken();
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

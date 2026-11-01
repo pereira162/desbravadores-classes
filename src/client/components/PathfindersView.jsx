@@ -31,7 +31,7 @@ import {
   EXECUTION_CONTEXT_LABELS,
 } from '../constants';
 import DateInput from './DateInput';
-import { exportElementToPdf } from '../utils/pdfExport';
+import PdfActionGroup from './PdfActionGroup';
 
 export default function PathfindersView({
   catalog,
@@ -91,9 +91,14 @@ export default function PathfindersView({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const isPathfinderUser = currentUser?.role === 'DESBRAVADOR';
-  const canManageRegistry = ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(
-    currentUser?.role
-  );
+  const canManageRegistry =
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(currentUser?.role) ||
+    Boolean(currentUser?.permissions?.can_manage_pathfinders) ||
+    currentUser?.role === 'INSTRUTOR' ||
+    currentUser?.role === 'CONSELHEIRO';
+  const canManageUnits =
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(currentUser?.role) ||
+    Boolean(currentUser?.permissions?.can_manage_units);
 
   // Enriquece desbravadores com estatísticas de progresso
   const enrichedPathfinders = useMemo(() => {
@@ -249,10 +254,19 @@ export default function PathfindersView({
     setPfEmail('');
     const defaultBirth = '2016-04-15';
     setPfBirthDate(defaultBirth);
-    setPfUnitId(units[0]?.id || '');
+    setPfUnitId(currentUser?.unit_id || units[0]?.id || '');
     setPfNotes('');
     setPfActive(true);
-    applyAgeSuggestedClasses(false, defaultBirth);
+    if (
+      currentUser?.role === 'INSTRUTOR' &&
+      Array.isArray(currentUser?.assigned_classes) &&
+      currentUser.assigned_classes.length > 0
+    ) {
+      setPfClassSlugs(currentUser.assigned_classes);
+      setPfIsGrouped(false);
+    } else {
+      applyAgeSuggestedClasses(false, defaultBirth);
+    }
     setPfModalOpen(true);
   };
 
@@ -431,22 +445,26 @@ export default function PathfindersView({
               </p>
             </div>
 
-            {canManageRegistry && (
+            {(canManageRegistry || canManageUnits) && (
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => openUnitManagerModal(null)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FolderPlus className="w-4 h-4 text-indigo-600" />
-                  Gerenciar Unidades ({units.length})
-                </button>
-                <button
-                  onClick={openCreatePfModal}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Cadastrar Desbravador
-                </button>
+                {canManageUnits && (
+                  <button
+                    onClick={() => openUnitManagerModal(null)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FolderPlus className="w-4 h-4 text-indigo-600" />
+                    Gerenciar Unidades ({units.length})
+                  </button>
+                )}
+                {canManageRegistry && (
+                  <button
+                    onClick={openCreatePfModal}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Cadastrar Desbravador
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -476,7 +494,7 @@ export default function PathfindersView({
                     <span className="text-[10px] text-slate-500">
                       ({count} {count === 1 ? 'membro' : 'membros'})
                     </span>
-                    {canManageRegistry && (
+                    {canManageUnits && (
                       <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-slate-200">
                         <button
                           type="button"
@@ -742,39 +760,17 @@ export default function PathfindersView({
                         {compactOnePageMode ? 'Ver Ficha Completa' : 'Versão Simplificada (1 Página)'}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const targetEl = compactOnePageMode
-                            ? (compactCardRef.current || document.getElementById('compact-card-container'))
-                            : (cardContainerRef.current || document.getElementById('card-container'));
-                          if (!targetEl) return;
-                          setExportingCardPdf(true);
-                          try {
-                            await exportElementToPdf(targetEl, {
-                              filenamePrefix: `ficha_${compactOnePageMode ? 'simplificada_1_pag' : 'completa'}_${activePf.name}`,
-                              orientation: 'portrait',
-                              singlePage: compactOnePageMode,
-                              scale: 2,
-                              marginMm: compactOnePageMode ? 4 : 6,
-                            });
-                          } catch (err) {
-                            console.error('Erro ao gerar PDF da ficha:', err);
-                            alert('Não foi possível gerar o PDF da ficha. Tente novamente.');
-                          } finally {
-                            setExportingCardPdf(false);
-                          }
+                      <PdfActionGroup
+                        docType="PF_CARD"
+                        params={{
+                          pathfinderId: activePf.id,
+                          mode: compactOnePageMode ? 'simplified' : 'full',
+                          classSlug: cardSelectedClassSlug,
                         }}
-                        disabled={exportingCardPdf}
-                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        <FileDown className="w-3.5 h-3.5" />
-                        {exportingCardPdf
-                          ? 'Gerando PDF...'
-                          : compactOnePageMode
-                          ? 'Baixar PDF (1 Página)'
-                          : 'Baixar PDF da Ficha'}
-                      </button>
+                        label={compactOnePageMode ? 'Baixar PDF (1 Página)' : 'Baixar PDF da Ficha'}
+                        colorScheme="slate"
+                        compact={true}
+                      />
                     </div>
                   </div>
 

@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Layers,
   Filter,
+  GitMerge,
 } from 'lucide-react';
 import { formatDateBR } from '../constants';
 
@@ -25,6 +26,7 @@ export default function DashboardView({
   requirementsMap,
   events,
   settings,
+  unificationAlerts = [],
   currentUser,
   onNavigate,
   onSelectClassMatrix,
@@ -33,6 +35,7 @@ export default function DashboardView({
   onQuickApproveBatch,
 }) {
   const [approvingQueue, setApprovingQueue] = useState(false);
+  const [syncingUnifications, setSyncingUnifications] = useState(false);
   const [queueClassFilter, setQueueClassFilter] = useState('ALL');
 
   const activePathfinders = useMemo(
@@ -211,13 +214,49 @@ export default function DashboardView({
     );
   }, [stats.approvalQueue, queueClassFilter]);
 
-  const canApproveQueue = [
-    'ADMIN',
-    'GESTOR',
-    'DIRETOR',
-    'SECRETARIO',
-    'INSTRUTOR',
-  ].includes(currentUser?.role);
+  const canApproveQueue =
+    [
+      'ADMIN',
+      'GESTOR',
+      'DIRETOR',
+      'SECRETARIO',
+      'INSTRUTOR',
+    ].includes(currentUser?.role) || Boolean(currentUser?.permissions?.can_approve_all);
+
+  const handleSyncSingleUnification = async (alertItem) => {
+    if (!canApproveQueue || syncingUnifications) return;
+    setSyncingUnifications(true);
+    try {
+      await onQuickApproveBatch(
+        [
+          {
+            pathfinder_id: alertItem.pathfinder_id,
+            requirement_id: alertItem.pending_requirement_id,
+          },
+        ],
+        `Unificação automática: ${alertItem.equivalence_title} (${alertItem.pathfinder_name})`
+      );
+    } finally {
+      setSyncingUnifications(false);
+    }
+  };
+
+  const handleSyncAllUnifications = async () => {
+    if (!canApproveQueue || unificationAlerts.length === 0 || syncingUnifications) return;
+    setSyncingUnifications(true);
+    try {
+      const items = unificationAlerts.map((a) => ({
+        pathfinder_id: a.pathfinder_id,
+        requirement_id: a.pending_requirement_id,
+      }));
+      await onQuickApproveBatch(
+        items,
+        `Sincronização em lote de ${items.length} unificações equivalentes pelo Painel`
+      );
+    } finally {
+      setSyncingUnifications(false);
+    }
+  };
 
   const handleApproveAllFilteredQueue = async () => {
     if (!canApproveQueue || filteredQueue.length === 0) return;
@@ -408,6 +447,89 @@ export default function DashboardView({
           </div>
         </div>
       </div>
+
+      {/* Avisos Inteligentes de Unificação Automática (Requisitos Equivalentes Cumpridos) */}
+      {unificationAlerts.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-400/80 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-amber-200 dark:border-slate-700 bg-amber-50/80 dark:bg-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <GitMerge className="w-5 h-5 text-amber-600" />
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  Avisos de Unificação Automática (Requisitos Equivalentes)
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-500 text-slate-950">
+                  {unificationAlerts.length} oportunidade(s)
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                Estes desbravadores já cumpriram um requisito equivalente em uma classe e possuem o item correspondente ainda pendente em outra classe matriculada!
+              </p>
+            </div>
+
+            {canApproveQueue && (
+              <button
+                type="button"
+                onClick={handleSyncAllUnifications}
+                disabled={syncingUnifications}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition cursor-pointer shrink-0"
+              >
+                <GitMerge className="w-4 h-4" />
+                {syncingUnifications
+                  ? 'Sincronizando...'
+                  : `Sincronizar Todas (${unificationAlerts.length})`}
+              </button>
+            )}
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
+            {unificationAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                className="px-5 py-3.5 hover:bg-amber-50/40 dark:hover:bg-slate-800/50 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectPathfinderCard(alert.pathfinder_id)}
+                      className="text-sm font-extrabold text-slate-900 dark:text-white hover:text-amber-600 cursor-pointer"
+                    >
+                      {alert.pathfinder_name}
+                    </button>
+                    <span className="text-xs text-slate-500">• {alert.unit_name}</span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      Unificação: {alert.equivalence_title}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-700 dark:text-slate-300 flex flex-wrap items-center gap-1.5">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                      ✓ Já cumpriu em {alert.completed_class_name} ({alert.completed_requirement_code})
+                    </span>
+                    <span className="text-slate-400">→</span>
+                    <span className="font-bold text-amber-800 dark:text-amber-300">
+                      Pendente em {alert.pending_class_name} ({alert.pending_requirement_code}: {alert.pending_requirement_title})
+                    </span>
+                  </div>
+                </div>
+
+                {canApproveQueue && (
+                  <button
+                    type="button"
+                    onClick={() => handleSyncSingleUnification(alert)}
+                    disabled={syncingUnifications}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-center"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Aprovar Equivalente
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* Fila de Conferência Rápida (Conselheiro marcou CONCLUIDO -> Instrutor/Diretor aprova APROVADO) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">

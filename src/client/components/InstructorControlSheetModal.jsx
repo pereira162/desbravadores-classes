@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
 import {
   X,
-  FileDown,
 } from 'lucide-react';
-import { exportElementToPdf } from '../utils/pdfExport';
+import PdfActionGroup from './PdfActionGroup';
 import { getAssetUrl } from '../api';
 
 const BASE_CLASSES = [
@@ -171,15 +170,12 @@ export default function InstructorControlSheetModal({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={exporting}
-            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-2 shadow-lg transition cursor-pointer disabled:opacity-50"
-          >
-            <FileDown className="w-4 h-4" />
-            {exporting ? 'Gerando PDF...' : 'Baixar PDF Oficial'}
-          </button>
+          <PdfActionGroup
+            docType="INSTRUCTOR_CONTROL"
+            params={{ baseSlug: currentBaseSlug, unitId: unitFilter }}
+            label="Baixar PDF Oficial"
+            colorScheme="amber"
+          />
 
           <button
             type="button"

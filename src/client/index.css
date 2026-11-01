@@ -55,3 +55,113 @@
   display: inline-flex !important;
 }
 
+/* ==========================================
+   TEMAS DE CORES DO CLUBE
+   ========================================== */
+:root,
+.theme-amber {
+  --club-accent: #f59e0b;
+  --club-accent-hover: #d97706;
+  --club-accent-soft: rgba(245, 158, 11, 0.14);
+}
+.theme-blue {
+  --club-accent: #3b82f6;
+  --club-accent-hover: #2563eb;
+  --club-accent-soft: rgba(59, 130, 246, 0.14);
+}
+.theme-emerald {
+  --club-accent: #10b981;
+  --club-accent-hover: #059669;
+  --club-accent-soft: rgba(16, 185, 129, 0.14);
+}
+.theme-crimson {
+  --club-accent: #e11d48;
+  --club-accent-hover: #be123c;
+  --club-accent-soft: rgba(225, 29, 72, 0.14);
+}
+.theme-indigo {
+  --club-accent: #6366f1;
+  --club-accent-hover: #4f46e5;
+  --club-accent-soft: rgba(99, 102, 241, 0.14);
+}
+
+.club-accent-bg {
+  background-color: var(--club-accent) !important;
+}
+.club-accent-bg:hover {
+  background-color: var(--club-accent-hover) !important;
+}
+.club-accent-text {
+  color: var(--club-accent) !important;
+}
+.club-accent-border {
+  border-color: var(--club-accent) !important;
+}
+
+/* ==========================================
+   MODO ESCURO GLOBAL (html.dark)
+   ========================================== */
+html.dark body {
+  background-color: #0b1120 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+html.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f1f5f9;
+}
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/50 {
+  background-color: rgba(15, 23, 42, 0.75) !important;
+}
+html.dark .border-slate-200,
+html.dark .border-slate-100,
+html.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155 !important;
+}
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #f8fafc !important;
+}
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+html.dark .matrix-scroll::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+html.dark .matrix-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+
+

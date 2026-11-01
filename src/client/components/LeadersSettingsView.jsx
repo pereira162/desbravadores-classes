@@ -21,10 +21,64 @@ import {
   HardDrive,
   RefreshCw,
   AlertTriangle,
+  Eye,
+  EyeOff,
+  Bot,
+  Palette,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { ROLE_CONFIG } from '../constants';
 import DateInput from './DateInput';
 import { API_BASE_URL, getStoredToken, isTestMode, apiRequest } from '../api';
+
+const EXTRA_PERMISSIONS_OPTIONS = [
+  {
+    key: 'can_manage_pathfinders',
+    label: 'Cadastrar e Editar Desbravadores',
+    desc: 'Permite adicionar novos desbravadores, alterar matrículas e gerar links de conta.',
+  },
+  {
+    key: 'can_manage_units',
+    label: 'Criar e Editar Unidades',
+    desc: 'Permite criar, renomear ou excluir unidades do clube.',
+  },
+  {
+    key: 'can_manage_events',
+    label: 'Criar Eventos e Dar Baixa em Lote',
+    desc: 'Permite agendar eventos no calendário e assinar presença/requisitos da turma.',
+  },
+  {
+    key: 'can_approve_all',
+    label: 'Aprovar Qualquer Classe (Poder de Instrutor Geral)',
+    desc: 'Libera assinar APROVADO oficial em qualquer classe (mesmo sendo Conselheiro ou Secretário).',
+  },
+  {
+    key: 'can_view_all_classes',
+    label: 'Ver Todas as Classes do Clube',
+    desc: 'Desbloqueia a visão de todas as 6 classes regulares e avançadas.',
+  },
+  {
+    key: 'can_view_all_units',
+    label: 'Ver Todas as Unidades do Clube',
+    desc: 'Desbloqueia a visão de todas as unidades além da unidade própria.',
+  },
+  {
+    key: 'can_edit_equivalences',
+    label: 'Criar e Editar Unificações entre Classes',
+    desc: 'Permite criar ou editar grupos de equivalência no Planejamento Anual.',
+  },
+];
+
+const CUSTOM_ROLE_SUGGESTIONS = [
+  'Diretor Associado',
+  'Diretora Associada',
+  'Capelão',
+  'Instrutor Geral',
+  'Coordenador de Classes',
+  'Coordenador de Unidades',
+  'Tesoureiro(a)',
+  'Ancião Conselheiro',
+];
 
 export default function LeadersSettingsView({
   catalog,
@@ -37,14 +91,17 @@ export default function LeadersSettingsView({
   onSendLeaderInvite,
   onSaveSettings,
   onTestSmtp,
+  onOpenMcpModal,
 }) {
-  // Estado das Configurações do Clube + SMTP + Google
+  // Estado das Configurações do Clube + Logo + Cor + SMTP + Google
   const [clubName, setClubName] = useState(settings?.club_name || '');
   const [clubRegion, setClubRegion] = useState(settings?.club_region || '');
   const [clubYear, setClubYear] = useState(settings?.club_year || '2026');
   const [investitureDate, setInvestitureDate] = useState(
     settings?.investiture_date || '2026-11-28'
   );
+  const [clubLogoUrl, setClubLogoUrl] = useState(settings?.club_logo_url || '');
+  const [colorTheme, setColorTheme] = useState(settings?.color_theme || 'amber');
   const [allowCounselorDirect, setAllowCounselorDirect] = useState(
     settings?.allow_counselor_direct_approval === 'true'
   );
@@ -53,6 +110,7 @@ export default function LeadersSettingsView({
   // Estado de E-mail (Gmail SMTP) e Google Sign-In
   const [smtpUser, setSmtpUser] = useState(settings?.smtp_user || '');
   const [smtpPass, setSmtpPass] = useState('');
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [smtpFromName, setSmtpFromName] = useState(
     settings?.smtp_from_name || settings?.club_name || 'SGC Classes Desbravadores'
   );
@@ -70,6 +128,8 @@ export default function LeadersSettingsView({
     setClubRegion(settings.club_region || '');
     setClubYear(settings.club_year || '2026');
     setInvestitureDate(settings.investiture_date || '2026-11-28');
+    setClubLogoUrl(settings.club_logo_url || '');
+    setColorTheme(settings.color_theme || 'amber');
     setAllowCounselorDirect(settings.allow_counselor_direct_approval === 'true');
     setDemoModeEnabled(false);
     setSmtpUser(settings.smtp_user || '');
@@ -85,10 +145,14 @@ export default function LeadersSettingsView({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showLeaderPassword, setShowLeaderPassword] = useState(false);
   const [sendInvite, setSendInvite] = useState(true);
   const [role, setRole] = useState('INSTRUTOR');
+  const [customRoleTitle, setCustomRoleTitle] = useState('');
   const [unitId, setUnitId] = useState('');
+  const [assignedUnits, setAssignedUnits] = useState([]);
   const [assignedClasses, setAssignedClasses] = useState([]);
+  const [leaderPermissions, setLeaderPermissions] = useState({});
   const [active, setActive] = useState(true);
   const [savingLeader, setSavingLeader] = useState(false);
   const [sendingInviteId, setSendingInviteId] = useState(null);
@@ -278,10 +342,14 @@ export default function LeadersSettingsView({
     setName('');
     setEmail('');
     setPassword('');
+    setShowLeaderPassword(false);
     setSendInvite(true);
     setRole('INSTRUTOR');
+    setCustomRoleTitle('');
     setUnitId('');
+    setAssignedUnits([]);
     setAssignedClasses(['amigo', 'amigo-avancado']);
+    setLeaderPermissions({});
     setActive(true);
     setLeaderModalOpen(true);
   };
@@ -291,10 +359,14 @@ export default function LeadersSettingsView({
     setName(ld.name);
     setEmail(ld.email);
     setPassword('');
+    setShowLeaderPassword(false);
     setSendInvite(false);
     setRole(ld.role);
+    setCustomRoleTitle(ld.custom_role_title || '');
     setUnitId(ld.unit_id || '');
+    setAssignedUnits(ld.assigned_units || []);
     setAssignedClasses(ld.assigned_classes || []);
+    setLeaderPermissions(ld.permissions || {});
     setActive(Boolean(ld.active));
     setLeaderModalOpen(true);
   };
@@ -303,6 +375,19 @@ export default function LeadersSettingsView({
     setAssignedClasses((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
     );
+  };
+
+  const toggleUnitScope = (uId) => {
+    setAssignedUnits((prev) =>
+      prev.includes(uId) ? prev.filter((id) => id !== uId) : [...prev, uId]
+    );
+  };
+
+  const togglePermissionFlag = (permKey) => {
+    setLeaderPermissions((prev) => ({
+      ...prev,
+      [permKey]: !prev[permKey],
+    }));
   };
 
   const handleLeaderSubmit = async (e) => {
@@ -316,8 +401,11 @@ export default function LeadersSettingsView({
           email: email.trim(),
           password: password.trim() || undefined,
           role,
-          unit_id: role === 'CONSELHEIRO' ? unitId || null : null,
-          assigned_classes: role === 'INSTRUTOR' ? assignedClasses : [],
+          custom_role_title: customRoleTitle.trim(),
+          unit_id: unitId || null,
+          assigned_units: assignedUnits,
+          assigned_classes: assignedClasses,
+          permissions: leaderPermissions,
           active,
           send_invite: !editingLeader ? sendInvite : false,
         },
@@ -354,6 +442,22 @@ export default function LeadersSettingsView({
     }, 3000);
   };
 
+  const handleLogoFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1.5 * 1024 * 1024) {
+      alert('Escolha uma imagem com até 1.5 MB para a logo do clube.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setClubLogoUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSettingsSubmit = async (e) => {
     e.preventDefault();
     if (!canManageLeaders) return;
@@ -364,6 +468,8 @@ export default function LeadersSettingsView({
         club_region: clubRegion,
         club_year: clubYear,
         investiture_date: investitureDate,
+        club_logo_url: clubLogoUrl.trim(),
+        color_theme: colorTheme,
         allow_counselor_direct_approval: allowCounselorDirect ? 'true' : 'false',
         demo_mode_enabled: demoModeEnabled,
         smtp_user: smtpUser.trim(),
@@ -381,12 +487,13 @@ export default function LeadersSettingsView({
     if (!onTestSmtp) return;
     setTestingSmtp(true);
     try {
-      // Salva configurações atuais antes de testar se o usuário digitou algo novo
       await onSaveSettings({
         club_name: clubName,
         club_region: clubRegion,
         club_year: clubYear,
         investiture_date: investitureDate,
+        club_logo_url: clubLogoUrl.trim(),
+        color_theme: colorTheme,
         allow_counselor_direct_approval: allowCounselorDirect ? 'true' : 'false',
         demo_mode_enabled: demoModeEnabled,
         smtp_user: smtpUser.trim(),
@@ -408,21 +515,33 @@ export default function LeadersSettingsView({
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
             <Shield className="w-6 h-6 text-indigo-600" />
-            Liderança, Convites por E-mail & Configurações do Clube
+            Liderança, Cargos Personalizados, Permissões & Configurações
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cadastre os líderes com o e-mail real deles, envie convites automáticos e configure o Gmail SMTP e Login Google.
+            Cadastre líderes, crie cargos personalizados da diretoria, conceda poderes extras e configure identidade visual, Gmail SMTP e IA/MCP.
           </p>
         </div>
 
         {canManageLeaders && (
-          <button
-            onClick={openCreateLeader}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
-          >
-            <UserPlus className="w-4 h-4" />
-            Convidar / Cadastrar Líder
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onOpenMcpModal && (
+              <button
+                type="button"
+                onClick={onOpenMcpModal}
+                className="px-3.5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/50 text-amber-900 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Bot className="w-4 h-4 text-amber-600" />
+                Assistente IA & Servidor MCP
+              </button>
+            )}
+            <button
+              onClick={openCreateLeader}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+            >
+              <UserPlus className="w-4 h-4" />
+              Convidar / Cadastrar Líder
+            </button>
+          </div>
         )}
       </div>
 
@@ -435,7 +554,7 @@ export default function LeadersSettingsView({
               Líderes Cadastrados ({leaders.length})
             </h2>
             <span className="text-xs text-slate-500">
-              Envie o convite por e-mail ou copie o link direto de ativação
+              Por padrão cada membro acessa seu próprio escopo (expansível pelo Diretor/Gestor)
             </span>
           </div>
 
@@ -443,6 +562,9 @@ export default function LeadersSettingsView({
             {leaders.map((ld) => {
               const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
               const inviteUrl = inviteLinksMap[ld.id];
+              const activePerms = Object.entries(ld.permissions || {}).filter(
+                ([, val]) => Boolean(val)
+              );
               return (
                 <div
                   key={ld.id}
@@ -456,8 +578,13 @@ export default function LeadersSettingsView({
                       <span
                         className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${rCfg.badgeClass}`}
                       >
-                        {rCfg.label}
+                        {ld.custom_role_title || rCfg.label}
                       </span>
+                      {ld.custom_role_title && (
+                        <span className="text-[10px] font-semibold text-slate-500">
+                          (Base: {rCfg.label})
+                        </span>
+                      )}
                       {ld.is_demo ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                           CONTA DEMO
@@ -482,13 +609,14 @@ export default function LeadersSettingsView({
                     </div>
 
                     {/* Escopo do Conselheiro ou Instrutor */}
-                    {ld.role === 'CONSELHEIRO' && (
+                    {(ld.role === 'CONSELHEIRO' || ld.unit_id) && (
                       <div className="text-xs text-rose-800 font-medium">
                         Unidade vinculada: <strong>{ld.unit_name || 'Todas'}</strong>
                       </div>
                     )}
-                    {ld.role === 'INSTRUTOR' && (
-                      <div className="flex flex-wrap gap-1 pt-1">
+                    {(ld.assigned_classes || []).length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1 pt-1">
+                        <span className="text-[10px] font-bold text-slate-500">Classes:</span>
                         {(ld.assigned_classes || []).map((slug) => (
                           <span
                             key={slug}
@@ -497,6 +625,34 @@ export default function LeadersSettingsView({
                             {slug}
                           </span>
                         ))}
+                        {Array.isArray(ld.assigned_pathfinders) &&
+                          ld.assigned_pathfinders.length > 0 && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
+                              Turma: {ld.assigned_pathfinders.length} desbravador(es)
+                            </span>
+                          )}
+                      </div>
+                    )}
+
+                    {/* Poderes extras concedidos pelo Diretor / Gestor */}
+                    {activePerms.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1 pt-1">
+                        <span className="text-[10px] font-extrabold text-amber-800">
+                          Poderes Extras:
+                        </span>
+                        {activePerms.map(([pKey]) => {
+                          const opt = EXTRA_PERMISSIONS_OPTIONS.find(
+                            (o) => o.key === pKey
+                          );
+                          return (
+                            <span
+                              key={pKey}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300"
+                            >
+                              + {opt ? opt.label : pKey}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
 
@@ -553,7 +709,7 @@ export default function LeadersSettingsView({
                         className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
-                        Editar
+                        Editar / Poderes
                       </button>
                     </div>
                   )}
@@ -563,13 +719,13 @@ export default function LeadersSettingsView({
           </div>
         </div>
 
-        {/* Coluna 3: Configurações Gerais, Gmail SMTP e Login Google */}
+        {/* Coluna 3: Configurações Gerais, Logo, Cor, Gmail SMTP e Login Google */}
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <Settings className="w-5 h-5 text-slate-700" />
               <h2 className="text-sm font-extrabold text-slate-900">
-                Parâmetros do Clube & E-mail Oficial
+                Identidade Visual, Parâmetros & E-mail
               </h2>
             </div>
 
@@ -623,6 +779,89 @@ export default function LeadersSettingsView({
                     onChange={(newDate) => setInvestitureDate(newDate)}
                     className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
                   />
+                </div>
+              </div>
+
+              {/* Logo do Clube e Tema de Cores */}
+              <div className="pt-3 border-t border-slate-200 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-600" />
+                    Logo do Clube (URL ou Upload de Imagem)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {clubLogoUrl && (
+                      <img
+                        src={clubLogoUrl}
+                        alt="Logo"
+                        className="w-9 h-9 rounded-lg object-contain border border-slate-200 bg-slate-50 p-0.5 shrink-0"
+                      />
+                    )}
+                    <input
+                      type="text"
+                      disabled={!canManageLeaders}
+                      value={clubLogoUrl}
+                      onChange={(e) => setClubLogoUrl(e.target.value)}
+                      placeholder="https://... ou envie um arquivo abaixo"
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs"
+                    />
+                  </div>
+                  {canManageLeaders && (
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-indigo-700 hover:underline cursor-pointer">
+                        Escolher imagem do computador/celular
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {clubLogoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setClubLogoUrl('')}
+                          className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Remover logo
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-amber-600" />
+                    Cor Principal do Clube (Tema Visual)
+                  </label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[
+                      { id: 'amber', label: 'Ouro', hex: '#d97706' },
+                      { id: 'blue', label: 'Azul', hex: '#2563eb' },
+                      { id: 'emerald', label: 'Verde', hex: '#059669' },
+                      { id: 'crimson', label: 'Rubi', hex: '#dc2626' },
+                      { id: 'indigo', label: 'Índigo', hex: '#4f46e5' },
+                    ].map((th) => (
+                      <button
+                        key={th.id}
+                        type="button"
+                        disabled={!canManageLeaders}
+                        onClick={() => setColorTheme(th.id)}
+                        className={`p-1.5 rounded-xl border text-[10px] font-bold flex flex-col items-center gap-1 cursor-pointer transition ${
+                          colorTheme === th.id
+                            ? 'border-slate-900 bg-slate-100 ring-2 ring-slate-900/20'
+                            : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: th.hex }}
+                        />
+                        <span>{th.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -717,18 +956,32 @@ export default function LeadersSettingsView({
                       </span>
                     )}
                   </label>
-                  <input
-                    type="password"
-                    disabled={!canManageLeaders}
-                    value={smtpPass}
-                    onChange={(e) => setSmtpPass(e.target.value)}
-                    placeholder={
-                      settings?.smtp_pass_configured
-                        ? '•••••••••••••••• (deixe vazio p/ manter)'
-                        : 'xxxx xxxx xxxx xxxx'
-                    }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showSmtpPass ? 'text' : 'password'}
+                      disabled={!canManageLeaders}
+                      value={smtpPass}
+                      onChange={(e) => setSmtpPass(e.target.value)}
+                      placeholder={
+                        settings?.smtp_pass_configured
+                          ? '•••••••••••••••• (deixe vazio p/ manter)'
+                          : 'xxxx xxxx xxxx xxxx'
+                      }
+                      className="w-full px-3 pr-9 py-2 rounded-xl border border-slate-300 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSmtpPass(!showSmtpPass)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                      title={showSmtpPass ? 'Ocultar senha' : 'Ver senha'}
+                    >
+                      {showSmtpPass ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {canManageLeaders && smtpUser && (
@@ -1012,10 +1265,12 @@ export default function LeadersSettingsView({
       {/* Modal Criar / Editar Líder */}
       {leaderModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="text-base font-extrabold">
-                {editingLeader ? 'Editar Conta de Líder' : 'Convidar / Cadastrar Novo Líder'}
+                {editingLeader
+                  ? 'Editar Líder, Cargo Personalizado & Poderes'
+                  : 'Convidar / Cadastrar Novo Membro da Diretoria'}
               </h3>
               <button
                 onClick={() => setLeaderModalOpen(false)}
@@ -1030,152 +1285,296 @@ export default function LeadersSettingsView({
               className="flex-1 overflow-hidden flex flex-col"
             >
               <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nome Completo do Líder *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Digite o nome completo do líder"
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    E-mail Real do Líder *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@gmail.com"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {editingLeader
-                      ? 'Nova Senha (deixe vazio p/ manter)'
-                      : 'Senha Provisória (opcional se enviar convite)'}
+                    Nome Completo do Líder *
                   </label>
                   <input
                     type="text"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={
-                      editingLeader
-                        ? '••••••••'
-                        : 'O próprio líder criará pelo link'
-                    }
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Digite o nome completo do líder"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                   />
                 </div>
-              </div>
 
-              {!editingLeader && (
-                <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      E-mail Real do Líder *
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={sendInvite}
-                      onChange={(e) => setSendInvite(e.target.checked)}
-                      className="mt-0.5 rounded text-indigo-600"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="email@gmail.com"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                     />
-                    <div>
-                      <span className="text-xs font-bold text-indigo-950 block">
-                        Enviar convite por e-mail para o líder criar a própria senha
-                      </span>
-                      <span className="text-[11px] text-indigo-800">
-                        O sistema envia o link oficial de ativação para o e-mail dele (e também gera um link copiável caso queira mandar por WhatsApp).
-                      </span>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {editingLeader
+                        ? 'Nova Senha (deixe vazio p/ manter)'
+                        : 'Senha Provisória (opcional se enviar convite)'}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showLeaderPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={
+                          editingLeader
+                            ? '••••••••'
+                            : 'O próprio líder criará pelo link'
+                        }
+                        className="w-full px-3.5 pr-9 py-2 rounded-xl border border-slate-300 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLeaderPassword(!showLeaderPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                        title={showLeaderPassword ? 'Ocultar senha' : 'Ver senha'}
+                      >
+                        {showLeaderPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
-                  </label>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Cargo / Papel no Clube (RBAC) *
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                >
-                  <option value="DIRETOR">DIRETOR(A) — Direção Geral do Clube e Reversão de Logs</option>
-                  <option value="GESTOR">GESTOR(A) / TI — Administração do Sistema (mesmos direitos do Diretor)</option>
-                  <option value="SECRETARIO">SECRETÁRIO(A) — Cadastros, Unidades e Relatórios</option>
-                  <option value="INSTRUTOR">INSTRUTOR(A) — Avalia e Assina Classes Atribuídas</option>
-                  <option value="CONSELHEIRO">CONSELHEIRO(A) — Acompanha Desbravadores da Unidade</option>
-                </select>
-              </div>
-
-              {role === 'CONSELHEIRO' && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Unidade Sob Responsabilidade do Conselheiro
-                  </label>
-                  <select
-                    value={unitId}
-                    onChange={(e) => setUnitId(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
-                  >
-                    <option value="">Todas as Unidades</option>
-                    {units.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {role === 'INSTRUTOR' && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Classes que este Instrutor Leciona e Assina:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto border border-slate-200 rounded-xl p-2">
-                    {(catalog.classes || []).map((cls) => {
-                      const checked = assignedClasses.includes(cls.slug);
-                      return (
-                        <label
-                          key={cls.slug}
-                          className={`p-2 rounded-lg border text-xs flex items-center gap-2 cursor-pointer ${
-                            checked
-                              ? 'bg-emerald-50 border-emerald-400 font-bold'
-                              : 'border-slate-200'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleClassScope(cls.slug)}
-                            className="rounded text-emerald-600"
-                          />
-                          <span className="truncate">{cls.name}</span>
-                        </label>
-                      );
-                    })}
                   </div>
                 </div>
-              )}
 
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={active}
-                  onChange={(e) => setActive(e.target.checked)}
-                  className="rounded text-indigo-600"
-                />
-                Conta Ativa (pode fazer login no sistema)
-              </label>
+                {!editingLeader && (
+                  <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendInvite}
+                        onChange={(e) => setSendInvite(e.target.checked)}
+                        className="mt-0.5 rounded text-indigo-600"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-indigo-950 block">
+                          Enviar convite por e-mail para o líder criar a própria senha
+                        </span>
+                        <span className="text-[11px] text-indigo-800">
+                          O sistema envia o link oficial de ativação para o e-mail dele (e também gera um link copiável caso queira mandar por WhatsApp).
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Perfil Base de Acesso (RBAC) *
+                    </label>
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                    >
+                      <option value="DIRETOR">DIRETOR(A) — Direção Geral do Clube</option>
+                      <option value="GESTOR">GESTOR(A) / TI — Administração Geral</option>
+                      <option value="SECRETARIO">SECRETÁRIO(A) — Secretaria e Relatórios</option>
+                      <option value="INSTRUTOR">INSTRUTOR(A) — Classes Atribuídas</option>
+                      <option value="CONSELHEIRO">CONSELHEIRO(A) — Unidade Atribuída</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Cargo Personalizado da Diretoria (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={customRoleTitle}
+                      onChange={(e) => setCustomRoleTitle(e.target.value)}
+                      placeholder="Ex: Diretor Associado, Capelão, Instrutor Geral..."
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Sugestões rápidas de cargos personalizados */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-500">
+                    Sugestões de Cargo:
+                  </span>
+                  {CUSTOM_ROLE_SUGGESTIONS.map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => setCustomRoleTitle(sug)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                        customRoleTitle === sug
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                  {customRoleTitle && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomRoleTitle('')}
+                      className="text-[10px] text-rose-600 hover:underline font-semibold ml-1 cursor-pointer"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+
+                {/* Escopo de Unidades (para Conselheiro ou qualquer líder com escopo de unidade) */}
+                {!['DIRETOR', 'GESTOR', 'ADMIN'].includes(role) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Unidade Principal Vinculada
+                      </label>
+                      <select
+                        value={unitId}
+                        onChange={(e) => setUnitId(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                      >
+                        <option value="">
+                          {role === 'CONSELHEIRO'
+                            ? 'Selecione a unidade do conselheiro...'
+                            : 'Nenhuma unidade específica (Padrão)'}
+                        </option>
+                        {units.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Unidades Extras Liberadas (Opcional)
+                      </label>
+                      <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-slate-200 bg-slate-50/50">
+                        {units.map((u) => {
+                          const checked =
+                            u.id === unitId || assignedUnits.includes(u.id);
+                          return (
+                            <label
+                              key={u.id}
+                              className={`px-2 py-1 rounded-lg border text-[11px] flex items-center gap-1.5 cursor-pointer ${
+                                checked
+                                  ? 'bg-indigo-50 border-indigo-300 font-bold text-indigo-900'
+                                  : 'bg-white border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={u.id === unitId}
+                                onChange={() => toggleUnitScope(u.id)}
+                                className="rounded text-indigo-600"
+                              />
+                              <span>{u.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Escopo de Classes */}
+                {!['DIRETOR', 'GESTOR', 'ADMIN'].includes(role) && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Classes Liberadas para este Membro (visualizar e avaliar):
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2">
+                      {(catalog.classes || []).map((cls) => {
+                        const checked = assignedClasses.includes(cls.slug);
+                        return (
+                          <label
+                            key={cls.slug}
+                            className={`p-2 rounded-lg border text-xs flex items-center gap-2 cursor-pointer ${
+                              checked
+                                ? 'bg-emerald-50 border-emerald-400 font-bold'
+                                : 'border-slate-200'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleClassScope(cls.slug)}
+                              className="rounded text-emerald-600"
+                            />
+                            <span className="truncate">{cls.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Poderes Extras / Permissões Granulares (Concedidas pelo Diretor / Gestor) */}
+                {!['DIRETOR', 'GESTOR', 'ADMIN'].includes(role) && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2.5">
+                    <div>
+                      <div className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-amber-600" />
+                        Conceder Poderes Extras a este Membro da Diretoria
+                      </div>
+                      <p className="text-[11px] text-amber-800">
+                        Por padrão, cada líder acessa apenas sua classe ou unidade. Marque abaixo caso queira dar mais poderes a este membro:
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {EXTRA_PERMISSIONS_OPTIONS.map((opt) => {
+                        const checked = Boolean(leaderPermissions[opt.key]);
+                        return (
+                          <label
+                            key={opt.key}
+                            className={`p-2.5 rounded-xl border text-xs flex items-start gap-2 cursor-pointer transition ${
+                              checked
+                                ? 'bg-white border-amber-500 shadow-2xs'
+                                : 'bg-white/60 border-amber-200/80 hover:bg-white'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => togglePermissionFlag(opt.key)}
+                              className="mt-0.5 rounded text-amber-600"
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900">
+                                {opt.label}
+                              </div>
+                              <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                                {opt.desc}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    onChange={(e) => setActive(e.target.checked)}
+                    className="rounded text-indigo-600"
+                  />
+                  Conta Ativa (pode fazer login no sistema)
+                </label>
               </div>
 
               <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">

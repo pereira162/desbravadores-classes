@@ -15,6 +15,13 @@ import {
   Download,
   Smartphone,
   X,
+  BookOpen,
+  Bot,
+  MessageSquareWarning,
+  Sun,
+  Moon,
+  Monitor,
+  RotateCcw,
 } from 'lucide-react';
 import {
   apiRequest,
@@ -23,7 +30,9 @@ import {
   getAssetUrl,
   isTestMode,
   getTestModeUrl,
+  resetEphemeralTestSession,
 } from './api';
+import { initBrowserLogger } from './logger';
 import { ROLE_CONFIG, STATUS_CONFIG } from './constants';
 import LoginView from './components/LoginView';
 import DashboardView from './components/DashboardView';
@@ -35,6 +44,10 @@ import LeadersSettingsView from './components/LeadersSettingsView';
 import AuditLogsView from './components/AuditLogsView';
 import RequirementDetailModal from './components/RequirementDetailModal';
 import BulkSignModal from './components/BulkSignModal';
+import OnboardingTour from './components/OnboardingTour';
+import DocumentationModal from './components/DocumentationModal';
+import McpSettingsAndChatModal from './components/McpSettingsAndChatModal';
+import FeedbackModal from './components/FeedbackModal';
 
 const NAV_ITEMS = [
   { id: 'DASHBOARD', label: 'Painel & Fila', icon: LayoutDashboard },
@@ -46,6 +59,8 @@ const NAV_ITEMS = [
   { id: 'AUDIT', label: 'Auditoria & Logs', icon: History },
 ];
 
+const THEME_STORAGE_KEY = 'dbv_theme_mode_v1';
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -53,7 +68,64 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('DASHBOARD');
   const [toast, setToast] = useState(null);
 
-  // Estado dos dados do banco SQLite
+  // Tema Claro / Escuro / Automático
+  const [themeMode, setThemeMode] = useState(() => {
+    try {
+      return localStorage.getItem(THEME_STORAGE_KEY) || 'auto';
+    } catch {
+      return 'auto';
+    }
+  });
+
+  // Modais de Documentação, IA/MCP, Feedback Beta e Trilha de Ensino
+  const [showDocsModal, setShowDocsModal] = useState(false);
+  const [showMcpModal, setShowMcpModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showOnboardingTour, setShowOnboardingTour] = useState(() => {
+    if (!isTestMode()) return false;
+    try {
+      return window.sessionStorage.getItem('dbv_tour_closed_v1') !== '1';
+    } catch {
+      return true;
+    }
+  });
+
+  // Inicializa captura de erros e console para Feedback Beta
+  useEffect(() => {
+    initBrowserLogger();
+  }, []);
+
+  // Aplica classe dark no <html> conforme themeMode (light | dark | auto)
+  useEffect(() => {
+    const applyTheme = () => {
+      const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = themeMode === 'dark' || (themeMode === 'auto' && prefersDark);
+      document.documentElement.classList.toggle('dark', isDark);
+    };
+    applyTheme();
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    } catch {}
+
+    if (themeMode === 'auto' && typeof window !== 'undefined' && window.matchMedia) {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      mql.addEventListener?.('change', applyTheme);
+      return () => mql.removeEventListener?.('change', applyTheme);
+    }
+  }, [themeMode]);
+
+  const handleToggleTheme = useCallback(() => {
+    setThemeMode((prev) => {
+      if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'auto';
+      return 'light';
+    });
+  }, []);
+
+  // Estado dos dados do banco SQLite / Sandbox
   const [rawBootstrap, setRawBootstrap] = useState(null);
 
   // Estado da navegação contextual
@@ -122,6 +194,9 @@ export default function App() {
     try {
       const data = await apiRequest('/api/bootstrap');
       setRawBootstrap(data);
+      if (data?.currentUser) {
+        setUser(data.currentUser);
+      }
     } catch (err) {
       if (err.status === 401) {
         setStoredToken(null);
@@ -175,6 +250,9 @@ export default function App() {
           if (res.user.pathfinder_id) {
             setSelectedPathfinderId(res.user.pathfinder_id);
           }
+        } else if (res.user?.role === 'INSTRUTOR' && res.user.assigned_classes?.length > 0) {
+          const firstBase = res.user.assigned_classes[0].replace('_avancado', '');
+          setSelectedBaseSlug(firstBase);
         }
         return fetchBootstrapData();
       })
@@ -188,12 +266,19 @@ export default function App() {
   const handleLoginSuccess = (token, loggedUser) => {
     setStoredToken(token);
     setUser(loggedUser);
+    if (isTestMode()) {
+      setShowOnboardingTour(true);
+    }
     if (loggedUser?.role === 'DESBRAVADOR') {
       setActiveTab('PATHFINDERS');
       if (loggedUser.pathfinder_id) {
         setSelectedPathfinderId(loggedUser.pathfinder_id);
       }
     } else {
+      if (loggedUser?.role === 'INSTRUTOR' && loggedUser.assigned_classes?.length > 0) {
+        const firstBase = loggedUser.assigned_classes[0].replace('_avancado', '');
+        setSelectedBaseSlug(firstBase);
+      }
       setActiveTab('DASHBOARD');
     }
     fetchBootstrapData();
@@ -206,14 +291,20 @@ export default function App() {
     setRawBootstrap(null);
   };
 
-  // Normaliza e enriquece o catálogo e os registros para compatibilidade total entre componentes
+  const handleResetMyTest = async () => {
+    resetEphemeralTestSession();
+    await fetchBootstrapData();
+    showToast('Seu ambiente de teste foi restaurado ao estado inicial!', 'success');
+  };
+
+  // Normaliza e enriquece o catálogo e os registros com escopo estrito por padrão (RBAC)
   const normalizedData = useMemo(() => {
     if (!rawBootstrap) {
       return {
         catalog: {
           categories: [],
           contextTags: [],
-          equivalenceGroups: [],
+          equivalenceGroups: {},
           classes: [],
           requirements: [],
         },
@@ -222,16 +313,17 @@ export default function App() {
         progressMap: {},
         units: [],
         pathfinders: [],
+        allPathfinders: [],
         events: [],
         leaders: [],
         auditLogs: [],
+        unificationAlerts: [],
         settings: {},
       };
     }
 
     const classesMap = {};
-    const classes = (rawBootstrap.catalog?.classes || []).map((c) => {
-      // Busca book_info do primeiro requisito da classe que tiver book_info
+    const allClasses = (rawBootstrap.catalog?.classes || []).map((c) => {
       const reqWithBook = (rawBootstrap.catalog?.requirements || []).find(
         (r) => r.class_slug === c.slug && r.book_info
       );
@@ -246,6 +338,65 @@ export default function App() {
       classesMap[c.slug] = norm;
       return norm;
     });
+
+    // Escopo de Classes e Unidades conforme o cargo e permissões granulares do usuário logado
+    const perms = user?.permissions || {};
+    const isFullAccess =
+      ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(user?.role) ||
+      Boolean(perms.can_approve_all);
+
+    const canViewAllClasses =
+      isFullAccess ||
+      user?.role === 'CONSELHEIRO' ||
+      user?.role === 'DESBRAVADOR' ||
+      Boolean(perms.can_view_all_classes);
+
+    const canViewAllUnits =
+      isFullAccess ||
+      user?.role === 'INSTRUTOR' ||
+      user?.role === 'DESBRAVADOR' ||
+      Boolean(perms.can_view_all_units);
+
+    const assignedClassSlugs = new Set(user?.assigned_classes || []);
+    const assignedBaseSlugs = new Set(
+      (user?.assigned_classes || []).map((s) => s.replace('_avancado', ''))
+    );
+
+    const classes =
+      !canViewAllClasses && assignedBaseSlugs.size > 0
+        ? allClasses.filter((c) => assignedBaseSlugs.has(c.base_slug || c.slug.replace('_avancado', '')))
+        : allClasses;
+
+    const allUnits = rawBootstrap.units || [];
+    const allowedUnitIds = new Set(
+      [user?.unit_id, ...(user?.assigned_units || [])].filter(Boolean)
+    );
+    const units =
+      !canViewAllUnits && allowedUnitIds.size > 0
+        ? allUnits.filter((u) => allowedUnitIds.has(u.id))
+        : allUnits;
+
+    const allPathfinders = rawBootstrap.pathfinders || [];
+    let scopedPathfinders = allPathfinders;
+
+    if (user?.role === 'DESBRAVADOR' && user.pathfinder_id) {
+      scopedPathfinders = allPathfinders.filter((p) => p.id === user.pathfinder_id);
+    } else if (user?.role === 'CONSELHEIRO' && !canViewAllUnits && allowedUnitIds.size > 0) {
+      scopedPathfinders = allPathfinders.filter((p) => allowedUnitIds.has(p.unit_id));
+    } else if (user?.role === 'INSTRUTOR' && !canViewAllClasses && assignedBaseSlugs.size > 0) {
+      const assignedPfIds = new Set(user?.assigned_pathfinders || []);
+      scopedPathfinders = allPathfinders.filter((p) => {
+        const inClass = (p.enrollments || []).some((e) =>
+          assignedBaseSlugs.has(e.class_slug.replace('_avancado', '')) ||
+          assignedClassSlugs.has(e.class_slug)
+        );
+        if (!inClass) return false;
+        if (assignedPfIds.size > 0) {
+          return assignedPfIds.has(p.id);
+        }
+        return true;
+      });
+    }
 
     const requirementsMap = {};
     const requirements = (rawBootstrap.catalog?.requirements || []).map((r) => {
@@ -301,25 +452,34 @@ export default function App() {
       description: lg.summary,
     }));
 
+    const scopedPfSet = new Set(scopedPathfinders.map((p) => p.id));
+    const unificationAlerts = (rawBootstrap.unificationAlerts || []).filter((a) =>
+      scopedPfSet.has(a.pathfinder_id)
+    );
+
     return {
       catalog: {
         categories: rawBootstrap.catalog?.categories || [],
         contextTags: rawBootstrap.catalog?.contextTags || [],
-        equivalenceGroups: rawBootstrap.catalog?.equivalenceGroups || [],
+        equivalenceGroups: rawBootstrap.catalog?.equivalenceGroups || {},
         classes,
+        allClasses,
         requirements,
       },
       classesMap,
       requirementsMap,
       progressMap,
-      units: rawBootstrap.units || [],
-      pathfinders: rawBootstrap.pathfinders || [],
+      units,
+      allUnits,
+      pathfinders: scopedPathfinders,
+      allPathfinders,
       events,
       leaders: rawBootstrap.leaders || [],
       auditLogs,
+      unificationAlerts,
       settings,
     };
-  }, [rawBootstrap]);
+  }, [rawBootstrap, user]);
 
   // Abre modal de detalhe de requisito aceitando (req, pf) ou (pf, req)
   const handleOpenRequirementDetail = useCallback((arg1, arg2) => {
@@ -631,7 +791,7 @@ export default function App() {
     }
   };
 
-  // Salvar Configurações do Clube + Gmail SMTP + Google OAuth
+  // Salvar Configurações do Clube + Logo + Cor + Gmail SMTP + Google OAuth
   const handleSaveSettings = async (payload) => {
     try {
       await apiRequest('/api/settings', {
@@ -639,6 +799,8 @@ export default function App() {
         body: JSON.stringify({
           club_name: payload.club_name,
           club_region: payload.club_region,
+          club_logo_url: payload.club_logo_url,
+          color_theme: payload.color_theme,
           current_year: Number(payload.club_year || 2026),
           investiture_date: payload.investiture_date,
           allow_counselor_direct_approval:
@@ -711,26 +873,44 @@ export default function App() {
     }
   };
 
+  const clubColorThemeClass = `theme-${normalizedData.settings?.color_theme || 'amber'}`;
+
   if (!user) {
     return (
-      <>
+      <div className={clubColorThemeClass}>
         <LoginView
           onLoginSuccess={handleLoginSuccess}
           deferredPrompt={deferredPrompt}
           isAppInstalled={isAppInstalled}
           onInstallApp={handleInstallApp}
           onOpenInstallGuide={() => setShowInstallGuideModal(true)}
+          onOpenDocs={() => setShowDocsModal(true)}
+          onOpenFeedback={() => setShowFeedbackModal(true)}
+          themeMode={themeMode}
+          onToggleTheme={handleToggleTheme}
         />
+
+        <DocumentationModal
+          isOpen={showDocsModal}
+          onClose={() => setShowDocsModal(false)}
+        />
+
+        <FeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          user={null}
+        />
+
         {showInstallGuideModal && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-scale-up space-y-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-extrabold text-slate-950">
+                    <h3 className="text-base font-extrabold text-slate-950 dark:text-white">
                       Instalar o SGC Classes
                     </h3>
                     <p className="text-xs text-slate-500">
@@ -747,9 +927,9 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="space-y-2.5 text-xs text-slate-700">
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block font-bold">
+              <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                  <strong className="text-slate-900 dark:text-white block font-bold">
                     📱 No Android / Google Chrome:
                   </strong>
                   <span>
@@ -757,8 +937,8 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block font-bold">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                  <strong className="text-slate-900 dark:text-white block font-bold">
                     🍏 No iPhone / iPad (Safari):
                   </strong>
                   <span>
@@ -766,8 +946,8 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block font-bold">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                  <strong className="text-slate-900 dark:text-white block font-bold">
                     💻 No Computador (Chrome / Edge):
                   </strong>
                   <span>
@@ -786,11 +966,12 @@ export default function App() {
             </div>
           </div>
         )}
-      </>
+      </div>
     );
   }
 
   const roleCfg = ROLE_CONFIG[user.role] || ROLE_CONFIG.INSTRUTOR;
+  const isDirectorOrGestor = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(user.role);
   const activeDetailProgress =
     detailModal.pathfinder && detailModal.requirement
       ? normalizedData.progressMap[
@@ -798,40 +979,64 @@ export default function App() {
         ]
       : null;
 
+  const handleTourSelectTab = (tabKey) => {
+    const map = {
+      dashboard: 'DASHBOARD',
+      matrix: 'MATRIX',
+      planning: 'DEMAND',
+      leaders: 'LEADERS',
+      pathfinders: 'PATHFINDERS',
+      events: 'EVENTS',
+      audit: 'AUDIT',
+    };
+    setActiveTab(map[tabKey] || tabKey);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
-      {/* Banner de Identificação de Ambiente (Oficial vs Teste) */}
-      {isTestMode() ? (
+    <div className={`min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col ${clubColorThemeClass}`}>
+      {/* Barra superior exclusiva quando estiver na Página de Teste (?teste=1) */}
+      {isTestMode() && (
         <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-extrabold flex flex-wrap items-center justify-between gap-2 border-b border-amber-500 no-print">
-          <div className="flex items-center gap-2">
-            <span className="px-1.5 py-0.5 rounded bg-slate-950 text-amber-400 font-black text-[10px]">
-              MODO TESTE (?teste=1)
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2 py-0.5 rounded bg-slate-950 text-amber-400 font-black text-[10px]">
+              PÁGINA DE TESTE EFÊMERA (?teste=1)
             </span>
             <span>
-              Exibindo <strong>Ambiente de Testes e Simulação</strong> (7 desbravadores, 213 requisitos). O banco oficial está 100% isolado e protegido.
+              Suas alterações ficam salvas <strong>apenas no seu navegador</strong> e se encerram ao fechar a janela.
             </span>
           </div>
-          <a
-            href={getTestModeUrl(false)}
-            className="px-3 py-1 rounded-lg bg-slate-950 text-white hover:bg-slate-800 transition shrink-0 font-bold"
-          >
-            Ir para o Clube Oficial de Produção →
-          </a>
-        </div>
-      ) : (
-        <div className="bg-slate-900 text-slate-300 px-4 py-1.5 text-xs font-medium flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 no-print">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>
-              <strong className="text-white">Clube Oficial:</strong> {normalizedData.settings?.club_name || 'Clube de Desbravadores'} — Sistema com backup automático contínuo ativo.
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {!showOnboardingTour && (
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    window.sessionStorage.removeItem('dbv_tour_closed_v1');
+                  } catch {}
+                  setShowOnboardingTour(true);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white text-slate-900 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                Abrir Trilha de Ensino
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleResetMyTest}
+              className="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-slate-950 font-bold text-[11px] flex items-center gap-1 cursor-pointer border border-amber-700/30"
+              title="Apagar alterações feitas neste navegador e voltar ao seed inicial"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Resetar Meu Teste
+            </button>
+            <a
+              href={getTestModeUrl(false)}
+              className="px-3 py-1 rounded-lg bg-slate-950 text-white hover:bg-slate-800 transition shrink-0 font-bold text-[11px]"
+            >
+              Sair da Página de Teste →
+            </a>
           </div>
-          <a
-            href={getTestModeUrl(true)}
-            className="text-[11px] font-bold text-amber-300 hover:text-amber-200 transition shrink-0 underline flex items-center gap-1"
-          >
-            🧪 Acessar Ambiente de Demonstração / Teste (?teste=1) →
-          </a>
         </div>
       )}
 
@@ -895,51 +1100,88 @@ export default function App() {
 
       {/* Barra de Topo Institucional */}
       <header className="bg-slate-950 text-white border-b border-slate-800 sticky top-0 z-30 no-print">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <img
-              src={getAssetUrl('/data/cartoes-oficiais/logos/logo_guia.png')}
+              src={
+                normalizedData.settings?.club_logo_url ||
+                getAssetUrl('/data/cartoes-oficiais/logos/logo_guia.png')
+              }
               alt="Desbravadores"
-              className="w-9 h-9 object-contain bg-white/10 p-1 rounded-xl"
+              className="w-9 h-9 object-contain bg-white/10 p-1 rounded-xl shrink-0"
             />
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm sm:text-base tracking-tight">
+                <span className="font-extrabold text-sm sm:text-base tracking-tight truncate">
                   SGC Classes • Desbravadores
                 </span>
-                <span className="hidden md:inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                <span className="hidden lg:inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">
                   12 Classes Oficiais DSA
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 hidden sm:block">
+              <div className="text-[11px] text-slate-400 hidden sm:block truncate">
                 {normalizedData.settings?.club_name || 'Clube de Desbravadores'}
               </div>
             </div>
           </div>
 
-          {/* Perfil Logado + Ambiente + Atualizar + Sair */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isTestMode() ? (
-              <a
-                href={getTestModeUrl(false)}
-                className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] font-extrabold flex items-center gap-1 shadow-xs transition"
-                title="Você está no Ambiente de Testes. Clique para ir ao Clube Oficial."
+          {/* Utilidades: IA/MCP (Diretor/Gestor), Documentação, Feedback Beta, Tema, Atualizar e Perfil */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {isDirectorOrGestor && (
+              <button
+                type="button"
+                onClick={() => setShowMcpModal(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                title="Abrir Assistente IA & Chaves de Servidor MCP"
               >
-                <span>🧪 Modo Teste</span>
-              </a>
-            ) : (
-              <a
-                href={getTestModeUrl(true)}
-                className="px-2.5 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-400 border border-emerald-700/60 text-[11px] font-bold flex items-center gap-1 transition"
-                title="Você está no Clube Oficial. Clique para abrir o Ambiente de Teste."
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span>Clube Oficial</span>
-              </a>
+                <Bot className="w-4 h-4" />
+                <span className="hidden md:inline">IA & MCP</span>
+              </button>
             )}
 
             <button
-              onClick={fetchBootstrapData}
+              type="button"
+              onClick={() => setShowDocsModal(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              title="Documentação Completa do Sistema"
+            >
+              <BookOpen className="w-4 h-4 text-amber-400" />
+              <span className="hidden xl:inline">Documentação</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowFeedbackModal(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              title="Enviar Feedback ou Relatar Erro (Beta)"
+            >
+              <MessageSquareWarning className="w-4 h-4 text-amber-400" />
+              <span className="hidden xl:inline">Feedback Beta</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleToggleTheme}
+              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 cursor-pointer"
+              title={`Tema atual: ${
+                themeMode === 'dark'
+                  ? 'Escuro'
+                  : themeMode === 'light'
+                  ? 'Claro'
+                  : 'Automático (Sistema)'
+              }`}
+            >
+              {themeMode === 'dark' ? (
+                <Moon className="w-4 h-4 text-amber-400" />
+              ) : themeMode === 'light' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Monitor className="w-4 h-4 text-slate-300" />
+              )}
+            </button>
+
+            <button
+              onClick={() => fetchBootstrapData(false)}
               disabled={loadingData}
               className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 cursor-pointer"
               title="Sincronizar dados"
@@ -949,19 +1191,19 @@ export default function App() {
               />
             </button>
 
-            <div className="flex items-center gap-2.5 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5">
-              <div className="text-right">
-                <div className="text-xs font-bold text-white leading-tight">
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+              <div className="text-right hidden sm:block">
+                <div className="text-xs font-bold text-white leading-tight truncate max-w-[140px]">
                   {user.name}
                 </div>
-                <div className="text-[10px] text-amber-300 font-semibold">
-                  {roleCfg.label}
+                <div className="text-[10px] text-amber-300 font-semibold truncate max-w-[140px]">
+                  {user.custom_role_title || roleCfg.label}
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition cursor-pointer"
-                title="Trocar de Líder / Sair"
+                title="Trocar de Conta / Sair"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -999,6 +1241,21 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6">
+        {/* Trilha de Ensino Interativa no Modo Teste */}
+        {isTestMode() && showOnboardingTour && (
+          <OnboardingTour
+            user={user}
+            isOpen={showOnboardingTour}
+            onClose={() => {
+              setShowOnboardingTour(false);
+              try {
+                window.sessionStorage.setItem('dbv_tour_closed_v1', '1');
+              } catch {}
+            }}
+            onSelectTab={handleTourSelectTab}
+          />
+        )}
+
         {activeTab === 'DASHBOARD' && user.role !== 'DESBRAVADOR' && (
           <DashboardView
             catalog={normalizedData.catalog}
@@ -1009,6 +1266,7 @@ export default function App() {
             requirementsMap={normalizedData.requirementsMap}
             events={normalizedData.events}
             settings={normalizedData.settings}
+            unificationAlerts={normalizedData.unificationAlerts}
             currentUser={user}
             onNavigate={setActiveTab}
             onSelectClassMatrix={(baseSlug, mode) => {
@@ -1032,6 +1290,9 @@ export default function App() {
             units={normalizedData.units}
             progressMap={normalizedData.progressMap}
             classesMap={normalizedData.classesMap}
+            currentUser={user}
+            onRefresh={fetchBootstrapData}
+            showToast={showToast}
             onOpenRequirementDetail={handleOpenRequirementDetail}
             onOpenBulkSign={handleOpenBulkSign}
             onCreateEventFromDemand={(draft) => {
@@ -1052,6 +1313,7 @@ export default function App() {
             catalog={normalizedData.catalog}
             pathfinders={normalizedData.pathfinders}
             units={normalizedData.units}
+            leaders={normalizedData.leaders}
             progressMap={normalizedData.progressMap}
             classesMap={normalizedData.classesMap}
             selectedBaseSlug={selectedBaseSlug}
@@ -1060,6 +1322,8 @@ export default function App() {
             onSelectMode={setSelectedMatrixMode}
             currentUser={user}
             settings={normalizedData.settings}
+            onRefresh={fetchBootstrapData}
+            showToast={showToast}
             onOpenRequirementDetail={handleOpenRequirementDetail}
             onOpenBulkSign={handleOpenBulkSign}
             onQuickToggleCell={handleQuickToggleCell}
@@ -1110,7 +1374,7 @@ export default function App() {
           <LeadersSettingsView
             catalog={normalizedData.catalog}
             leaders={normalizedData.leaders}
-            units={normalizedData.units}
+            units={normalizedData.allUnits || normalizedData.units}
             settings={normalizedData.settings}
             currentUser={user}
             onSaveLeader={handleSaveLeader}
@@ -1118,6 +1382,7 @@ export default function App() {
             onSendLeaderInvite={handleSendLeaderInvite}
             onSaveSettings={handleSaveSettings}
             onTestSmtp={handleTestSmtp}
+            onOpenMcpModal={() => setShowMcpModal(true)}
           />
         )}
 
@@ -1164,17 +1429,39 @@ export default function App() {
         onExecuteBulk={handleExecuteBulk}
       />
 
+      {/* Modal de Documentação Completa */}
+      <DocumentationModal
+        isOpen={showDocsModal}
+        onClose={() => setShowDocsModal(false)}
+      />
+
+      {/* Modal de IA & Servidor MCP (Exclusivo Diretor / Gestor) */}
+      <McpSettingsAndChatModal
+        isOpen={showMcpModal}
+        onClose={() => setShowMcpModal(false)}
+        user={user}
+        leaders={normalizedData.leaders}
+        onRefresh={fetchBootstrapData}
+      />
+
+      {/* Modal de Feedback Beta & Relato de Erros */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        user={user}
+      />
+
       {/* Modal de Instruções de Instalação do App (PWA) */}
       {showInstallGuideModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-scale-up space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
                   <Smartphone className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-950">
+                  <h3 className="text-base font-extrabold text-slate-950 dark:text-white">
                     Instalar o SGC Classes
                   </h3>
                   <p className="text-xs text-slate-500">
@@ -1191,9 +1478,9 @@ export default function App() {
               </button>
             </div>
 
-            <div className="space-y-2.5 text-xs text-slate-700">
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <strong className="text-slate-900 block font-bold">
+            <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white block font-bold">
                   📱 No Android / Google Chrome:
                 </strong>
                 <span>
@@ -1201,8 +1488,8 @@ export default function App() {
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <strong className="text-slate-900 block font-bold">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white block font-bold">
                   🍏 No iPhone / iPad (Safari):
                 </strong>
                 <span>
@@ -1210,8 +1497,8 @@ export default function App() {
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <strong className="text-slate-900 block font-bold">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white block font-bold">
                   💻 No Computador (Chrome / Edge):
                 </strong>
                 <span>

@@ -46,6 +46,109 @@ function verifyToken(token) {
   }
 }
 
+function parseJsonSafe(raw, fallback) {
+  if (!raw) return fallback;
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function getUserPermissions(user) {
+  if (!user) return {};
+  const perms = parseJsonSafe(user.permissions || user.permissions_json, {});
+  if (['ADMIN', 'GESTOR', 'DIRETOR'].includes(user.role)) {
+    return {
+      can_manage_pathfinders: true,
+      can_manage_units: true,
+      can_manage_events: true,
+      can_approve_all: true,
+      can_view_all_units: true,
+      can_view_all_classes: true,
+      can_edit_equivalences: true,
+      ...perms,
+    };
+  }
+  if (user.role === 'SECRETARIO') {
+    return {
+      can_manage_pathfinders: true,
+      can_manage_units: true,
+      can_manage_events: true,
+      can_view_all_units: true,
+      can_view_all_classes: true,
+      ...perms,
+    };
+  }
+  return perms || {};
+}
+
+function getUserAssignedClasses(user) {
+  if (!user) return [];
+  return parseJsonSafe(user.assigned_classes || user.assigned_classes_json, []);
+}
+
+function getUserAssignedUnits(user) {
+  if (!user) return [];
+  const arr = parseJsonSafe(user.assigned_units || user.assigned_units_json, []);
+  const set = new Set(Array.isArray(arr) ? arr : []);
+  if (user.unit_id) set.add(user.unit_id);
+  return Array.from(set);
+}
+
+function getUserAssignedPathfinders(user) {
+  if (!user) return [];
+  const arr = parseJsonSafe(user.assigned_pathfinders || user.assigned_pathfinders_json, []);
+  return Array.isArray(arr) ? arr : [];
+}
+
+/**
+ * Verifica se um usuário tem permissão para visualizar/gerenciar determinada classe.
+ */
+function hasClassAccess(user, classSlug) {
+  if (!user) return false;
+  const perms = getUserPermissions(user);
+  if (
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(user.role) ||
+    perms.can_view_all_classes ||
+    perms.can_approve_all
+  ) {
+    return true;
+  }
+  const assigned = getUserAssignedClasses(user);
+  if (assigned.includes('*')) return true;
+  if (!classSlug) return assigned.length > 0;
+  const baseClassSlug = String(classSlug).replace('-avancado', '');
+  return (
+    assigned.includes(classSlug) ||
+    assigned.includes(baseClassSlug) ||
+    assigned.includes(`${baseClassSlug}-avancado`)
+  );
+}
+
+/**
+ * Verifica se um usuário tem permissão para visualizar/gerenciar determinada unidade.
+ */
+function hasUnitAccess(user, unitId) {
+  if (!user) return false;
+  const perms = getUserPermissions(user);
+  if (
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(user.role) ||
+    perms.can_view_all_units ||
+    perms.can_approve_all
+  ) {
+    return true;
+  }
+  const units = getUserAssignedUnits(user);
+  if (units.includes('*')) return true;
+  if (!unitId) return true;
+  if (user.role === 'CONSELHEIRO') {
+    return units.includes(unitId);
+  }
+  return true;
+}
+
 /**
  * Verifica se o líder ou desbravador tem permissão para alterar o progresso de um desbravador em determinada classe/requisito.
  */
@@ -54,8 +157,13 @@ function checkProgressPermission(user, pathfinder, classSlug, requestedStatus, c
     return { allowed: false, reason: 'Usuário não autenticado ou inativo.' };
   }
 
-  // Gestor, Diretor, Admin e Secretário têm permissão global
-  if (['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(user.role)) {
+  const perms = getUserPermissions(user);
+
+  // Gestor, Diretor, Admin, Secretário ou líder com permissão global de aprovação
+  if (
+    ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(user.role) ||
+    perms.can_approve_all
+  ) {
     return { allowed: true, effectiveStatus: requestedStatus };
   }
 
@@ -81,30 +189,55 @@ function checkProgressPermission(user, pathfinder, classSlug, requestedStatus, c
   const baseClassSlug = (classSlug || '').replace('-avancado', '');
 
   if (user.role === 'INSTRUTOR') {
-    const assigned = Array.isArray(user.assigned_classes) ? user.assigned_classes : [];
+    const assigned = getUserAssignedClasses(user);
     const hasClassScope =
-      assigned.length === 0 ||
+      perms.can_view_all_classes ||
       assigned.includes('*') ||
       assigned.includes(classSlug) ||
-      assigned.includes(baseClassSlug);
+      assigned.includes(baseClassSlug) ||
+      assigned.includes(`${baseClassSlug}-avancado`);
 
     if (!hasClassScope) {
       return {
         allowed: false,
-        reason: `Como Instrutor, seu escopo está vinculado apenas à(s) classe(s): ${assigned.join(', ')}.`,
+        reason: `Como Instrutor, seu escopo está vinculado apenas à(s) classe(s): ${assigned.join(', ') || 'nenhuma'}.`,
       };
     }
+
+    const assignedPfs = getUserAssignedPathfinders(user);
+    if (
+      assignedPfs.length > 0 &&
+      !assignedPfs.includes('*') &&
+      pathfinder &&
+      !assignedPfs.includes(pathfinder.id) &&
+      !perms.can_view_all_classes
+    ) {
+      return {
+        allowed: false,
+        reason: 'Este desbravador está distribuído para outro instrutor desta classe.',
+      };
+    }
+
     return { allowed: true, effectiveStatus: requestedStatus };
   }
 
   if (user.role === 'CONSELHEIRO') {
-    if (user.unit_id && pathfinder && pathfinder.unit_id && user.unit_id !== pathfinder.unit_id) {
+    const allowedUnits = getUserAssignedUnits(user);
+    if (
+      !perms.can_view_all_units &&
+      allowedUnits.length > 0 &&
+      pathfinder &&
+      pathfinder.unit_id &&
+      !allowedUnits.includes(pathfinder.unit_id)
+    ) {
       return {
         allowed: false,
         reason: 'Como Conselheiro, você só pode atualizar requisitos dos desbravadores da sua própria Unidade.',
       };
     }
-    const allowDirectApproval = clubSettings && Number(clubSettings.allow_counselor_direct_approval) === 1;
+    const allowDirectApproval =
+      (clubSettings && Number(clubSettings.allow_counselor_direct_approval) === 1) ||
+      perms.can_approve_all;
     if (requestedStatus === 'APROVADO' && !allowDirectApproval) {
       return {
         allowed: true,
@@ -125,4 +258,10 @@ module.exports = {
   createToken,
   verifyToken,
   checkProgressPermission,
+  getUserPermissions,
+  getUserAssignedClasses,
+  getUserAssignedUnits,
+  getUserAssignedPathfinders,
+  hasClassAccess,
+  hasUnitAccess,
 };
