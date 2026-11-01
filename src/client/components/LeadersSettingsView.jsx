@@ -609,6 +609,7 @@ export default function LeadersSettingsView({
               <button
                 type="button"
                 onClick={() => setLeadersViewMode('MATRIX')}
+                data-tour="btn-permissions-matrix-mode"
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                   leadersViewMode === 'MATRIX'
                     ? 'bg-white text-slate-900 shadow-2xs'
@@ -622,7 +623,7 @@ export default function LeadersSettingsView({
           </div>
 
           {leadersViewMode === 'MATRIX' ? (
-            <div className="overflow-x-auto matrix-scroll">
+            <div className="overflow-x-auto matrix-scroll" data-tour="leaders-permissions-table">
               <table className="w-full border-collapse text-left text-xs">
                 <thead>
                   <tr className="bg-slate-900 text-white border-b border-slate-800">

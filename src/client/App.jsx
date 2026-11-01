@@ -151,12 +151,14 @@ export default function App() {
   const [showMcpModal, setShowMcpModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showOnboardingTour, setShowOnboardingTour] = useState(() => {
-    if (!isTestMode()) return false;
-    try {
-      return window.sessionStorage.getItem('dbv_tour_closed_v1') !== '1';
-    } catch {
-      return true;
+    if (isTestMode()) {
+      try {
+        return window.sessionStorage.getItem('dbv_tour_closed_v2') !== '1';
+      } catch {
+        return true;
+      }
     }
+    return false;
   });
 
   // Inicializa captura de erros e console para Feedback Beta
@@ -323,6 +325,21 @@ export default function App() {
           const firstBase = res.user.assigned_classes[0].replace('_avancado', '');
           setSelectedBaseSlug(firstBase);
         }
+        if (isTestMode()) {
+          try {
+            const closed = window.sessionStorage.getItem('dbv_tour_closed_v2');
+            if (closed !== '1') setShowOnboardingTour(true);
+          } catch {
+            setShowOnboardingTour(true);
+          }
+        } else if (res.user?.id) {
+          try {
+            const key = `dbv_tour_completed_${res.user.id}`;
+            if (!window.localStorage.getItem(key)) {
+              setShowOnboardingTour(true);
+            }
+          } catch {}
+        }
         return fetchBootstrapData();
       })
       .catch(() => {
@@ -337,6 +354,13 @@ export default function App() {
     setUser(loggedUser);
     if (isTestMode()) {
       setShowOnboardingTour(true);
+    } else if (loggedUser?.id) {
+      try {
+        const key = `dbv_tour_completed_${loggedUser.id}`;
+        if (!window.localStorage.getItem(key)) {
+          setShowOnboardingTour(true);
+        }
+      } catch {}
     }
     if (loggedUser?.role === 'DESBRAVADOR') {
       setActiveTab('PATHFINDERS');
@@ -1004,6 +1028,19 @@ export default function App() {
     setActiveTab(map[tabKey] || tabKey);
   };
 
+  const handleCloseTour = useCallback(() => {
+    setShowOnboardingTour(false);
+    if (isTestMode()) {
+      try {
+        window.sessionStorage.setItem('dbv_tour_closed_v2', '1');
+      } catch {}
+    } else if (user?.id) {
+      try {
+        window.localStorage.setItem(`dbv_tour_completed_${user.id}`, '1');
+      } catch {}
+    }
+  }, [user?.id]);
+
   return (
     <div className={`min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col ${clubColorThemeClass}`}>
       {/* Barra superior exclusiva quando estiver na Página de Teste (?teste=1) */}
@@ -1023,7 +1060,7 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   try {
-                    window.sessionStorage.removeItem('dbv_tour_closed_v1');
+                    window.sessionStorage.removeItem('dbv_tour_closed_v2');
                   } catch {}
                   setShowOnboardingTour(true);
                 }}
@@ -1153,6 +1190,17 @@ export default function App() {
 
             <button
               type="button"
+              onClick={() => setShowOnboardingTour(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              title="Abrir Trilha de Ensino Interativa"
+              data-tour="btn-open-tour"
+            >
+              <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="hidden sm:inline">Trilha de Ensino</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowDocsModal(true)}
               className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
               title="Documentação Completa do Sistema"
@@ -1236,6 +1284,7 @@ export default function App() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
+                  data-tour={`nav-${item.id.toLowerCase()}`}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition cursor-pointer ${
                     isActive
                       ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
@@ -1253,20 +1302,6 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6">
-        {/* Trilha de Ensino Interativa no Modo Teste */}
-        {isTestMode() && showOnboardingTour && (
-          <OnboardingTour
-            user={user}
-            isOpen={showOnboardingTour}
-            onClose={() => {
-              setShowOnboardingTour(false);
-              try {
-                window.sessionStorage.setItem('dbv_tour_closed_v1', '1');
-              } catch {}
-            }}
-            onSelectTab={handleTourSelectTab}
-          />
-        )}
 
         <Suspense
           fallback={
@@ -1485,6 +1520,17 @@ export default function App() {
         isOpen={showInstallGuideModal}
         onClose={() => setShowInstallGuideModal(false)}
       />
+
+      {/* Trilha de Ensino Interativa (Spotlight / Walkthrough com Overlay Escuro e Animações) */}
+      {showOnboardingTour && user && (
+        <OnboardingTour
+          user={user}
+          isOpen={showOnboardingTour}
+          activeTab={activeTab}
+          onClose={handleCloseTour}
+          onSelectTab={handleTourSelectTab}
+        />
+      )}
     </div>
   );
 }

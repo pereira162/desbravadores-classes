@@ -168,6 +168,7 @@ export default function EventsBatchView({
 
         <button
           onClick={handleOpenNewEventModal}
+          data-tour="btn-new-event"
           className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition cursor-pointer shrink-0"
         >
           <CalendarPlus className="w-4 h-4" />

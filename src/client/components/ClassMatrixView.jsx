@@ -303,7 +303,7 @@ export default function ClassMatrixView({
   return (
     <div className="space-y-5">
       {/* Seletor das Classes Base */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 no-print">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 no-print" data-tour="matrix-class-selector">
         {visibleBaseClasses.map((bc) => {
           const isSelected = selectedBaseSlug === bc.baseSlug;
           return (
@@ -376,7 +376,7 @@ export default function ClassMatrixView({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 no-print">
+          <div className="flex flex-wrap items-center gap-2 no-print" data-tour="matrix-pdf-actions">
             <PdfActionGroup
               docType="INSTRUCTOR_CONTROL"
               params={{
@@ -444,7 +444,7 @@ export default function ClassMatrixView({
 
           {/* Filtro por Instrutor / Turma (quando houver instrutores na classe) */}
           {classInstructors.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-slate-800 border border-amber-300 dark:border-slate-700 rounded-xl px-3 py-1.5">
+            <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-slate-800 border border-amber-300 dark:border-slate-700 rounded-xl px-3 py-1.5" data-tour="matrix-instructor-filter">
               <Users className="w-3.5 h-3.5 text-amber-600" />
               <select
                 value={instructorFilter}
@@ -569,6 +569,7 @@ export default function ClassMatrixView({
       ) : (
         <div
           id="matrix-table-container"
+          data-tour="matrix-grid-table"
           className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
         >
           <div className="overflow-auto max-h-[calc(100vh-140px)] matrix-scroll">

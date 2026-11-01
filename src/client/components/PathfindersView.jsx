@@ -443,6 +443,7 @@ export default function PathfindersView({
                 {canManageUnits && (
                   <button
                     onClick={() => openUnitManagerModal(null)}
+                    data-tour="btn-manage-units"
                     className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
                   >
                     <FolderPlus className="w-4 h-4 text-indigo-600" />
@@ -452,6 +453,7 @@ export default function PathfindersView({
                 {canManageRegistry && (
                   <button
                     onClick={openCreatePfModal}
+                    data-tour="btn-new-pathfinder"
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4" />
@@ -697,7 +699,7 @@ export default function PathfindersView({
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 no-print">
+                    <div className="flex flex-wrap items-center gap-2 no-print" data-tour="pathfinder-pdf-actions">
                       {canManageRegistry && (
                         <>
                           <button

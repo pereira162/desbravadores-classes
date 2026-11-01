@@ -477,6 +477,7 @@ export default function DemandPlanningView({
                 setViewMode('EQUIVALENCE');
                 openCreateEqModal();
               }}
+              data-tour="btn-new-unification"
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -501,7 +502,7 @@ export default function DemandPlanningView({
       </div>
 
       {/* Pílulas Rápidas de Filtro por Local / Formato (Tags) */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs no-print">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs no-print" data-tour="demand-filters">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-amber-600" />

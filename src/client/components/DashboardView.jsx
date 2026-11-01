@@ -365,7 +365,7 @@ export default function DashboardView({
       )}
 
       {/* 4 KPIs Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="dashboard-summary">
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -450,7 +450,7 @@ export default function DashboardView({
 
       {/* Avisos Inteligentes de Unificação Automática (Requisitos Equivalentes Cumpridos) */}
       {unificationAlerts.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-400/80 shadow-xs overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-400/80 shadow-xs overflow-hidden" data-tour="unification-alerts-banner">
           <div className="p-5 border-b border-amber-200 dark:border-slate-700 bg-amber-50/80 dark:bg-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
