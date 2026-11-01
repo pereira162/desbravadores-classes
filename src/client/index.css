@@ -83,23 +83,29 @@
   border-color: var(--club-accent) !important;
 }
 
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
 /* ==========================================
    MODO ESCURO GLOBAL (html.dark)
    ========================================== */
 html.dark body {
-  background-color: #0b1120 !important;
-  color: #e2e8f0 !important;
+  background-color: #090d16 !important;
+  color: #f8fafc !important;
 }
 
 html.dark .bg-slate-50 {
   background-color: #0f172a !important;
 }
 html.dark .bg-white {
-  background-color: #1e293b !important;
-  color: #f1f5f9;
+  background-color: #111827 !important;
+  color: #f8fafc;
 }
 html.dark .bg-slate-100 {
-  background-color: #1e293b !important;
+  background-color: #0f172a !important;
 }
 html.dark .bg-slate-50\/80,
 html.dark .bg-slate-50\/60,

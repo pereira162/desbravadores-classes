@@ -208,27 +208,35 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
 
       y += headerH;
 
-      // LINHAS DE SEÇÃO E REQUISITOS
-      // Calcula altura por linha para caber em 1 página
-      const availableTableH = pageHeight - y - margin - 35; // reserva 35pt para assinaturas
-      const rowH = Math.min(18.5, availableTableH / (reqs.length + 8));
+      // LINHAS DE SEÇÃO E REQUISITOS (Calcula altura exata para caber em 1 página sem sobreposição)
+      const distinctSections = new Set(
+        reqs.map((r) => `${r.section_code || ''}:${r.section_name || ''}:${r.class_type || ''}`)
+      );
+      const distinctSectionsCount = distinctSections.size;
+
+      const footH = 36; // Reserva estrita para o bloco de assinaturas
+      const footY = pageHeight - margin - footH;
+      const availableTableH = footY - y - 6; // Termina 6pt antes das assinaturas
+      const totalUnits = reqs.length + (distinctSectionsCount * 0.8);
+      const rowH = Math.min(15.5, availableTableH / Math.max(1, totalUnits));
+      const secH = Math.max(9.5, rowH * 0.8);
 
       let lastSection = null;
       for (const req of reqs) {
         const secLabel = `${req.section_code ? `${req.section_code}. ` : ''}${req.section_name || ''} ${req.class_type === 'AVANCADA' ? '(AVANÇADA)' : ''}`.trim().toUpperCase();
         if (secLabel !== lastSection) {
           lastSection = secLabel;
-          doc.rect(margin, y, contentWidth, rowH - 1).fillAndStroke('#cbd5e1', '#94a3b8');
-          doc.fillColor('#0f172a').fontSize(6.5).font('Helvetica-Bold')
-            .text(secLabel, margin + 4, y + 3, { width: contentWidth - 8 });
-          y += rowH - 1;
+          doc.rect(margin, y, contentWidth, secH).fillAndStroke('#cbd5e1', '#94a3b8');
+          doc.fillColor('#0f172a').fontSize(6).font('Helvetica-Bold')
+            .text(secLabel, margin + 4, y + 2, { width: contentWidth - 8 });
+          y += secH;
         }
 
         doc.rect(margin, y, colCodW, rowH).fillAndStroke('#ffffff', '#cbd5e1');
         doc.rect(margin + colCodW, y, colReqW, rowH).fillAndStroke('#ffffff', '#cbd5e1');
 
         doc.fillColor('#0f172a').fontSize(6.5).font('Helvetica-Bold')
-          .text(req.code, margin, y + 3, { width: colCodW, align: 'center' });
+          .text(req.code, margin, y + 2.5, { width: colCodW, align: 'center' });
 
         let subStr = '';
         try {
@@ -239,7 +247,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
         } catch {}
 
         doc.fillColor('#1e293b').fontSize(6.5).font('Helvetica')
-          .text(`${req.title}${subStr}`, margin + colCodW + 3, y + 3, {
+          .text(`${req.title}${subStr}`, margin + colCodW + 3, y + 2.5, {
             width: colReqW - 6,
             height: rowH - 2,
             ellipsis: true,
@@ -262,10 +270,10 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
               doc.restore();
             } else if (st === 'CONCLUIDO') {
               doc.fillColor('#0f766e').fontSize(6.5).font('Helvetica-Bold')
-                .text('Feito', cellX, y + 3.5, { width: colColW, align: 'center' });
+                .text('Feito', cellX, y + 3, { width: colColW, align: 'center' });
             } else if (st === 'EM_ANDAMENTO') {
               doc.fillColor('#b45309').fontSize(6).font('Helvetica-Bold')
-                .text('And.', cellX, y + 3.5, { width: colColW, align: 'center' });
+                .text('And.', cellX, y + 3, { width: colColW, align: 'center' });
             }
           }
         }
@@ -273,19 +281,19 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
         y += rowH;
       }
 
-      // RODAPÉ COM ASSINATURAS
-      const footY = pageHeight - margin - 28;
+      // RODAPÉ COM ASSINATURAS (Sem sobreposição)
+      const sigLineY = footY + 14;
       const sigW = contentWidth / 3;
 
       doc.strokeColor('#94a3b8').lineWidth(0.5);
-      doc.moveTo(margin + 10, footY).lineTo(margin + sigW - 10, footY).stroke();
-      doc.moveTo(margin + sigW + 10, footY).lineTo(margin + sigW * 2 - 10, footY).stroke();
-      doc.moveTo(margin + sigW * 2 + 10, footY).lineTo(margin + contentWidth - 10, footY).stroke();
+      doc.moveTo(margin + 10, sigLineY).lineTo(margin + sigW - 10, sigLineY).stroke();
+      doc.moveTo(margin + sigW + 10, sigLineY).lineTo(margin + sigW * 2 - 10, sigLineY).stroke();
+      doc.moveTo(margin + sigW * 2 + 10, sigLineY).lineTo(margin + contentWidth - 10, sigLineY).stroke();
 
       doc.fillColor('#334155').fontSize(6.5).font('Helvetica-Bold')
-        .text('Assinatura do Instrutor(a)', margin, footY + 3, { width: sigW, align: 'center' })
-        .text('Diretoria do Clube', margin + sigW, footY + 3, { width: sigW, align: 'center' })
-        .text('Regional / Distrital', margin + sigW * 2, footY + 3, { width: sigW, align: 'center' });
+        .text('Assinatura do Instrutor(a)', margin, sigLineY + 3, { width: sigW, align: 'center' })
+        .text('Diretoria do Clube', margin + sigW, sigLineY + 3, { width: sigW, align: 'center' })
+        .text('Regional / Distrital', margin + sigW * 2, sigLineY + 3, { width: sigW, align: 'center' });
     }
 
     doc.end();
@@ -813,14 +821,14 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
     progressMap[`${pr.pathfinder_id}:${pr.requirement_id}`] = pr.status;
   }
 
-  return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
       orientation: 'landscape',
       margin: 18,
-      autoFirstPage: true,
+      autoFirstPage: false,
       info: {
-        Title: `Matriz - ${cfg.name}`,
+        Title: `Matriz Completa - ${cfg.name}`,
         Author: 'SGC Classes • Divisão Sul-Americana',
       },
     });
@@ -829,82 +837,186 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
     doc.pipe(writeStream);
 
     const margin = 18;
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
+    const pageWidth = 841.89; // A4 paisagem
+    const pageHeight = 595.28;
     const contentWidth = pageWidth - margin * 2; // ~805pt
 
-    let y = margin;
-    function renderHeader() {
-      doc.rect(margin, y, contentWidth, 38).fillAndStroke('#0f172a', '#0f172a');
-      doc.fillColor('#94a3b8').fontSize(7).font('Helvetica-Bold')
-        .text('MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA', margin + 8, y + 5);
-      doc.fillColor(cfg.color).fontSize(10.5).font('Helvetica-Bold')
-        .text(`MATRIZ DE PROGRESSO DA CLASSE: ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 14);
-      doc.fillColor('#ffffff').fontSize(7.5).font('Helvetica')
-        .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''} • ${enrolledPfs.length} desbravadores • ${reqs.length} requisitos exibidos`, margin + 8, y + 26);
-      y += 42;
+    // Divide desbravadores em blocos de até 6 por conjunto de páginas
+    const COLS_PER_BLOCK = 6;
+    const blockCount = Math.max(1, Math.ceil(enrolledPfs.length / COLS_PER_BLOCK));
+    const blocks = [];
+    for (let b = 0; b < blockCount; b++) {
+      const cols = [];
+      for (let c = 0; c < COLS_PER_BLOCK; c++) {
+        cols.push(enrolledPfs[b * COLS_PER_BLOCK + c] || null);
+      }
+      blocks.push(cols);
     }
 
-    renderHeader();
+    const colCodW = 32;
+    const colPfW = 48; // 6 colunas = 288pt
+    const colReqW = contentWidth - colCodW - (colPfW * COLS_PER_BLOCK); // ~485pt
+    const headerTableH = 50;
 
-    const colCodW = 28;
-    const colPfW = Math.max(34, Math.min(65, (contentWidth - 260 - colCodW) / Math.max(1, enrolledPfs.length)));
-    const colReqW = contentWidth - colCodW - (colPfW * enrolledPfs.length);
+    for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
+      const currentCols = blocks[bIdx];
+      let pageInBlock = 1;
 
-    // Header da tabela
-    doc.rect(margin, y, colCodW, 20).fillAndStroke('#e2e8f0', '#94a3b8');
-    doc.rect(margin + colCodW, y, colReqW, 20).fillAndStroke('#e2e8f0', '#94a3b8');
-    doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
-      .text('CÓD', margin, y + 6, { width: colCodW, align: 'center' })
-      .text('REQUISITO OFICIAL', margin + colCodW + 6, y + 6, { width: colReqW - 12 });
-
-    for (let pIdx = 0; pIdx < enrolledPfs.length; pIdx++) {
-      const pf = enrolledPfs[pIdx];
-      const cellX = margin + colCodW + colReqW + (pIdx * colPfW);
-      doc.rect(cellX, y, colPfW, 20).fillAndStroke('#f1f5f9', '#94a3b8');
-      doc.fillColor('#0f172a').fontSize(6.5).font('Helvetica-Bold')
-        .text(pf.name.slice(0, 10), cellX, y + 6, { width: colPfW, align: 'center' });
-    }
-    y += 20;
-
-    for (const req of reqs) {
-      if (y + 16 > pageHeight - margin - 15) {
+      const startNewPage = () => {
         doc.addPage({ size: 'A4', orientation: 'landscape', margin: 18 });
-        y = margin;
-        renderHeader();
-      }
+        let y = margin;
 
-      doc.rect(margin, y, colCodW, 16).fillAndStroke('#ffffff', '#cbd5e1');
-      doc.rect(margin + colCodW, y, colReqW, 16).fillAndStroke('#ffffff', '#cbd5e1');
+        // Cabeçalho institucional do documento
+        doc.rect(margin, y, contentWidth, 38).fillAndStroke('#0f172a', '#0f172a');
+        doc.fillColor('#94a3b8').fontSize(7).font('Helvetica-Bold')
+          .text('MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA', margin + 8, y + 5);
+        doc.fillColor(cfg.color).fontSize(10.5).font('Helvetica-Bold')
+          .text(`MATRIZ COMPLETA DE REQUISITOS: ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 14);
+        doc.fillColor('#ffffff').fontSize(7.5).font('Helvetica')
+          .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length}` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 26);
+        y += 42;
 
-      doc.fillColor('#0f172a').fontSize(6.5).font('Helvetica-Bold')
-        .text(req.code, margin, y + 4, { width: colCodW, align: 'center' });
+        // Cabeçalho da tabela com os desbravadores do bloco
+        doc.rect(margin, y, colCodW, headerTableH).fillAndStroke('#e2e8f0', '#94a3b8');
+        doc.rect(margin + colCodW, y, colReqW, headerTableH).fillAndStroke('#e2e8f0', '#94a3b8');
+        doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
+          .text('CÓD', margin, y + 20, { width: colCodW, align: 'center' })
+          .text('REQUISITOS OFICIAIS DETALHADOS (TEXTO INTEGRAL & SUBITENS)', margin + colCodW + 8, y + 20, { width: colReqW - 16 });
 
-      doc.fillColor('#334155').fontSize(6.5).font('Helvetica')
-        .text(`${req.marker ? `${req.marker} ` : ''}${req.title}`, margin + colCodW + 4, y + 4, {
-          width: colReqW - 8,
-          height: 12,
-          ellipsis: true,
-        });
+        for (let c = 0; c < COLS_PER_BLOCK; c++) {
+          const pf = currentCols[c];
+          const cellX = margin + colCodW + colReqW + (c * colPfW);
+          doc.rect(cellX, y, colPfW, headerTableH).fillAndStroke('#f1f5f9', '#94a3b8');
 
-      for (let pIdx = 0; pIdx < enrolledPfs.length; pIdx++) {
-        const pf = enrolledPfs[pIdx];
-        const cellX = margin + colCodW + colReqW + (pIdx * colPfW);
-        doc.rect(cellX, y, colPfW, 16).fillAndStroke('#ffffff', '#cbd5e1');
-
-        const st = progressMap[`${pf.id}:${req.id}`] || 'PENDENTE';
-        if (st === 'APROVADO') {
-          doc.fillColor('#047857').fontSize(7.5).font('Helvetica-Bold')
-            .text('Aprov.', cellX, y + 4, { width: colPfW, align: 'center' });
-        } else if (st === 'CONCLUIDO') {
-          doc.fillColor('#0f766e').fontSize(7).font('Helvetica-Bold')
-            .text('Feito', cellX, y + 4, { width: colPfW, align: 'center' });
-        } else {
-          // Espaço em branco limpo para o instrutor preencher
+          if (pf) {
+            doc.save();
+            doc.rotate(-90, { origin: [cellX + colPfW / 2, y + headerTableH / 2] });
+            doc.fillColor('#0f172a').fontSize(7).font('Helvetica-Bold')
+              .text(pf.name.replace(/\(.*\)/g, '').trim().slice(0, 20), cellX + colPfW / 2 - 22, y + headerTableH / 2 - 3.5, {
+                width: 44,
+                align: 'left',
+              });
+            doc.restore();
+          } else {
+            // Coluna vazia para preenchimento manual se necessário
+            doc.fillColor('#94a3b8').fontSize(6).font('Helvetica')
+              .text('Nome:', cellX + 4, y + 8, { width: colPfW - 8, align: 'left' });
+          }
         }
+
+        y += headerTableH;
+        pageInBlock++;
+        return y;
+      };
+
+      let curY = startNewPage();
+      let lastSection = null;
+
+      for (const req of reqs) {
+        let subs = [];
+        try {
+          subs = JSON.parse(req.sub_items_json || '[]');
+        } catch {}
+
+        // Calcula altura necessária para o conteúdo completo do requisito
+        doc.fontSize(7.5).font('Helvetica-Bold');
+        const titleH = doc.heightOfString(`${req.marker ? `${req.marker} ` : ''}${req.title}`, { width: colReqW - 14 });
+
+        let descText = (req.description && req.description.trim() !== req.title.trim()) ? req.description.trim() : '';
+        doc.fontSize(6.5).font('Helvetica');
+        const descH = descText ? doc.heightOfString(descText, { width: colReqW - 14 }) : 0;
+
+        let subsLines = [];
+        if (subs.length > 0) {
+          subsLines = subs.map((s) => `${s.key || s.code}) ${s.text}`);
+        }
+        const subsH = subsLines.length > 0
+          ? doc.heightOfString(subsLines.join('\n'), { width: colReqW - 14 })
+          : 0;
+
+        const rowH = Math.max(20, titleH + (descH ? descH + 4 : 0) + (subsH ? subsH + 4 : 0) + 8);
+
+        // Seção divisória
+        const secLabel = `${req.section_code ? `${req.section_code}. ` : ''}${req.section_name || ''} ${req.class_type === 'AVANCADA' ? '(AVANÇADA)' : ''}`.trim().toUpperCase();
+        if (secLabel !== lastSection) {
+          lastSection = secLabel;
+          if (curY + 16 + rowH > pageHeight - margin - 35) {
+            curY = startNewPage();
+          }
+          doc.rect(margin, curY, contentWidth, 15).fillAndStroke('#cbd5e1', '#94a3b8');
+          doc.fillColor('#0f172a').fontSize(6.5).font('Helvetica-Bold')
+            .text(secLabel, margin + 6, curY + 3.5, { width: contentWidth - 12 });
+          curY += 15;
+        }
+
+        // Verifica quebra de página para a linha do requisito
+        if (curY + rowH > pageHeight - margin - 35) {
+          curY = startNewPage();
+        }
+
+        // Desenha célula do código e do requisito
+        doc.rect(margin, curY, colCodW, rowH).fillAndStroke('#ffffff', '#cbd5e1');
+        doc.rect(margin + colCodW, curY, colReqW, rowH).fillAndStroke('#ffffff', '#cbd5e1');
+
+        doc.fillColor('#0f172a').fontSize(7).font('Helvetica-Bold')
+          .text(req.code, margin, curY + 4, { width: colCodW, align: 'center' });
+
+        let textY = curY + 4;
+        doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
+          .text(`${req.marker ? `${req.marker} ` : ''}${req.title}`, margin + colCodW + 6, textY, { width: colReqW - 12 });
+        textY += titleH + 2;
+
+        if (descText) {
+          doc.fillColor('#334155').fontSize(6.5).font('Helvetica')
+            .text(descText, margin + colCodW + 6, textY, { width: colReqW - 12 });
+          textY += descH + 2;
+        }
+
+        if (subsLines.length > 0) {
+          doc.fillColor('#475569').fontSize(6.5).font('Helvetica')
+            .text(subsLines.join('\n'), margin + colCodW + 10, textY, { width: colReqW - 16 });
+        }
+
+        // Células dos desbravadores
+        for (let c = 0; c < COLS_PER_BLOCK; c++) {
+          const pf = currentCols[c];
+          const cellX = margin + colCodW + colReqW + (c * colPfW);
+          doc.rect(cellX, curY, colPfW, rowH).fillAndStroke('#ffffff', '#cbd5e1');
+
+          if (pf) {
+            const st = progressMap[`${pf.id}:${req.id}`] || 'PENDENTE';
+            if (st === 'APROVADO') {
+              const ckX = cellX + colPfW / 2;
+              const ckY = curY + rowH / 2;
+              doc.save();
+              doc.strokeColor('#047857').lineWidth(1.3).lineCap('round').lineJoin('round');
+              doc.moveTo(ckX - 4, ckY).lineTo(ckX - 1, ckY + 3).lineTo(ckX + 4, ckY - 3).stroke();
+              doc.restore();
+            } else if (st === 'CONCLUIDO') {
+              doc.fillColor('#0f766e').fontSize(6.5).font('Helvetica-Bold')
+                .text('Concluído', cellX, curY + rowH / 2 - 3.5, { width: colPfW, align: 'center' });
+            } else if (st === 'EM_ANDAMENTO') {
+              doc.fillColor('#b45309').fontSize(6).font('Helvetica-Bold')
+                .text('Em And.', cellX, curY + rowH / 2 - 3.5, { width: colPfW, align: 'center' });
+            }
+          }
+        }
+
+        curY += rowH;
       }
 
-      y += 16;
+      // Rodapé de Assinaturas ao final do bloco
+      const footY = pageHeight - margin - 26;
+      const sigW = contentWidth / 3;
+      doc.strokeColor('#94a3b8').lineWidth(0.5);
+      doc.moveTo(margin + 15, footY).lineTo(margin + sigW - 15, footY).stroke();
+      doc.moveTo(margin + sigW + 15, footY).lineTo(margin + sigW * 2 - 15, footY).stroke();
+      doc.moveTo(margin + sigW * 2 + 15, footY).lineTo(margin + contentWidth - 15, footY).stroke();
+
+      doc.fillColor('#334155').fontSize(6.5).font('Helvetica-Bold')
+        .text('Instrutor(a) da Classe', margin, footY + 3, { width: sigW, align: 'center' })
+        .text('Diretoria do Clube', margin + sigW, footY + 3, { width: sigW, align: 'center' })
+        .text('Regional / Distrital', margin + sigW * 2, footY + 3, { width: sigW, align: 'center' });
     }
 
     doc.end();

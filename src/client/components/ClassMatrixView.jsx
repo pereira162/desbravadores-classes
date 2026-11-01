@@ -571,14 +571,14 @@ export default function ClassMatrixView({
           id="matrix-table-container"
           className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
         >
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
+          <div className="overflow-auto max-h-[calc(100vh-140px)] matrix-scroll">
+            <table className="w-max min-w-full border-collapse text-left">
+              <thead className="sticky top-0 z-30 shadow-xs">
                 <tr className="bg-slate-900 text-white border-b border-slate-800">
-                  <th className="sticky left-0 z-20 bg-slate-900 px-4 py-3.5 min-w-[320px] max-w-[400px] text-xs font-extrabold uppercase tracking-wider border-r border-slate-800">
-                    Requisito Oficial do Cartão
+                  <th className="sticky left-0 top-0 z-40 bg-slate-900 px-3 sm:px-4 py-3.5 min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px] text-xs font-extrabold uppercase tracking-wider border-r border-slate-800">
+                    Requisito Oficial
                   </th>
-                  <th className="px-2.5 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-slate-800 w-24 no-print">
+                  <th className="sticky top-0 z-30 bg-slate-900 px-2 sm:px-2.5 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-slate-800 w-20 sm:w-24 no-print">
                     Lote
                   </th>
                   {enrolledPathfinders.map((pf) => {
@@ -586,7 +586,7 @@ export default function ClassMatrixView({
                     return (
                       <th
                         key={pf.id}
-                        className="px-2.5 py-3 text-center min-w-[110px] max-w-[130px] border-r border-slate-800 align-bottom"
+                        className="sticky top-0 z-30 bg-slate-900 px-2 sm:px-2.5 py-3 text-center min-w-[100px] sm:min-w-[110px] max-w-[130px] border-r border-slate-800 align-bottom"
                       >
                         <button
                           onClick={() => onSelectPathfinderCard(pf.id)}
@@ -647,7 +647,7 @@ export default function ClassMatrixView({
                           className="hover:bg-slate-50/70 transition group"
                         >
                           {/* Coluna Fixa: Descrição do Requisito */}
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 border-r border-slate-200 align-top">
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-3 sm:px-4 py-3 border-r border-slate-200 align-top min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px]">
                             <div className="flex items-start gap-2.5">
                               <span
                                 className="px-2 py-0.5 rounded text-[11px] font-extrabold text-white shrink-0 mt-0.5"

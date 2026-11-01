@@ -488,8 +488,11 @@ export default function DemandPlanningView({
             docType="PLANNING"
             params={{
               mode: viewMode === 'EQUIVALENCE' ? 'equivalences' : 'activities',
-              tag: tagFilter,
+              tagFilter,
               unitId: unitFilter,
+              baseClassFilter,
+              classTypeFilter,
+              onlyPending,
             }}
             label={viewMode === 'EQUIVALENCE' ? 'Baixar Unificações (PDF)' : 'Baixar Planejamento (PDF)'}
             colorScheme="white"

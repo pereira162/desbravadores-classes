@@ -1010,8 +1010,8 @@ export default function App() {
       {isTestMode() && (
         <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-extrabold flex flex-wrap items-center justify-between gap-2 border-b border-amber-500 no-print">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded bg-slate-950 text-amber-400 font-black text-[10px]">
-              PÁGINA DE TESTE EFÊMERA (?teste=1)
+            <span className="px-2 py-0.5 rounded bg-slate-950 text-amber-400 font-black text-[10px] tracking-wide">
+              AMBIENTE DE TESTES E DEMONSTRAÇÃO
             </span>
             <span>
               Suas alterações ficam salvas <strong>apenas no seu navegador</strong> e se encerram ao fechar a janela.
@@ -1111,7 +1111,7 @@ export default function App() {
       )}
 
       {/* Barra de Topo Institucional */}
-      <header className="bg-slate-950 text-white border-b border-slate-800 sticky top-0 z-30 no-print">
+      <header className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-colors no-print">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <img
@@ -1120,18 +1120,18 @@ export default function App() {
                 getAssetUrl('/data/cartoes-oficiais/logos/logo_guia.png')
               }
               alt="Desbravadores"
-              className="w-9 h-9 object-contain bg-white/10 p-1 rounded-xl shrink-0"
+              className="w-9 h-9 object-contain bg-slate-100 dark:bg-white/10 p-1 rounded-xl shrink-0 border border-slate-200 dark:border-transparent"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm sm:text-base tracking-tight truncate">
+                <span className="font-extrabold text-sm sm:text-base tracking-tight truncate text-slate-900 dark:text-white">
                   SGC Classes • Desbravadores
                 </span>
-                <span className="hidden lg:inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                <span className="hidden lg:inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-400/30">
                   12 Classes Oficiais DSA
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 hidden sm:block truncate">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block truncate font-medium">
                 {normalizedData.settings?.club_name || 'Clube de Desbravadores'}
               </div>
             </div>
@@ -1143,7 +1143,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowMcpModal(true)}
-                className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-xs transition cursor-pointer"
                 title="Abrir Assistente IA & Chaves de Servidor MCP"
               >
                 <Bot className="w-4 h-4" />
@@ -1154,67 +1154,67 @@ export default function App() {
             <button
               type="button"
               onClick={() => setShowDocsModal(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
               title="Documentação Completa do Sistema"
             >
-              <BookOpen className="w-4 h-4 text-amber-400" />
+              <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span className="hidden xl:inline">Documentação</span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowFeedbackModal(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
               title="Enviar Feedback ou Relatar Erro (Beta)"
             >
-              <MessageSquareWarning className="w-4 h-4 text-amber-400" />
+              <MessageSquareWarning className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span className="hidden xl:inline">Feedback Beta</span>
             </button>
 
             <button
               type="button"
               onClick={handleToggleTheme}
-              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 cursor-pointer"
-              title={`Tema atual: ${
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 cursor-pointer transition"
+              title={`Alternar tema. Atual: ${
                 themeMode === 'dark'
-                  ? 'Escuro'
+                  ? 'Modo Escuro'
                   : themeMode === 'light'
-                  ? 'Claro'
+                  ? 'Modo Claro'
                   : 'Automático (Sistema)'
               }`}
             >
               {themeMode === 'dark' ? (
                 <Moon className="w-4 h-4 text-amber-400" />
               ) : themeMode === 'light' ? (
-                <Sun className="w-4 h-4 text-amber-400" />
+                <Sun className="w-4 h-4 text-amber-600" />
               ) : (
-                <Monitor className="w-4 h-4 text-slate-300" />
+                <Monitor className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               )}
             </button>
 
             <button
               onClick={() => fetchBootstrapData(false)}
               disabled={loadingData}
-              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 cursor-pointer"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 cursor-pointer transition"
               title="Sincronizar dados"
             >
               <RefreshCw
-                className={`w-4 h-4 ${loadingData ? 'animate-spin text-amber-400' : ''}`}
+                className={`w-4 h-4 ${loadingData ? 'animate-spin text-amber-500' : ''}`}
               />
             </button>
 
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5">
               <div className="text-right hidden sm:block">
-                <div className="text-xs font-bold text-white leading-tight truncate max-w-[140px]">
+                <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[140px]">
                   {user.name}
                 </div>
-                <div className="text-[10px] text-amber-300 font-semibold truncate max-w-[140px]">
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 font-bold truncate max-w-[140px]">
                   {user.custom_role_title || roleCfg.label}
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-300 transition cursor-pointer"
                 title="Trocar de Conta / Sair"
               >
                 <LogOut className="w-4 h-4" />
@@ -1224,7 +1224,7 @@ export default function App() {
         </div>
 
         {/* Sub-barra de Navegação por Abas */}
-        <div className="bg-slate-900/90 border-t border-slate-800/80">
+        <div className="bg-slate-50/95 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800/80">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto py-1.5">
             {(user.role === 'DESBRAVADOR'
               ? [{ id: 'PATHFINDERS', label: 'Meu Cartão de Classes', icon: Users }]
@@ -1238,8 +1238,8 @@ export default function App() {
                   onClick={() => setActiveTab(item.id)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition cursor-pointer ${
                     isActive
-                      ? 'bg-amber-500 text-slate-950 shadow-xs'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

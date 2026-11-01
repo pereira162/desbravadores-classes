@@ -3522,29 +3522,53 @@ app.post('/api/mcp/rpc', async (req, res) => {
 // ============================================================================
 // 10.5. ROTAS DE PDF ESTRUTURADO EM CÓDIGO COM CACHE E LINKS SEGUROS
 // ============================================================================
-const { resolvePdfRecord, schedulePdfWarmup } = require('./pdfCache');
+const {
+  resolvePdfRecord,
+  schedulePdfWarmup,
+  createEphemeralMemoryDatabaseFromSandbox,
+  PDF_CACHE_DIR,
+} = require('./pdfCache');
 
 function findPdfRecordAcrossDbs(token) {
   let rec = db.prepare('SELECT * FROM pdf_cache_registry WHERE id = ?').get(token);
   if (!rec) rec = prodDb.prepare('SELECT * FROM pdf_cache_registry WHERE id = ?').get(token);
   if (!rec) rec = testDb.prepare('SELECT * FROM pdf_cache_registry WHERE id = ?').get(token);
+  if (!rec && token && /^[a-zA-Z0-9_-]+$/.test(token) && PDF_CACHE_DIR) {
+    const fallbackPath = path.join(PDF_CACHE_DIR, `${token}.pdf`);
+    if (fs.existsSync(fallbackPath)) {
+      rec = {
+        id: token,
+        file_path: fallbackPath,
+        file_name: `documento_${token.slice(0, 8)}.pdf`,
+      };
+    }
+  }
   return rec;
 }
 
 // Resolve ou garante o token do PDF e dispara compilação rápida caso ainda não exista
 app.post('/api/pdf/resolve', async (req, res) => {
   try {
-    const { docType, params } = req.body || {};
+    const { docType, params, sandboxState } = req.body || {};
     if (!docType) {
       return res.status(400).json({ error: 'docType é obrigatório' });
     }
-    const record = await resolvePdfRecord({ docType, params: params || {}, dbInstance: db });
+
+    const isTest = req.headers['x-test-mode'] === 'true' || req.query?.teste === '1';
+    let targetDb = isTest ? testDb : prodDb;
+
+    // Se a requisição veio do Sandbox Efêmero de Teste (?teste=1) com dados locais do usuário:
+    if (sandboxState && isTest) {
+      targetDb = createEphemeralMemoryDatabaseFromSandbox(sandboxState);
+    }
+
+    const record = await resolvePdfRecord({ docType, params: params || {}, dbInstance: targetDb });
     res.json({
       success: true,
       token: record.id,
       fileName: record.file_name,
-      viewUrl: `/api/pdf/${record.id}/view${req.query?.teste === '1' ? '?teste=1' : ''}`,
-      downloadUrl: `/api/pdf/${record.id}/download${req.query?.teste === '1' ? '?teste=1' : ''}`,
+      viewUrl: `/api/pdf/${record.id}/view${isTest ? '?teste=1' : ''}`,
+      downloadUrl: `/api/pdf/${record.id}/download${isTest ? '?teste=1' : ''}`,
     });
   } catch (err) {
     console.error('[PDF Resolve] Erro:', err);

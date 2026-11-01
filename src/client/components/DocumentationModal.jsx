@@ -162,10 +162,10 @@ export default function DocumentationModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                     <h4 className="font-bold text-slate-900 dark:text-white mb-1">
-                      Ambiente Oficial vs. Página de Teste (?teste=1)
+                      Ambiente Oficial vs. Ambiente de Testes
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-300">
-                      O ambiente oficial salva os dados reais do seu clube com backup automático. Já a <strong>Página de Teste (?teste=1)</strong> funciona em uma <em>Sandbox efêmera no navegador</em>: você pode testar todas as contas (Diretor, Instrutores, Conselheiros e Desbravadores) sem alterar o servidor e sem misturar seus testes com outros visitantes.
+                      O ambiente oficial salva os dados reais do seu clube com backup automático. Já o <strong>Ambiente de Testes (Demonstração)</strong> funciona em uma <em>Sandbox efêmera no navegador</em>: você pode testar todas as contas (Diretor, Instrutores, Conselheiros e Desbravadores) sem alterar o servidor e sem misturar seus testes com outros visitantes.
                     </p>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">

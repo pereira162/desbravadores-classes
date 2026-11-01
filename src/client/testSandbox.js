@@ -24,6 +24,10 @@ function loadSandboxStateFromStorage() {
   }
 }
 
+export function getSandboxFullState() {
+  return loadSandboxStateFromStorage();
+}
+
 function saveSandboxStateToStorage(state) {
   memoryFallbackState = state;
   try {

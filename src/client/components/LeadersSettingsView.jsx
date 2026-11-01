@@ -33,6 +33,11 @@ import { API_BASE_URL, getStoredToken, isTestMode, apiRequest } from '../api';
 
 const EXTRA_PERMISSIONS_OPTIONS = [
   {
+    key: 'can_manage_permissions',
+    label: 'Configurar Poderes da Diretoria',
+    desc: 'Permite alterar permissões e conceder/retirar poderes de outros membros da diretoria.',
+  },
+  {
     key: 'can_manage_pathfinders',
     label: 'Cadastrar e Editar Desbravadores',
     desc: 'Permite adicionar novos desbravadores, alterar matrículas e gerar links de conta.',
@@ -333,9 +338,38 @@ export default function LeadersSettingsView({
     }
   };
 
-  const canManageLeaders = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(
-    currentUser?.role
-  );
+  const canManageLeaders =
+    ['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role) ||
+    Boolean(currentUser?.permissions?.can_manage_permissions);
+
+  const [leadersViewMode, setLeadersViewMode] = useState('CARDS'); // 'CARDS' | 'MATRIX'
+
+  const handleToggleLeaderPermissionQuick = async (ld, permKey) => {
+    if (!canManageLeaders) return;
+    const currentPerms = ld.permissions || {};
+    const updatedPerms = {
+      ...currentPerms,
+      [permKey]: !currentPerms[permKey],
+    };
+    try {
+      await onSaveLeader(
+        {
+          name: ld.name,
+          email: ld.email,
+          role: ld.role,
+          custom_role_title: ld.custom_role_title,
+          unit_id: ld.unit_id,
+          assigned_units: ld.assigned_units || [],
+          assigned_classes: ld.assigned_classes || [],
+          permissions: updatedPerms,
+          active: ld.active !== false,
+        },
+        ld.id
+      );
+    } catch (err) {
+      alert(err.message || 'Erro ao atualizar poder do líder.');
+    }
+  };
 
   const openCreateLeader = () => {
     setEditingLeader(null);
@@ -549,15 +583,113 @@ export default function LeadersSettingsView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Coluna 1 e 2: Contas de Líderes */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-extrabold text-slate-900">
-              Líderes Cadastrados ({leaders.length})
-            </h2>
-            <span className="text-xs text-slate-500">
-              Por padrão cada membro acessa seu próprio escopo (expansível pelo Diretor/Gestor)
-            </span>
+          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-900">
+                Líderes Cadastrados ({leaders.length})
+              </h2>
+              <span className="text-xs text-slate-500">
+                Por padrão cada membro acessa seu próprio escopo (expansível pelo Diretor/Gestor)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-200/80 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setLeadersViewMode('CARDS')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  leadersViewMode === 'CARDS'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                Cartões
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeadersViewMode('MATRIX')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  leadersViewMode === 'MATRIX'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-600" />
+                Matriz de Poderes
+              </button>
+            </div>
           </div>
 
+          {leadersViewMode === 'MATRIX' ? (
+            <div className="overflow-x-auto matrix-scroll">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-900 text-white border-b border-slate-800">
+                    <th className="sticky left-0 z-20 bg-slate-900 px-4 py-3 min-w-[200px] font-extrabold uppercase tracking-wider border-r border-slate-800">
+                      Membro da Diretoria
+                    </th>
+                    {EXTRA_PERMISSIONS_OPTIONS.map((opt) => (
+                      <th
+                        key={opt.key}
+                        className="px-3 py-3 text-center min-w-[125px] font-bold border-r border-slate-800 text-[11px] align-bottom"
+                        title={opt.desc}
+                      >
+                        <div className="line-clamp-2">{opt.label}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {leaders.map((ld) => {
+                    const isTotalPower = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(ld.role);
+                    const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
+                    return (
+                      <tr key={ld.id} className="hover:bg-slate-50/80 transition group">
+                        <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 border-r border-slate-200">
+                          <div className="font-bold text-slate-900 leading-tight">
+                            {ld.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span className={`px-1.5 py-0.5 rounded font-semibold ${rCfg.badgeClass}`}>
+                              {ld.custom_role_title || rCfg.label}
+                            </span>
+                            <span>{ld.email}</span>
+                          </div>
+                        </td>
+                        {EXTRA_PERMISSIONS_OPTIONS.map((opt) => {
+                          const hasPerm = isTotalPower || Boolean(ld.permissions?.[opt.key]);
+                          return (
+                            <td
+                              key={opt.key}
+                              className="px-3 py-3 text-center border-r border-slate-100 align-middle"
+                            >
+                              {isTotalPower ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]" title="Poder nativo total da função">
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                  Total
+                                </span>
+                              ) : (
+                                <label className="inline-flex items-center justify-center cursor-pointer p-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={hasPerm}
+                                    disabled={!canManageLeaders}
+                                    onChange={() => handleToggleLeaderPermissionQuick(ld, opt.key)}
+                                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer disabled:opacity-50"
+                                  />
+                                </label>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div className="divide-y divide-slate-100">
             {leaders.map((ld) => {
               const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
@@ -717,7 +849,8 @@ export default function LeadersSettingsView({
               );
             })}
           </div>
-        </div>
+        )}
+      </div>
 
         {/* Coluna 3: Configurações Gerais, Logo, Cor, Gmail SMTP e Login Google */}
         <div className="space-y-6">
@@ -830,39 +963,7 @@ export default function LeadersSettingsView({
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-amber-600" />
-                    Cor Principal do Clube (Tema Visual)
-                  </label>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {[
-                      { id: 'amber', label: 'Ouro', hex: '#d97706' },
-                      { id: 'blue', label: 'Azul', hex: '#2563eb' },
-                      { id: 'emerald', label: 'Verde', hex: '#059669' },
-                      { id: 'crimson', label: 'Rubi', hex: '#dc2626' },
-                      { id: 'indigo', label: 'Índigo', hex: '#4f46e5' },
-                    ].map((th) => (
-                      <button
-                        key={th.id}
-                        type="button"
-                        disabled={!canManageLeaders}
-                        onClick={() => setColorTheme(th.id)}
-                        className={`p-1.5 rounded-xl border text-[10px] font-bold flex flex-col items-center gap-1 cursor-pointer transition ${
-                          colorTheme === th.id
-                            ? 'border-slate-900 bg-slate-100 ring-2 ring-slate-900/20'
-                            : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: th.hex }}
-                        />
-                        <span>{th.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+
               </div>
 
               {/* Regra de Dupla Checagem Conselheiro -> Instrutor */}

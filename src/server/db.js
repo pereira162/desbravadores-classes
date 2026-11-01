@@ -1037,4 +1037,6 @@ module.exports = {
   initDatabase,
   loadCardsMetadata,
   recordAudit,
+  createSchemaOn,
+  ensureAuthAndEmailColumnsOn,
 };

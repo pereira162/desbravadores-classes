@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Eye, Share2, Check, Loader2 } from 'lucide-react';
-import { apiRequest, API_BASE_URL } from '../api';
+import { apiRequest, API_BASE_URL, isTestMode } from '../api';
+import { getSandboxFullState } from '../testSandbox';
 
 /**
  * Componente unificado para Download, Visualização e Compartilhamento de PDFs estruturados.
@@ -24,9 +25,11 @@ export default function PdfActionGroup({
 
   // Obtém ou resolve o token e URLs do PDF para a solicitação
   const fetchPdfUrls = async () => {
+    const testMode = isTestMode();
+    const sandboxState = testMode ? getSandboxFullState() : null;
     const res = await apiRequest('/api/pdf/resolve', {
       method: 'POST',
-      body: JSON.stringify({ docType, params }),
+      body: JSON.stringify({ docType, params, sandboxState }),
     });
     if (!res || !res.token) {
       throw new Error(res?.error || 'Não foi possível gerar o link do PDF.');

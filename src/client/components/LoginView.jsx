@@ -435,8 +435,8 @@ export default function LoginView({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-amber-950 flex flex-col justify-center items-center p-4 sm:p-6">
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 transition-colors">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 bg-white dark:bg-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-800">
         {/* Painel Esquerdo: Login / Primeiro Acesso / Convite / Recuperação */}
         <div
           className={`${
@@ -691,8 +691,8 @@ export default function LoginView({
                     </div>
                   </div>
 
-                  {/* Logo do Clube e Tema de Cores */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+                  {/* Logo do Clube */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                         <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
@@ -715,29 +715,6 @@ export default function LoginView({
                             className="hidden"
                           />
                         </label>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                        <Palette className="w-3.5 h-3.5 text-amber-500" />
-                        Cor Principal do Clube
-                      </label>
-                      <div className="flex items-center gap-2 pt-1">
-                        {CLUB_THEME_PRESETS.map((preset) => (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            onClick={() => setDirColorTheme(preset.id)}
-                            className={`w-6 h-6 rounded-full border-2 transition cursor-pointer ${
-                              dirColorTheme === preset.id
-                                ? 'scale-110 border-slate-900 dark:border-white ring-2 ring-amber-400'
-                                : 'border-transparent opacity-75 hover:opacity-100'
-                            }`}
-                            style={{ backgroundColor: preset.color }}
-                            title={preset.label}
-                          />
-                        ))}
                       </div>
                     </div>
                   </div>
