@@ -390,6 +390,19 @@ export default function App() {
     showToast('Seu ambiente de teste foi restaurado ao estado inicial!', 'success');
   };
 
+  const handleCloseTour = useCallback(() => {
+    setShowOnboardingTour(false);
+    if (isTestMode()) {
+      try {
+        window.sessionStorage.setItem('dbv_tour_closed_v2', '1');
+      } catch {}
+    } else if (user?.id) {
+      try {
+        window.localStorage.setItem(`dbv_tour_completed_${user.id}`, '1');
+      } catch {}
+    }
+  }, [user?.id]);
+
   // Normaliza e enriquece o catálogo e os registros com escopo estrito por padrão (RBAC)
   const normalizedData = useMemo(() => {
     if (!rawBootstrap) {
@@ -1027,19 +1040,6 @@ export default function App() {
     };
     setActiveTab(map[tabKey] || tabKey);
   };
-
-  const handleCloseTour = useCallback(() => {
-    setShowOnboardingTour(false);
-    if (isTestMode()) {
-      try {
-        window.sessionStorage.setItem('dbv_tour_closed_v2', '1');
-      } catch {}
-    } else if (user?.id) {
-      try {
-        window.localStorage.setItem(`dbv_tour_completed_${user.id}`, '1');
-      } catch {}
-    }
-  }, [user?.id]);
 
   return (
     <div className={`min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col ${clubColorThemeClass}`}>
