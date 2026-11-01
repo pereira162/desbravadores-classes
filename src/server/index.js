@@ -1958,6 +1958,11 @@ app.post('/api/events', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Título e data do evento são obrigatórios.' });
   }
 
+  const canApproveDirectly =
+    ['DIRETOR', 'GESTOR', 'ADMIN'].includes(req.user.role) ||
+    Boolean(req.user.permissions?.can_approve_events);
+  const initialStatus = canApproveDirectly ? 'PLANEJADO' : 'PENDENTE_APROVACAO';
+
   const id = `evt-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
   const now = new Date().toISOString();
 
@@ -1967,7 +1972,7 @@ app.post('/api/events', requireAuth, (req, res) => {
       INSERT INTO activity_events (
         id, title, description, event_type, location, scheduled_date, status,
         notes, created_by_user_id, created_by_name, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'PLANEJADO', ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       String(title).trim(),
@@ -1975,6 +1980,7 @@ app.post('/api/events', requireAuth, (req, res) => {
       event_type,
       location,
       scheduled_date,
+      initialStatus,
       notes,
       req.user.id,
       req.user.name,
@@ -1996,17 +2002,51 @@ app.post('/api/events', requireAuth, (req, res) => {
       action: 'EVENT_CREATE',
       entityType: 'ACTIVITY_EVENT',
       entityId: id,
-      summary: `${req.user.name} planejou o evento "${title}" para ${scheduled_date} com ${requirement_ids.length} requisito(s).`,
-      newState: { id, title, scheduled_date, requirement_ids, attendee_ids },
+      summary: `${req.user.name} planejou o evento "${title}" para ${scheduled_date} (${initialStatus === 'PENDENTE_APROVACAO' ? 'Aguardando Aprovação do Diretor' : 'Planejado'}).`,
+      newState: { id, title, scheduled_date, status: initialStatus, requirement_ids, attendee_ids },
       createdAt: now,
     });
 
     db.exec('COMMIT');
-    res.json({ success: true, id });
+    res.json({ success: true, id, status: initialStatus });
   } catch (err) {
     db.exec('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post('/api/events/:id/approve', requireAuth, (req, res) => {
+  const canApprove =
+    ['DIRETOR', 'GESTOR', 'ADMIN'].includes(req.user.role) ||
+    Boolean(req.user.permissions?.can_approve_events);
+  if (!canApprove) {
+    return res
+      .status(403)
+      .json({ error: 'Apenas o Diretor ou líderes com permissão podem aprovar eventos do clube.' });
+  }
+
+  const eventId = req.params.id;
+  const ev = db.prepare('SELECT * FROM activity_events WHERE id = ?').get(eventId);
+  if (!ev) return res.status(404).json({ error: 'Evento não encontrado.' });
+
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE activity_events
+    SET status = 'PLANEJADO'
+    WHERE id = ?
+  `).run(eventId);
+
+  recordAudit({
+    user: req.user,
+    action: 'EVENT_APPROVE',
+    entityType: 'ACTIVITY_EVENT',
+    entityId: eventId,
+    summary: `${req.user.name} aprovou oficialmente o evento "${ev.title}".`,
+    newState: { id: eventId, status: 'PLANEJADO' },
+    createdAt: now,
+  });
+
+  res.json({ success: true, status: 'PLANEJADO' });
 });
 
 app.post('/api/events/:id/execute', requireAuth, (req, res) => {
@@ -2019,6 +2059,12 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
   const eventId = req.params.id;
   const ev = db.prepare('SELECT * FROM activity_events WHERE id = ?').get(eventId);
   if (!ev) return res.status(404).json({ error: 'Evento não encontrado.' });
+
+  if (ev.status === 'PENDENTE_APROVACAO') {
+    return res.status(400).json({
+      error: 'Este evento está aguardando aprovação da Diretoria e não pode ser executado antes de ser aprovado.',
+    });
+  }
 
   const {
     requirement_ids,

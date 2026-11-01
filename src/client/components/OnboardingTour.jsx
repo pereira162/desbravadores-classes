@@ -270,34 +270,34 @@ const TOUR_STEPS_BY_ROLE = {
   ],
   INSTRUTOR: [
     {
-      id: 'welcome',
-      title: '1. Sua Área Focada de Instrução',
-      tab: 'matrix',
-      targetSelector: '[data-tour="matrix-class-selector"]',
-      icon: Grid,
+      id: 'dashboard',
+      title: '1. Painel Inicial & Fila de Vistos',
+      tab: 'dashboard',
+      targetSelector: '[data-tour="nav-dashboard"]',
+      icon: Compass,
       description:
-        'Bem-vindo(a), Instrutor(a)! Por padrão, sua tela já abre focada nas classes que você instrui. Aqui você tem o controle dos requisitos e da evolução pedagógica de cada aluno.',
-      actionPrompt: 'Clique em Próximo Passo para ver a aprovação de requisitos.',
+        'Bem-vindo(a), Instrutor(a)! Este é o seu painel de controle. Aqui você acompanha em tempo real o percentual geral da sua classe, os membros ativos e a fila de requisitos aguardando seu visto oficial.',
+      actionPrompt: 'Clique em Próximo Passo para acessar a Matriz das Classes.',
     },
     {
       id: 'turmas',
-      title: '2. Filtro da Sua Turma Atribuída',
+      title: '2. Matriz das Classes & Filtro da Sua Turma',
       tab: 'matrix',
       targetSelector: '[data-tour="matrix-instructor-filter"]',
       icon: Users,
       description:
-        'Caso haja mais de um instrutor para a mesma classe (ex: Turma A e Turma B de Amigo), filtre aqui para ver exclusivamente os desbravadores sob sua orientação.',
-      actionPrompt: 'Clique em Próximo Passo para ver a aprovação de requisitos.',
+        'Sua visão já vem filtrada para as classes que você orienta. Se houver mais de um instrutor para a mesma classe (ex: Turma A e Turma B de Amigo), utilize este filtro para separar os alunos sob sua responsabilidade.',
+      actionPrompt: 'Clique em Próximo Passo para ver como preencher uma atividade cumprida.',
     },
     {
-      id: 'approval',
-      title: '3. Assinatura e Preenchimento de Subitens',
+      id: 'fill_activity',
+      title: '3. Preencher Atividade Cumprida & Assinar Visto',
       tab: 'matrix',
       targetSelector: '[data-tour="matrix-grid-table"]',
       icon: CheckCircle2,
       description:
-        'Clique em qualquer célula para preencher observações e subitens (a, b, c...) ou use o botão "Linha" para assinar um requisito para toda a sua turma com 1 toque!',
-      actionPrompt: 'Clique em Próximo Passo para conhecer sua folha de controle em PDF.',
+        'Para lançar uma atividade realizada pelo desbravador: clique diretamente na célula do requisito correspondente! Uma janela se abrirá com os detalhes: marque subitens cumpridos (a, b, c...), anote observações de campo, informe a data e assine como APROVADO oficial ou CONCLUÍDO. Se a classe inteira fez a atividade, use o botão "Linha" para assinar de uma só vez!',
+      actionPrompt: '👉 Clique em qualquer célula da Matriz ou em Próximo Passo.',
     },
     {
       id: 'pdf_instructor',
@@ -306,27 +306,47 @@ const TOUR_STEPS_BY_ROLE = {
       targetSelector: '[data-tour="matrix-pdf-actions"]',
       icon: Printer,
       description:
-        'No topo da tela, clique no botão de Olho (visualizar) ou na Seta (download) para emitir sua folha sintética de 1 página A4 com nomes na vertical e espaços para anotar em campo.',
-      actionPrompt: 'Clique em Próximo Passo para ver a lista de desbravadores.',
+        'Para reuniões de campo ou acampamentos: no topo da tela, clique no ícone do Olho para visualizar ou na Seta para baixar sua folha sintética de 1 página A4 com nomes na vertical e rodapé para assinaturas pré-compilada em cache.',
+      actionPrompt: 'Clique em Próximo Passo para aprender a adicionar e editar desbravadores.',
     },
     {
-      id: 'pathfinders',
-      title: '5. Desbravadores Sob Sua Orientação',
+      id: 'pathfinders_manage',
+      title: '5. Adicionar e Editar Desbravadores',
+      tab: 'pathfinders',
+      targetSelector: '[data-tour="btn-new-pathfinder"]',
+      icon: UserPlus,
+      description:
+        'Precisa cadastrar um novo desbravador na sua turma? Clique em "Cadastrar Desbravador" para informar nome, nascimento, unidade e classe. Para editar um desbravador existente, basta abrir o cartão dele e clicar em "Editar Desbravador".',
+      actionPrompt: '👉 Clique em "Cadastrar Desbravador" ou em Próximo Passo.',
+    },
+    {
+      id: 'pdf_cards',
+      title: '6. Fichas Oficiais em PDF dos Alunos',
       tab: 'pathfinders',
       targetSelector: '[data-tour="pathfinder-pdf-actions"]',
-      icon: Users,
+      icon: FileDown,
       description:
-        'Consulte a ficha individual completa de cada desbravador da sua classe e emita a ficha em PDF para acompanhamento individual.',
-      actionPrompt: 'Clique em Próximo Passo para ver eventos e requisitos práticos.',
+        'Consulte a ficha individual completa de cada aluno da sua classe e emita a versão simplificada (1 página) ou a pasta completa para os pais e para a investidura.',
+      actionPrompt: 'Clique em Próximo Passo para ver eventos e atividades de campo.',
+    },
+    {
+      id: 'events',
+      title: '7. Eventos & Saídas Coletivas do Clube',
+      tab: 'events',
+      targetSelector: '[data-tour="btn-new-event"]',
+      icon: Tent,
+      description:
+        'Agende acampamentos e caminhadas vinculando os requisitos práticos que serão cumpridos. Eventos cadastrados pela liderança ficam salvos e, após validação do Diretor, você confirma a presença da turma para assinar todos os requisitos em lote!',
+      actionPrompt: 'Clique em Próximo Passo para finalizar o guia.',
     },
     {
       id: 'conclusion',
-      title: '6. Pronto para Ensinar!',
-      tab: 'matrix',
+      title: '8. Pronto para Instruir com Sucesso!',
+      tab: 'dashboard',
       targetSelector: null,
       icon: Sparkles,
       description:
-        'Você está pronto(a) para orientar sua classe rumo à investidura! Reabra este guia sempre que precisar no botão "Trilha de Ensino".',
+        'Tudo pronto! Você tem em mãos todas as ferramentas para orientar sua classe rumo à investidura. Você pode reabrir esta trilha quando quiser no botão "Trilha de Ensino".',
       actionPrompt: '🎉 Clique em Concluir e Começar a Usar!',
     },
   ],
@@ -385,32 +405,42 @@ const TOUR_STEPS_BY_ROLE = {
   DESBRAVADOR: [
     {
       id: 'welcome',
-      title: '1. Bem-vindo ao Seu Cartão Digital!',
+      title: '1. Bem-vindo(a) ao Seu Cartão Digital!',
       tab: 'pathfinders',
-      targetSelector: '[data-tour="pathfinder-pdf-actions"]',
+      targetSelector: '[data-tour="pathfinder-progress-banner"]',
       icon: Sparkles,
       description:
-        'Olá, Desbravador(a)! Este é o seu Cartão Digital Oficial. Aqui você acompanha sua porcentagem de conclusão, vê todos os requisitos da sua classe e marca as atividades que já realizou para avaliação do seu instrutor.',
-      actionPrompt: 'Clique em Próximo Passo para ver suas fichas em PDF.',
+        'Olá, Desbravador(a)! Este é o seu Cartão Digital Oficial. Aqui você acompanha sua porcentagem de conclusão, o total de requisitos aprovados e o que ainda falta conquistar para sua Investidura.',
+      actionPrompt: 'Clique em Próximo Passo para aprender como preencher uma atividade que você realizou.',
+    },
+    {
+      id: 'fill_activity',
+      title: '2. Preencher Atividade Realizada & Enviar para Avaliação',
+      tab: 'pathfinders',
+      targetSelector: '[data-tour="pathfinder-requirement-row"]',
+      icon: MousePointerClick,
+      description:
+        'Fez a leitura bíblica, completou um nó, fez uma caminhada ou cumpriu um item do cartão? Clique diretamente no requisito na lista abaixo! Na janela que se abre, marque os subitens cumpridos, escreva como realizou a tarefa, informe a data e anexe fotos comprovando a execução. Ao salvar, seu instrutor recebe a notificação para avaliar e dar o visto oficial!',
+      actionPrompt: '👉 Clique no primeiro requisito pendente destacado ou em Próximo Passo.',
     },
     {
       id: 'pdfs',
-      title: '2. Sua Ficha em PDF (Simplificada e Completa)',
+      title: '3. Visualizar e Baixar Seu Cartão em PDF',
       tab: 'pathfinders',
       targetSelector: '[data-tour="pathfinder-pdf-actions"]',
       icon: FileDown,
       description:
-        'Clique no ícone do Olho para visualizar sua ficha diretamente no navegador ou na Seta para baixar seu PDF oficial atualizado.',
-      actionPrompt: 'Clique em Próximo Passo para ver seus requisitos.',
+        'Quer imprimir ou mostrar aos pais seu progresso? Clique no ícone do Olho para visualizar seu cartão (em 1 página ou versão completa) direto no navegador, ou na Seta para baixar o PDF oficial.',
+      actionPrompt: 'Clique em Próximo Passo para concluir o guia.',
     },
     {
       id: 'conclusion',
-      title: '3. Rumo à Investidura!',
+      title: '4. Rumo à Investidura!',
       tab: 'pathfinders',
       targetSelector: null,
       icon: CheckCircle2,
       description:
-        'Cumpra seus requisitos nas reuniões, acampamentos e especialidades. Bom aprendizado e uma excelente jornada rumo ao lenço e à sua insígnia!',
+        'Participe com dedicação das reuniões, acampamentos e projetos da sua unidade. Bom aprendizado e uma excelente jornada rumo ao lenço e à sua insígnia!',
       actionPrompt: '🎉 Clique em Concluir e Começar a Usar!',
     },
   ],
@@ -523,6 +553,18 @@ export default function OnboardingTour({ user, isOpen, onClose, onSelectTab, act
       el.removeEventListener('click', handleTargetClick);
     };
   }, [isOpen, currentStep.targetSelector, stepIdx, steps.length]);
+
+  // Fecha a trilha de ensino ao pressionar ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !user) return null;
 

@@ -396,7 +396,10 @@ export default function PathfindersView({
     <div className="space-y-5">
       {/* Banner exclusivo quando logado como DESBRAVADOR */}
       {isPathfinderUser ? (
-        <div className="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-teal-700/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4 no-print">
+        <div
+          data-tour="pathfinder-progress-banner"
+          className="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-teal-700/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4 no-print"
+        >
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-bold uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
@@ -970,7 +973,7 @@ export default function PathfindersView({
                           </div>
                         ) : (
                           <div className="divide-y divide-slate-100">
-                            {clsBlock.requirements.map((req) => {
+                            {clsBlock.requirements.map((req, rIdx) => {
                               const cfg =
                                 STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDENTE;
                               const ctxBadge =
@@ -983,6 +986,7 @@ export default function PathfindersView({
                               return (
                                 <div
                                   key={req.id}
+                                  data-tour={rIdx === 0 ? 'pathfinder-requirement-row' : undefined}
                                   onClick={() =>
                                     onOpenRequirementDetail(activePf, req)
                                   }

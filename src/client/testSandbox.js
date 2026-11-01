@@ -572,6 +572,11 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
 
   // 9. Eventos
   if (path === '/api/events' && method === 'POST') {
+    const canApproveDirectly =
+      ['DIRETOR', 'GESTOR', 'ADMIN'].includes(currentUser.role) ||
+      Boolean(currentUser.permissions?.can_approve_events);
+    const initialStatus = canApproveDirectly ? 'PLANEJADO' : 'PENDENTE_APROVACAO';
+
     const id = `evt-local-${Date.now().toString(36)}`;
     state.events.unshift({
       id,
@@ -580,7 +585,7 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
       event_type: body.event_type || 'ACAMPAMENTO',
       location: body.location || '',
       scheduled_date: body.scheduled_date,
-      status: 'PLANEJADO',
+      status: initialStatus,
       notes: body.notes || '',
       requirement_ids: body.requirement_ids || [],
       attendee_ids: body.attendee_ids || [],
@@ -588,13 +593,35 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
       created_at: new Date().toISOString(),
     });
     saveSandboxStateToStorage(state);
-    return { success: true, id };
+    return { success: true, id, status: initialStatus };
+  }
+
+  if (path.startsWith('/api/events/') && path.endsWith('/approve') && method === 'POST') {
+    const eventId = path.split('/')[3];
+    const canApprove =
+      ['DIRETOR', 'GESTOR', 'ADMIN'].includes(currentUser.role) ||
+      Boolean(currentUser.permissions?.can_approve_events);
+    if (!canApprove) {
+      throw new Error('Apenas o Diretor ou líderes com permissão podem aprovar eventos do clube.');
+    }
+    const ev = (state.events || []).find((e) => e.id === eventId);
+    if (!ev) throw new Error('Evento não encontrado.');
+    ev.status = 'PLANEJADO';
+    ev.approved_by_name = currentUser.name;
+    ev.approved_at = new Date().toISOString();
+    saveSandboxStateToStorage(state);
+    return { success: true, status: 'PLANEJADO' };
   }
 
   if (path.startsWith('/api/events/') && path.endsWith('/execute') && method === 'POST') {
     const eventId = path.split('/')[3];
     const ev = (state.events || []).find((e) => e.id === eventId);
     if (!ev) throw new Error('Evento não encontrado.');
+
+    if (ev.status === 'PENDENTE_APROVACAO') {
+      throw new Error('Este evento está aguardando aprovação da Diretoria e não pode ser executado antes de ser aprovado.');
+    }
+
     const reqIds = body.requirement_ids || ev.requirement_ids || [];
     const attIds = body.attendee_ids || ev.attendee_ids || [];
     const targetStatus = body.target_status || 'APROVADO';

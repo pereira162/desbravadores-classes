@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Shield,
   UserPlus,
+  Users,
   Settings,
   Edit3,
   CheckCircle2,
@@ -51,6 +52,11 @@ const EXTRA_PERMISSIONS_OPTIONS = [
     key: 'can_manage_events',
     label: 'Criar Eventos e Dar Baixa em Lote',
     desc: 'Permite agendar eventos no calendário e assinar presença/requisitos da turma.',
+  },
+  {
+    key: 'can_approve_events',
+    label: 'Aprovar Eventos do Calendário',
+    desc: 'Permite autorizar e validar eventos criados por outros membros da liderança antes da execução.',
   },
   {
     key: 'can_approve_all',

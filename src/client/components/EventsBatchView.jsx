@@ -35,7 +35,13 @@ export default function EventsBatchView({
   onCreateEvent,
   onDeleteEvent,
   onExecuteEvent,
+  onApproveEvent,
+  currentUser,
 }) {
+  const canApproveEvents =
+    ['DIRETOR', 'GESTOR', 'ADMIN'].includes(currentUser?.role) ||
+    Boolean(currentUser?.permissions?.can_approve_events);
+
   // Modal Criar Evento
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -53,6 +59,18 @@ export default function EventsBatchView({
   const [targetStatus, setTargetStatus] = useState('APROVADO');
   const [execNotes, setExecNotes] = useState('');
   const [runningExecute, setRunningExecute] = useState(false);
+
+  // Fecha modais locais com tecla ESC
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        if (createOpen) setCreateOpen(false);
+        if (executingEvent) setExecutingEvent(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [createOpen, executingEvent]);
 
   // Se veio um rascunho da tela de Planejamento de Demanda Anual, abre o modal preenchido
   useEffect(() => {
@@ -220,13 +238,19 @@ export default function EventsBatchView({
                         {formatDateBR(ev.event_date)}
                       </span>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
                           ev.status === 'REALIZADO'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : ev.status === 'PENDENTE_APROVACAO'
+                            ? 'bg-amber-100 text-amber-900 border-amber-400'
+                            : 'bg-blue-100 text-blue-800 border-blue-300'
                         }`}
                       >
-                        {ev.status === 'REALIZADO' ? 'REALIZADO' : 'PLANEJADO'}
+                        {ev.status === 'REALIZADO'
+                          ? 'REALIZADO'
+                          : ev.status === 'PENDENTE_APROVACAO'
+                          ? '⏳ AGUARDANDO APROVAÇÃO'
+                          : 'PLANEJADO'}
                       </span>
                     </div>
                   </div>
@@ -281,35 +305,57 @@ export default function EventsBatchView({
                   </div>
                 </div>
 
-                <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
-                  {onDeleteEvent ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (
-                          window.confirm(
-                            `Tem certeza que deseja excluir o evento "${ev.title}"?`
-                          )
-                        ) {
-                          await onDeleteEvent(ev.id);
-                        }
-                      }}
-                      className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
-                    >
-                      Excluir Evento
-                    </button>
-                  ) : (
-                    <span className="text-xs text-slate-500">
-                      Pronto para lançamento em lote
-                    </span>
-                  )}
-                  <button
-                    onClick={() => openExecuteModal(ev)}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <CheckSquare className="w-4 h-4 text-emerald-400" />
-                    Lançar Presença & Assinar Lote
-                  </button>
+                <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {onDeleteEvent ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (
+                            window.confirm(
+                              `Tem certeza que deseja excluir o evento "${ev.title}"?`
+                            )
+                          ) {
+                            await onDeleteEvent(ev.id);
+                          }
+                        }}
+                        className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                      >
+                        Excluir Evento
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-500">
+                        Pronto para lançamento em lote
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {ev.status === 'PENDENTE_APROVACAO' && canApproveEvents && onApproveEvent && (
+                      <button
+                        type="button"
+                        onClick={() => onApproveEvent(ev.id)}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Aprovar Evento
+                      </button>
+                    )}
+
+                    {ev.status === 'PENDENTE_APROVACAO' ? (
+                      <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-300">
+                        Aguardando Aprovação do Diretor
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => openExecuteModal(ev)}
+                        className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <CheckSquare className="w-4 h-4 text-emerald-400" />
+                        Lançar Presença & Assinar Lote
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

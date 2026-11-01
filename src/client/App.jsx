@@ -150,16 +150,7 @@ export default function App() {
   const [showDocsModal, setShowDocsModal] = useState(false);
   const [showMcpModal, setShowMcpModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [showOnboardingTour, setShowOnboardingTour] = useState(() => {
-    if (isTestMode()) {
-      try {
-        return window.sessionStorage.getItem('dbv_tour_closed_v2') !== '1';
-      } catch {
-        return true;
-      }
-    }
-    return false;
-  });
+  const [showOnboardingTour, setShowOnboardingTour] = useState(false);
 
   // Inicializa captura de erros e console para Feedback Beta
   useEffect(() => {
@@ -325,17 +316,12 @@ export default function App() {
           const firstBase = res.user.assigned_classes[0].replace('_avancado', '');
           setSelectedBaseSlug(firstBase);
         }
-        if (isTestMode()) {
+        if (res.user) {
           try {
-            const closed = window.sessionStorage.getItem('dbv_tour_closed_v2');
-            if (closed !== '1') setShowOnboardingTour(true);
-          } catch {
-            setShowOnboardingTour(true);
-          }
-        } else if (res.user?.id) {
-          try {
-            const key = `dbv_tour_completed_${res.user.id}`;
-            if (!window.localStorage.getItem(key)) {
+            const roleKey = `dbv_tour_completed_role_${res.user.role}`;
+            const roleDone = window.localStorage.getItem(roleKey) === '1';
+            const userDone = res.user.id && window.localStorage.getItem(`dbv_tour_completed_${res.user.id}`) === '1';
+            if (!roleDone && !userDone) {
               setShowOnboardingTour(true);
             }
           } catch {}
@@ -352,12 +338,12 @@ export default function App() {
   const handleLoginSuccess = (token, loggedUser) => {
     setStoredToken(token);
     setUser(loggedUser);
-    if (isTestMode()) {
-      setShowOnboardingTour(true);
-    } else if (loggedUser?.id) {
+    if (loggedUser) {
       try {
-        const key = `dbv_tour_completed_${loggedUser.id}`;
-        if (!window.localStorage.getItem(key)) {
+        const roleKey = `dbv_tour_completed_role_${loggedUser.role}`;
+        const roleDone = window.localStorage.getItem(roleKey) === '1';
+        const userDone = loggedUser.id && window.localStorage.getItem(`dbv_tour_completed_${loggedUser.id}`) === '1';
+        if (!roleDone && !userDone) {
           setShowOnboardingTour(true);
         }
       } catch {}
@@ -392,16 +378,120 @@ export default function App() {
 
   const handleCloseTour = useCallback(() => {
     setShowOnboardingTour(false);
-    if (isTestMode()) {
-      try {
-        window.sessionStorage.setItem('dbv_tour_closed_v2', '1');
-      } catch {}
-    } else if (user?.id) {
-      try {
+    try {
+      if (user?.role) {
+        window.localStorage.setItem(`dbv_tour_completed_role_${user.role}`, '1');
+      }
+      if (user?.id) {
         window.localStorage.setItem(`dbv_tour_completed_${user.id}`, '1');
-      } catch {}
+      }
+      window.sessionStorage.setItem('dbv_tour_closed_v2', '1');
+    } catch {}
+  }, [user?.role, user?.id]);
+
+  // Fecha modais com a tecla ESC ou botão voltar do mobile (Android / Navegador)
+  const modalHistoryPushedRef = useRef(false);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        if (detailModal.isOpen) {
+          setDetailModal({ isOpen: false, requirement: null, pathfinder: null });
+          return;
+        }
+        if (bulkModal.isOpen) {
+          setBulkModal({ isOpen: false, requirements: [] });
+          return;
+        }
+        if (showOnboardingTour) {
+          handleCloseTour();
+          return;
+        }
+        if (showFeedbackModal) {
+          setShowFeedbackModal(false);
+          return;
+        }
+        if (showDocsModal) {
+          setShowDocsModal(false);
+          return;
+        }
+        if (showMcpModal) {
+          setShowMcpModal(false);
+          return;
+        }
+        if (showInstallGuideModal) {
+          setShowInstallGuideModal(false);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [
+    detailModal.isOpen,
+    bulkModal.isOpen,
+    showOnboardingTour,
+    showFeedbackModal,
+    showDocsModal,
+    showMcpModal,
+    showInstallGuideModal,
+    handleCloseTour,
+  ]);
+
+  useEffect(() => {
+    const hasAnyModal =
+      detailModal.isOpen ||
+      bulkModal.isOpen ||
+      showOnboardingTour ||
+      showFeedbackModal ||
+      showDocsModal ||
+      showMcpModal ||
+      showInstallGuideModal;
+
+    if (hasAnyModal) {
+      if (!modalHistoryPushedRef.current) {
+        try {
+          window.history.pushState({ dbvModalOpen: true }, '');
+          modalHistoryPushedRef.current = true;
+        } catch {}
+      }
+
+      const handlePopState = () => {
+        modalHistoryPushedRef.current = false;
+        if (detailModal.isOpen) {
+          setDetailModal({ isOpen: false, requirement: null, pathfinder: null });
+        } else if (bulkModal.isOpen) {
+          setBulkModal({ isOpen: false, requirements: [] });
+        } else if (showOnboardingTour) {
+          handleCloseTour();
+        } else if (showFeedbackModal) {
+          setShowFeedbackModal(false);
+        } else if (showDocsModal) {
+          setShowDocsModal(false);
+        } else if (showMcpModal) {
+          setShowMcpModal(false);
+        } else if (showInstallGuideModal) {
+          setShowInstallGuideModal(false);
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    } else {
+      modalHistoryPushedRef.current = false;
     }
-  }, [user?.id]);
+  }, [
+    detailModal.isOpen,
+    bulkModal.isOpen,
+    showOnboardingTour,
+    showFeedbackModal,
+    showDocsModal,
+    showMcpModal,
+    showInstallGuideModal,
+    handleCloseTour,
+  ]);
 
   // Normaliza e enriquece o catálogo e os registros com escopo estrito por padrão (RBAC)
   const normalizedData = useMemo(() => {
@@ -825,6 +915,17 @@ export default function App() {
     }
   };
 
+  // Aprovar Evento (Diretor / Gestor / com permissão)
+  const handleApproveEvent = async (eventId) => {
+    try {
+      await apiRequest(`/api/events/${eventId}/approve`, { method: 'POST' });
+      await fetchBootstrapData();
+      showToast('Evento aprovado pela Diretoria com sucesso!');
+    } catch (err) {
+      showToast(err.message || 'Erro ao aprovar evento.', 'error');
+    }
+  };
+
   // Salvar Líder
   const handleSaveLeader = async (payload, leaderId) => {
     try {
@@ -1055,21 +1156,15 @@ export default function App() {
             </span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {!showOnboardingTour && (
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    window.sessionStorage.removeItem('dbv_tour_closed_v2');
-                  } catch {}
-                  setShowOnboardingTour(true);
-                }}
-                className="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white text-slate-900 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                Abrir Trilha de Ensino
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowOnboardingTour(true)}
+              className="px-2.5 py-1 rounded-lg bg-slate-950 text-amber-300 hover:bg-slate-900 border border-amber-400 font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Abrir o passo a passo interativo deste cargo"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              💡 Trilha de Ensino ({user?.custom_role_title || user?.role})
+            </button>
             <button
               type="button"
               onClick={handleResetMyTest}
@@ -1422,6 +1517,8 @@ export default function App() {
               onCreateEvent={handleCreateEvent}
               onDeleteEvent={handleDeleteEvent}
               onExecuteEvent={handleExecuteEvent}
+              onApproveEvent={handleApproveEvent}
+              currentUser={user}
             />
           )}
 

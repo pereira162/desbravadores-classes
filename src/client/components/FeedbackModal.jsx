@@ -29,6 +29,18 @@ export default function FeedbackModal({ isOpen, onClose, user }) {
     }
   }, [user]);
 
+  // Fecha ao pressionar ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const capturedLogs = getCapturedBrowserLogs();
