@@ -71,6 +71,116 @@ function getEnrolledPathfindersForPdf(dbInstance, classSlug, unitId = 'ALL', ins
 }
 
 /**
+ * Divide os desbravadores de uma classe em folhas ou blocos de até 6:
+ * 1. Se a classe possuir divisão por turmas de instrutores, divide agrupando os desbravadores
+ *    de cada instrutor em folhas dedicadas.
+ * 2. Se um instrutor tiver mais de 6 desbravadores, divide de forma equilibrada (ex.: 10 = 5 + 5).
+ * 3. Desbravadores sem instrutor são distribuídos em página(s) própria(s).
+ * 4. Qualquer espaço restante na folha é preenchido como coluna em branco (sem qualquer texto)
+ *    para o instrutor poder escrever à vontade a caneta.
+ */
+function partitionPathfindersIntoSheets(enrolledPfs, dbInstance, classSlug, instructorId) {
+  const MAX_PER_SHEET = 6;
+
+  const balanceAndPad = (list, label = '') => {
+    const N = list.length;
+    if (N === 0) {
+      return [{ cols: [null, null, null, null, null, null], label }];
+    }
+    const numSheets = Math.ceil(N / MAX_PER_SHEET);
+    const baseSize = Math.floor(N / numSheets);
+    const remainder = N % numSheets;
+    const res = [];
+    let idx = 0;
+    for (let i = 0; i < numSheets; i++) {
+      const size = baseSize + (i < remainder ? 1 : 0);
+      const chunk = list.slice(idx, idx + size);
+      while (chunk.length < MAX_PER_SHEET) {
+        chunk.push(null);
+      }
+      res.push({ cols: chunk, label });
+      idx += size;
+    }
+    return res;
+  };
+
+  // Se um instrutor específico foi filtrado na tela
+  if (instructorId && instructorId !== 'ALL') {
+    let instName = '';
+    const u = dbInstance.prepare('SELECT name FROM users WHERE id = ?').get(instructorId);
+    if (u) instName = u.name;
+    return balanceAndPad(enrolledPfs, instName);
+  }
+
+  // Quando "TODOS" os desbravadores da classe estiverem selecionados:
+  const leaders = dbInstance.prepare(`
+    SELECT id, name, assigned_classes_json, assigned_pathfinders_json
+    FROM users
+    WHERE active = 1
+    ORDER BY name ASC
+  `).all();
+
+  const pfMap = new Map();
+  for (const pf of enrolledPfs) {
+    pfMap.set(pf.id, pf);
+  }
+
+  const assignedPfIdsSet = new Set();
+  const instructorGroups = [];
+
+  for (const leader of leaders) {
+    let classes = [];
+    try {
+      classes = JSON.parse(leader.assigned_classes_json || '[]');
+    } catch {}
+    const teachesClass = classes.includes('*') || classes.includes(classSlug) || classes.includes(`${classSlug}-avancado`);
+    if (!teachesClass) continue;
+
+    let assignedPfIds = [];
+    try {
+      assignedPfIds = JSON.parse(leader.assigned_pathfinders_json || '[]');
+    } catch {}
+
+    if (Array.isArray(assignedPfIds) && !assignedPfIds.includes('*') && assignedPfIds.length > 0) {
+      const myPfs = [];
+      for (const id of assignedPfIds) {
+        if (pfMap.has(id)) {
+          myPfs.push(pfMap.get(id));
+          assignedPfIdsSet.add(id);
+        }
+      }
+      if (myPfs.length > 0) {
+        instructorGroups.push({
+          instructorName: leader.name,
+          pathfinders: myPfs,
+        });
+      }
+    }
+  }
+
+  // Se não houver turmas divididas por instrutor na classe, divide a turma inteira de forma equilibrada (ex.: 10 = 5 + 5)
+  if (instructorGroups.length === 0) {
+    return balanceAndPad(enrolledPfs, '');
+  }
+
+  // Se houver divisão por instrutores:
+  const sheets = [];
+  for (const group of instructorGroups) {
+    const subSheets = balanceAndPad(group.pathfinders, group.instructorName);
+    sheets.push(...subSheets);
+  }
+
+  // Desbravadores que não foram atribuídos a nenhum instrutor
+  const unassignedPfs = enrolledPfs.filter((p) => !assignedPfIdsSet.has(p.id));
+  if (unassignedPfs.length > 0) {
+    const unassignedSheets = balanceAndPad(unassignedPfs, 'Sem Instrutor / Geral');
+    sheets.push(...unassignedSheets);
+  }
+
+  return sheets.length > 0 ? sheets : [{ cols: [null, null, null, null, null, null], label: '' }];
+}
+
+/**
  * 1. CONTROLE DO INSTRUTOR (1 Página A4 por grupo de 6 desbravadores)
  */
 async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL', instructorId = 'ALL', outputPath, dbInstance }) {
@@ -112,35 +222,12 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
     progressMap[`${pr.pathfinder_id}:${pr.requirement_id}`] = pr.status;
   }
 
-  // Divide desbravadores em blocos de até 6 por folha.
-  // Se houver menos de 6 desbravadores, preenche o restante com null (espaço em branco para preenchimento manual a caneta).
-  const COLS_PER_SHEET = 6;
-  const totalPfs = enrolledPfs.length;
-  let sheets = [];
-  if (totalPfs <= COLS_PER_SHEET) {
-    const chunk = [...enrolledPfs];
-    while (chunk.length < COLS_PER_SHEET) {
-      chunk.push(null);
-    }
-    sheets = [chunk];
-  } else {
-    const numSheets = Math.ceil(totalPfs / COLS_PER_SHEET);
-    const baseSize = Math.floor(totalPfs / numSheets);
-    const remainder = totalPfs % numSheets;
-    let currentIndex = 0;
-    for (let i = 0; i < numSheets; i++) {
-      const size = baseSize + (i < remainder ? 1 : 0);
-      const chunk = enrolledPfs.slice(currentIndex, currentIndex + size);
-      while (chunk.length < COLS_PER_SHEET) {
-        chunk.push(null);
-      }
-      sheets.push(chunk);
-      currentIndex += size;
-    }
-  }
-  if (sheets.length === 0) {
-    sheets = [[null, null, null, null, null, null]];
-  }
+  const sheets = partitionPathfindersIntoSheets(
+    enrolledPfs,
+    dbInstance,
+    classSlug,
+    instructorId
+  );
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -158,7 +245,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
     doc.pipe(writeStream);
 
     for (let sheetIdx = 0; sheetIdx < sheets.length; sheetIdx++) {
-      const cols = sheets[sheetIdx];
+      const { cols, label: sheetInstructorLabel } = sheets[sheetIdx];
       doc.addPage({ size: 'A4', layout: 'portrait', margin: 15 });
 
       const pageWidth = doc.page.width;
@@ -175,8 +262,9 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
         .text('MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA', margin + 8, y + 6);
       doc.fillColor(cfg.color).fontSize(11).font('Helvetica-Bold')
         .text(`CONTROLE DO INSTRUTOR — ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 16);
+      const currentInstLabel = sheetInstructorLabel || instructorLabel;
       doc.fillColor('#475569').fontSize(7.5).font('Helvetica')
-        .text(`Faixa Etária: ${cfg.age} anos • Currículo Oficial DSA 2026${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${sheets.length > 1 ? ` • Folha ${sheetIdx + 1} de ${sheets.length}` : ''}`, margin + 8, y + 30);
+        .text(`Faixa Etária: ${cfg.age} anos • Currículo Oficial DSA 2026${currentInstLabel ? ` • Instrutor(a): ${currentInstLabel}` : ''}${sheets.length > 1 ? ` • Folha ${sheetIdx + 1} de ${sheets.length}` : ''}`, margin + 8, y + 30);
 
       // Dados do Clube no canto direito
       const rightX = margin + contentWidth - 175;
@@ -206,7 +294,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
       for (let c = 0; c < colsCount; c++) {
         const pf = cols[c];
         const cellX = margin + colCodW + colReqW + (c * colColW);
-        doc.rect(cellX, y, colColW, headerH).fillAndStroke('#f1f5f9', '#94a3b8');
+        doc.rect(cellX, y, colColW, headerH).fillAndStroke(pf ? '#f1f5f9' : '#ffffff', '#94a3b8');
 
         if (pf) {
           const parts = pf.name.replace(/\(.*\)/g, '').trim().split(/\s+/);
@@ -222,17 +310,8 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
               align: 'left',
             });
           doc.restore();
-        } else {
-          // Espaço em branco para o instrutor preencher com caneta
-          doc.save();
-          doc.rotate(-90, { origin: [cellX + colColW / 2, y + headerH / 2] });
-          doc.fillColor('#64748b').fontSize(6).font('Helvetica')
-            .text('Nome: ________________', cellX + colColW / 2 - 32, y + headerH / 2 - 3.5, {
-              width: 64,
-              align: 'left',
-            });
-          doc.restore();
         }
+        // Se pf for null/vazio, fica completamente em branco (sem qualquer texto) para preenchimento manual a caneta
       }
 
       y += headerH;
@@ -892,38 +971,15 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
     const pageHeight = 595.28;
     const contentWidth = pageWidth - margin * 2; // ~805pt
 
-    // Divide desbravadores em blocos equilibrados de no máximo 6 por grupo de páginas
-    // Se houver menos de 6 desbravadores no bloco, preenche até 6 com null para anotações manuais a caneta
-    const COLS_PER_BLOCK = 6;
-    const totalPfs = enrolledPfs.length;
-    let blocks = [];
-    if (totalPfs <= COLS_PER_BLOCK) {
-      const chunk = [...enrolledPfs];
-      while (chunk.length < COLS_PER_BLOCK) {
-        chunk.push(null);
-      }
-      blocks = [chunk];
-    } else {
-      const numBlocks = Math.ceil(totalPfs / COLS_PER_BLOCK);
-      const baseSize = Math.floor(totalPfs / numBlocks);
-      const remainder = totalPfs % numBlocks;
-      let currentIndex = 0;
-      for (let i = 0; i < numBlocks; i++) {
-        const size = baseSize + (i < remainder ? 1 : 0);
-        const chunk = enrolledPfs.slice(currentIndex, currentIndex + size);
-        while (chunk.length < COLS_PER_BLOCK) {
-          chunk.push(null);
-        }
-        blocks.push(chunk);
-        currentIndex += size;
-      }
-    }
-    if (blocks.length === 0) {
-      blocks = [[null, null, null, null, null, null]];
-    }
+    const blocks = partitionPathfindersIntoSheets(
+      enrolledPfs,
+      dbInstance,
+      classSlug,
+      instructorId
+    );
 
     for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
-      const currentCols = blocks[bIdx];
+      const { cols: currentCols, label: blockInstructorLabel } = blocks[bIdx];
       const colsInBlock = 6;
       const colCodW = 32;
       const colPfW = 54; // 6 colunas * 54pt = 324pt
@@ -941,8 +997,9 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
           .text('MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA', margin + 8, y + 4);
         doc.fillColor(cfg.color).fontSize(10).font('Helvetica-Bold')
           .text(`MATRIZ COMPLETA DE REQUISITOS: ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 13);
+        const currentInstLabel = blockInstructorLabel || instructorLabel;
         doc.fillColor('#ffffff').fontSize(7).font('Helvetica')
-          .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length}` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 24);
+          .text(`Clube: ${clubName}${currentInstLabel ? ` • Instrutor(a): ${currentInstLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length}` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 24);
         y += 40;
 
         // Cabeçalho da tabela com os desbravadores do bloco
@@ -955,7 +1012,7 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
         for (let c = 0; c < colsInBlock; c++) {
           const pf = currentCols[c];
           const cellX = margin + colCodW + colReqW + (c * colPfW);
-          doc.rect(cellX, y, colPfW, headerTableH).fillAndStroke('#f1f5f9', '#94a3b8');
+          doc.rect(cellX, y, colPfW, headerTableH).fillAndStroke(pf ? '#f1f5f9' : '#ffffff', '#94a3b8');
 
           if (pf) {
             doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
@@ -964,11 +1021,8 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
                 align: 'center',
                 height: headerTableH - 12,
               });
-          } else {
-            doc.fillColor('#64748b').fontSize(6).font('Helvetica')
-              .text('Nome:', cellX + 3, y + 8, { width: colPfW - 6, align: 'center' })
-              .text('________________', cellX + 3, y + 20, { width: colPfW - 6, align: 'center' });
           }
+          // Se pf for null/vazio, fica completamente em branco (sem qualquer texto) para preenchimento manual a caneta
         }
 
         y += headerTableH;
