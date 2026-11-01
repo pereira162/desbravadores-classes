@@ -1,16 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   UserPlus,
   FolderPlus,
   Search,
   Award,
-  CheckCircle2,
-  Clock,
   Edit3,
   Trash2,
-  FileDown,
-  Printer,
   Sparkles,
   X,
   ChevronRight,
@@ -56,9 +52,6 @@ export default function PathfindersView({
   const [cardOnlyPending, setCardOnlyPending] = useState(false);
   const [cardSelectedClassSlug, setCardSelectedClassSlug] = useState('ALL');
   const [compactOnePageMode, setCompactOnePageMode] = useState(false);
-  const [exportingCardPdf, setExportingCardPdf] = useState(false);
-  const cardContainerRef = useRef(null);
-  const compactCardRef = useRef(null);
 
   // Estado do Modal de Novo/Editar Desbravador
   const [pfModalOpen, setPfModalOpen] = useState(false);
@@ -675,29 +668,9 @@ export default function PathfindersView({
             </div>
           ) : (
             <>
-              {/* Container Geral do Cartão Virtual Individual (Incluindo Cabeçalho para Ficha Completa) */}
-              <div id="card-container" ref={cardContainerRef} className="space-y-4">
-                <div className="pdf-item bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-                  {/* Cabeçalho Oficial adicional visível no topo do PDF da Ficha Completa */}
-                  <div className="hidden pdf-show-block border-b-2 border-slate-900 pb-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                          MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA
-                        </div>
-                        <h1 className="text-lg font-black uppercase text-slate-950">
-                          FICHA INDIVIDUAL DETALHADA DE CLASSES — 2026
-                        </h1>
-                      </div>
-                      <div className="text-right text-xs font-bold text-slate-700">
-                        <div>Clube: {settings?.club_name || 'Clube de Desbravadores'}</div>
-                        <div>
-                          Concluído: {activePf.pct}% ({activePf.approvedReqs}/{activePf.totalReqs} requisitos)
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
+              {/* Container Geral do Cartão Virtual Individual */}
+              <div id="card-container" className="space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -868,7 +841,6 @@ export default function PathfindersView({
                 {compactOnePageMode ? (
                   <div
                     id="compact-card-container"
-                    ref={compactCardRef}
                     className="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm font-sans"
                     style={{ minHeight: '1080px' }}
                   >
@@ -915,7 +887,6 @@ export default function PathfindersView({
                               return (
                                 <div
                                   key={req.id}
-                                  data-pdf-state={req.status}
                                   className="flex items-start justify-between gap-1.5 py-0.5 border-b border-slate-100 last:border-0 leading-tight"
                                 >
                                   <div className="min-w-0 pr-1">
@@ -973,7 +944,7 @@ export default function PathfindersView({
                         className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
                       >
                         <div
-                          className="pdf-item px-5 py-3 text-white flex items-center justify-between"
+                          className="px-5 py-3 text-white flex items-center justify-between"
                           style={{
                             backgroundColor: clsBlock.classInfo?.color || '#334155',
                           }}
@@ -992,7 +963,7 @@ export default function PathfindersView({
                         </div>
 
                         {clsBlock.requirements.length === 0 ? (
-                          <div className="pdf-item p-6 text-center text-xs text-emerald-700 font-semibold">
+                          <div className="p-6 text-center text-xs text-emerald-700 font-semibold">
                             Parabéns! Todos os requisitos desta classe já foram aprovados!
                           </div>
                         ) : (
@@ -1010,11 +981,10 @@ export default function PathfindersView({
                               return (
                                 <div
                                   key={req.id}
-                                  data-pdf-state={req.status}
                                   onClick={() =>
                                     onOpenRequirementDetail(activePf, req)
                                   }
-                                  className="pdf-item p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                  className="p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                                 >
                                   <div className="space-y-1">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -1098,26 +1068,11 @@ export default function PathfindersView({
                                   </div>
 
                                   <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
-                                    {req.status === 'PENDENTE' ? (
-                                      <>
-                                        {/* Visível na tela do site, mas oculto no PDF */}
-                                        <span
-                                          className={`pdf-hide px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
-                                        >
-                                          {cfg.label}
-                                        </span>
-                                        {/* Visível apenas no PDF: espaço limpo sem texto para o instrutor marcar/assinar */}
-                                        <span className="hidden pdf-show w-20 h-6 rounded-lg border border-slate-300 bg-white text-transparent select-none">
-                                          &nbsp;
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span
-                                        className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
-                                      >
-                                        {cfg.label}
-                                      </span>
-                                    )}
+                                    <span
+                                      className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
+                                    >
+                                      {cfg.label}
+                                    </span>
                                     {isPathfinderUser && req.status !== 'APROVADO' && (
                                       <span className="text-[10px] font-bold text-teal-700 flex items-center gap-1 no-print">
                                         <Camera className="w-3 h-3" />

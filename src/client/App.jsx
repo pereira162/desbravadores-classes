@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import {
   LayoutDashboard,
   Compass,
@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  Download,
   Smartphone,
   X,
   BookOpen,
@@ -36,18 +35,88 @@ import { initBrowserLogger } from './logger';
 import { ROLE_CONFIG, STATUS_CONFIG } from './constants';
 import LoginView from './components/LoginView';
 import DashboardView from './components/DashboardView';
-import DemandPlanningView from './components/DemandPlanningView';
 import ClassMatrixView from './components/ClassMatrixView';
 import PathfindersView from './components/PathfindersView';
-import EventsBatchView from './components/EventsBatchView';
-import LeadersSettingsView from './components/LeadersSettingsView';
-import AuditLogsView from './components/AuditLogsView';
 import RequirementDetailModal from './components/RequirementDetailModal';
 import BulkSignModal from './components/BulkSignModal';
 import OnboardingTour from './components/OnboardingTour';
-import DocumentationModal from './components/DocumentationModal';
-import McpSettingsAndChatModal from './components/McpSettingsAndChatModal';
 import FeedbackModal from './components/FeedbackModal';
+
+const DemandPlanningView = lazy(() => import('./components/DemandPlanningView'));
+const EventsBatchView = lazy(() => import('./components/EventsBatchView'));
+const LeadersSettingsView = lazy(() => import('./components/LeadersSettingsView'));
+const AuditLogsView = lazy(() => import('./components/AuditLogsView'));
+const DocumentationModal = lazy(() => import('./components/DocumentationModal'));
+const McpSettingsAndChatModal = lazy(() => import('./components/McpSettingsAndChatModal'));
+
+function PwaInstallGuideModal({ isOpen, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-950 dark:text-white">
+                Instalar o SGC Classes
+              </h3>
+              <p className="text-xs text-slate-500">
+                Acesso direto com ícone no seu celular ou PC
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+            <strong className="text-slate-900 dark:text-white block font-bold">
+              📱 No Android / Google Chrome:
+            </strong>
+            <span>
+              Toque nos <strong>três pontinhos (⋮)</strong> no canto superior direito do navegador e selecione <strong>&ldquo;Instalar aplicativo&rdquo;</strong> ou <strong>&ldquo;Adicionar à tela inicial&rdquo;</strong>.
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+            <strong className="text-slate-900 dark:text-white block font-bold">
+              🍏 No iPhone / iPad (Safari):
+            </strong>
+            <span>
+              Toque no ícone de <strong>Compartilhar (⎋)</strong> na barra inferior do Safari e escolha <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong> (+).
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+            <strong className="text-slate-900 dark:text-white block font-bold">
+              💻 No Computador (Chrome / Edge):
+            </strong>
+            <span>
+              Clique no ícone de <strong>instalação (computador/seta)</strong> no canto direito da barra de endereços (URL).
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+        >
+          Entendi, fechar
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const NAV_ITEMS = [
   { id: 'DASHBOARD', label: 'Painel & Fila', icon: LayoutDashboard },
@@ -890,10 +959,14 @@ export default function App() {
           onToggleTheme={handleToggleTheme}
         />
 
-        <DocumentationModal
-          isOpen={showDocsModal}
-          onClose={() => setShowDocsModal(false)}
-        />
+        {showDocsModal && (
+          <Suspense fallback={null}>
+            <DocumentationModal
+              isOpen={showDocsModal}
+              onClose={() => setShowDocsModal(false)}
+            />
+          </Suspense>
+        )}
 
         <FeedbackModal
           isOpen={showFeedbackModal}
@@ -901,71 +974,10 @@ export default function App() {
           user={null}
         />
 
-        {showInstallGuideModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                    <Smartphone className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-950 dark:text-white">
-                      Instalar o SGC Classes
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Acesso direto com ícone no seu celular ou PC
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowInstallGuideModal(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <strong className="text-slate-900 dark:text-white block font-bold">
-                    📱 No Android / Google Chrome:
-                  </strong>
-                  <span>
-                    Toque nos <strong>três pontinhos (⋮)</strong> no canto superior direito do navegador e selecione <strong>&ldquo;Instalar aplicativo&rdquo;</strong> ou <strong>&ldquo;Adicionar à tela inicial&rdquo;</strong>.
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <strong className="text-slate-900 dark:text-white block font-bold">
-                    🍏 No iPhone / iPad (Safari):
-                  </strong>
-                  <span>
-                    Toque no ícone de <strong>Compartilhar (⎋)</strong> na barra inferior do Safari e escolha <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong> (+).
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <strong className="text-slate-900 dark:text-white block font-bold">
-                    💻 No Computador (Chrome / Edge):
-                  </strong>
-                  <span>
-                    Clique no ícone de <strong>instalação (computador/seta)</strong> no canto direito da barra de endereços (URL).
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowInstallGuideModal(false)}
-                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
-              >
-                Entendi, fechar
-              </button>
-            </div>
-          </div>
-        )}
+        <PwaInstallGuideModal
+          isOpen={showInstallGuideModal}
+          onClose={() => setShowInstallGuideModal(false)}
+        />
       </div>
     );
   }
@@ -1256,144 +1268,153 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'DASHBOARD' && user.role !== 'DESBRAVADOR' && (
-          <DashboardView
-            catalog={normalizedData.catalog}
-            pathfinders={normalizedData.pathfinders}
-            units={normalizedData.units}
-            progressMap={normalizedData.progressMap}
-            classesMap={normalizedData.classesMap}
-            requirementsMap={normalizedData.requirementsMap}
-            events={normalizedData.events}
-            settings={normalizedData.settings}
-            unificationAlerts={normalizedData.unificationAlerts}
-            currentUser={user}
-            onNavigate={setActiveTab}
-            onSelectClassMatrix={(baseSlug, mode) => {
-              setSelectedBaseSlug(baseSlug);
-              setSelectedMatrixMode(mode || 'BOTH');
-              setActiveTab('MATRIX');
-            }}
-            onSelectPathfinderCard={(pfId) => {
-              setSelectedPathfinderId(pfId);
-              setActiveTab('PATHFINDERS');
-            }}
-            onOpenRequirementDetail={handleOpenRequirementDetail}
-            onQuickApproveBatch={handleQuickApproveBatch}
-          />
-        )}
+        <Suspense
+          fallback={
+            <div className="py-16 flex items-center justify-center text-slate-500 text-xs font-bold gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
+              Carregando módulo...
+            </div>
+          }
+        >
+          {activeTab === 'DASHBOARD' && user.role !== 'DESBRAVADOR' && (
+            <DashboardView
+              catalog={normalizedData.catalog}
+              pathfinders={normalizedData.pathfinders}
+              units={normalizedData.units}
+              progressMap={normalizedData.progressMap}
+              classesMap={normalizedData.classesMap}
+              requirementsMap={normalizedData.requirementsMap}
+              events={normalizedData.events}
+              settings={normalizedData.settings}
+              unificationAlerts={normalizedData.unificationAlerts}
+              currentUser={user}
+              onNavigate={setActiveTab}
+              onSelectClassMatrix={(baseSlug, mode) => {
+                setSelectedBaseSlug(baseSlug);
+                setSelectedMatrixMode(mode || 'BOTH');
+                setActiveTab('MATRIX');
+              }}
+              onSelectPathfinderCard={(pfId) => {
+                setSelectedPathfinderId(pfId);
+                setActiveTab('PATHFINDERS');
+              }}
+              onOpenRequirementDetail={handleOpenRequirementDetail}
+              onQuickApproveBatch={handleQuickApproveBatch}
+            />
+          )}
 
-        {activeTab === 'DEMAND' && user.role !== 'DESBRAVADOR' && (
-          <DemandPlanningView
-            catalog={normalizedData.catalog}
-            pathfinders={normalizedData.pathfinders}
-            units={normalizedData.units}
-            progressMap={normalizedData.progressMap}
-            classesMap={normalizedData.classesMap}
-            currentUser={user}
-            onRefresh={fetchBootstrapData}
-            showToast={showToast}
-            onOpenRequirementDetail={handleOpenRequirementDetail}
-            onOpenBulkSign={handleOpenBulkSign}
-            onCreateEventFromDemand={(draft) => {
-              setPendingEventDraft({
-                title: draft.title,
-                description: draft.description,
-                event_type: 'ACAMPAMENTO',
-                event_date: new Date().toISOString().slice(0, 10),
-                requirement_ids: (draft.requirements || []).map((r) => r.id),
-              });
-              setActiveTab('EVENTS');
-            }}
-          />
-        )}
+          {activeTab === 'DEMAND' && user.role !== 'DESBRAVADOR' && (
+            <DemandPlanningView
+              catalog={normalizedData.catalog}
+              pathfinders={normalizedData.pathfinders}
+              units={normalizedData.units}
+              progressMap={normalizedData.progressMap}
+              classesMap={normalizedData.classesMap}
+              currentUser={user}
+              onRefresh={fetchBootstrapData}
+              showToast={showToast}
+              onOpenRequirementDetail={handleOpenRequirementDetail}
+              onOpenBulkSign={handleOpenBulkSign}
+              onCreateEventFromDemand={(draft) => {
+                setPendingEventDraft({
+                  title: draft.title,
+                  description: draft.description,
+                  event_type: 'ACAMPAMENTO',
+                  event_date: new Date().toISOString().slice(0, 10),
+                  requirement_ids: (draft.requirements || []).map((r) => r.id),
+                });
+                setActiveTab('EVENTS');
+              }}
+            />
+          )}
 
-        {activeTab === 'MATRIX' && user.role !== 'DESBRAVADOR' && (
-          <ClassMatrixView
-            catalog={normalizedData.catalog}
-            pathfinders={normalizedData.pathfinders}
-            units={normalizedData.units}
-            leaders={normalizedData.leaders}
-            progressMap={normalizedData.progressMap}
-            classesMap={normalizedData.classesMap}
-            selectedBaseSlug={selectedBaseSlug}
-            onSelectBaseSlug={setSelectedBaseSlug}
-            selectedMode={selectedMatrixMode}
-            onSelectMode={setSelectedMatrixMode}
-            currentUser={user}
-            settings={normalizedData.settings}
-            onRefresh={fetchBootstrapData}
-            showToast={showToast}
-            onOpenRequirementDetail={handleOpenRequirementDetail}
-            onOpenBulkSign={handleOpenBulkSign}
-            onQuickToggleCell={handleQuickToggleCell}
-            onSelectPathfinderCard={(pfId) => {
-              setSelectedPathfinderId(pfId);
-              setActiveTab('PATHFINDERS');
-            }}
-          />
-        )}
+          {activeTab === 'MATRIX' && user.role !== 'DESBRAVADOR' && (
+            <ClassMatrixView
+              catalog={normalizedData.catalog}
+              pathfinders={normalizedData.pathfinders}
+              units={normalizedData.units}
+              leaders={normalizedData.leaders}
+              progressMap={normalizedData.progressMap}
+              classesMap={normalizedData.classesMap}
+              selectedBaseSlug={selectedBaseSlug}
+              onSelectBaseSlug={setSelectedBaseSlug}
+              selectedMode={selectedMatrixMode}
+              onSelectMode={setSelectedMatrixMode}
+              currentUser={user}
+              settings={normalizedData.settings}
+              onRefresh={fetchBootstrapData}
+              showToast={showToast}
+              onOpenRequirementDetail={handleOpenRequirementDetail}
+              onOpenBulkSign={handleOpenBulkSign}
+              onQuickToggleCell={handleQuickToggleCell}
+              onSelectPathfinderCard={(pfId) => {
+                setSelectedPathfinderId(pfId);
+                setActiveTab('PATHFINDERS');
+              }}
+            />
+          )}
 
-        {(activeTab === 'PATHFINDERS' || user.role === 'DESBRAVADOR') && (
-          <PathfindersView
-            catalog={normalizedData.catalog}
-            pathfinders={normalizedData.pathfinders}
-            units={normalizedData.units}
-            progressMap={normalizedData.progressMap}
-            classesMap={normalizedData.classesMap}
-            selectedPathfinderId={selectedPathfinderId}
-            onSelectPathfinderId={setSelectedPathfinderId}
-            currentUser={user}
-            onSavePathfinder={handleSavePathfinder}
-            onDeletePathfinder={handleDeletePathfinder}
-            onSaveUnit={handleSaveUnit}
-            onDeleteUnit={handleDeleteUnit}
-            onInvitePathfinder={handleInvitePathfinder}
-            onOpenRequirementDetail={handleOpenRequirementDetail}
-            settings={normalizedData.settings}
-          />
-        )}
+          {(activeTab === 'PATHFINDERS' || user.role === 'DESBRAVADOR') && (
+            <PathfindersView
+              catalog={normalizedData.catalog}
+              pathfinders={normalizedData.pathfinders}
+              units={normalizedData.units}
+              progressMap={normalizedData.progressMap}
+              classesMap={normalizedData.classesMap}
+              selectedPathfinderId={selectedPathfinderId}
+              onSelectPathfinderId={setSelectedPathfinderId}
+              currentUser={user}
+              onSavePathfinder={handleSavePathfinder}
+              onDeletePathfinder={handleDeletePathfinder}
+              onSaveUnit={handleSaveUnit}
+              onDeleteUnit={handleDeleteUnit}
+              onInvitePathfinder={handleInvitePathfinder}
+              onOpenRequirementDetail={handleOpenRequirementDetail}
+              settings={normalizedData.settings}
+            />
+          )}
 
-        {activeTab === 'EVENTS' && user.role !== 'DESBRAVADOR' && (
-          <EventsBatchView
-            catalog={normalizedData.catalog}
-            events={normalizedData.events}
-            pathfinders={normalizedData.pathfinders}
-            classesMap={normalizedData.classesMap}
-            requirementsMap={normalizedData.requirementsMap}
-            progressMap={normalizedData.progressMap}
-            pendingEventDraft={pendingEventDraft}
-            onClearEventDraft={() => setPendingEventDraft(null)}
-            onCreateEvent={handleCreateEvent}
-            onDeleteEvent={handleDeleteEvent}
-            onExecuteEvent={handleExecuteEvent}
-          />
-        )}
+          {activeTab === 'EVENTS' && user.role !== 'DESBRAVADOR' && (
+            <EventsBatchView
+              catalog={normalizedData.catalog}
+              events={normalizedData.events}
+              pathfinders={normalizedData.pathfinders}
+              classesMap={normalizedData.classesMap}
+              requirementsMap={normalizedData.requirementsMap}
+              progressMap={normalizedData.progressMap}
+              pendingEventDraft={pendingEventDraft}
+              onClearEventDraft={() => setPendingEventDraft(null)}
+              onCreateEvent={handleCreateEvent}
+              onDeleteEvent={handleDeleteEvent}
+              onExecuteEvent={handleExecuteEvent}
+            />
+          )}
 
-        {activeTab === 'LEADERS' && user.role !== 'DESBRAVADOR' && (
-          <LeadersSettingsView
-            catalog={normalizedData.catalog}
-            leaders={normalizedData.leaders}
-            units={normalizedData.allUnits || normalizedData.units}
-            settings={normalizedData.settings}
-            currentUser={user}
-            onSaveLeader={handleSaveLeader}
-            onDeleteLeader={handleDeleteLeader}
-            onSendLeaderInvite={handleSendLeaderInvite}
-            onSaveSettings={handleSaveSettings}
-            onTestSmtp={handleTestSmtp}
-            onOpenMcpModal={() => setShowMcpModal(true)}
-          />
-        )}
+          {activeTab === 'LEADERS' && user.role !== 'DESBRAVADOR' && (
+            <LeadersSettingsView
+              catalog={normalizedData.catalog}
+              leaders={normalizedData.leaders}
+              units={normalizedData.allUnits || normalizedData.units}
+              settings={normalizedData.settings}
+              currentUser={user}
+              onSaveLeader={handleSaveLeader}
+              onDeleteLeader={handleDeleteLeader}
+              onSendLeaderInvite={handleSendLeaderInvite}
+              onSaveSettings={handleSaveSettings}
+              onTestSmtp={handleTestSmtp}
+              onOpenMcpModal={() => setShowMcpModal(true)}
+            />
+          )}
 
-        {activeTab === 'AUDIT' && user.role !== 'DESBRAVADOR' && (
-          <AuditLogsView
-            auditLogs={normalizedData.auditLogs}
-            leaders={normalizedData.leaders}
-            currentUser={user}
-            onRevertLog={handleRevertLog}
-          />
-        )}
+          {activeTab === 'AUDIT' && user.role !== 'DESBRAVADOR' && (
+            <AuditLogsView
+              auditLogs={normalizedData.auditLogs}
+              leaders={normalizedData.leaders}
+              currentUser={user}
+              onRevertLog={handleRevertLog}
+            />
+          )}
+        </Suspense>
       </main>
 
       {/* Modal Global: Detalhe / Subitens / Evidências do Requisito */}
@@ -1430,19 +1451,27 @@ export default function App() {
       />
 
       {/* Modal de Documentação Completa */}
-      <DocumentationModal
-        isOpen={showDocsModal}
-        onClose={() => setShowDocsModal(false)}
-      />
+      {showDocsModal && (
+        <Suspense fallback={null}>
+          <DocumentationModal
+            isOpen={showDocsModal}
+            onClose={() => setShowDocsModal(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Modal de IA & Servidor MCP (Exclusivo Diretor / Gestor) */}
-      <McpSettingsAndChatModal
-        isOpen={showMcpModal}
-        onClose={() => setShowMcpModal(false)}
-        user={user}
-        leaders={normalizedData.leaders}
-        onRefresh={fetchBootstrapData}
-      />
+      {showMcpModal && (
+        <Suspense fallback={null}>
+          <McpSettingsAndChatModal
+            isOpen={showMcpModal}
+            onClose={() => setShowMcpModal(false)}
+            user={user}
+            leaders={normalizedData.leaders}
+            onRefresh={fetchBootstrapData}
+          />
+        </Suspense>
+      )}
 
       {/* Modal de Feedback Beta & Relato de Erros */}
       <FeedbackModal
@@ -1452,71 +1481,10 @@ export default function App() {
       />
 
       {/* Modal de Instruções de Instalação do App (PWA) */}
-      {showInstallGuideModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-950 dark:text-white">
-                    Instalar o SGC Classes
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Acesso direto com ícone no seu celular ou PC
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowInstallGuideModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                <strong className="text-slate-900 dark:text-white block font-bold">
-                  📱 No Android / Google Chrome:
-                </strong>
-                <span>
-                  Toque nos <strong>três pontinhos (⋮)</strong> no canto superior direito do navegador e selecione <strong>&ldquo;Instalar aplicativo&rdquo;</strong> ou <strong>&ldquo;Adicionar à tela inicial&rdquo;</strong>.
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                <strong className="text-slate-900 dark:text-white block font-bold">
-                  🍏 No iPhone / iPad (Safari):
-                </strong>
-                <span>
-                  Toque no ícone de <strong>Compartilhar (⎋)</strong> na barra inferior do Safari e escolha <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong> (+).
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                <strong className="text-slate-900 dark:text-white block font-bold">
-                  💻 No Computador (Chrome / Edge):
-                </strong>
-                <span>
-                  Clique no ícone de <strong>instalação (computador/seta)</strong> no canto direito da barra de endereços (URL).
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowInstallGuideModal(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
-            >
-              Entendi, fechar
-            </button>
-          </div>
-        </div>
-      )}
+      <PwaInstallGuideModal
+        isOpen={showInstallGuideModal}
+        onClose={() => setShowInstallGuideModal(false)}
+      />
     </div>
   );
 }

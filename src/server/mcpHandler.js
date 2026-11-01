@@ -272,7 +272,20 @@ function hashMcpApiKey(rawKey) {
 
 function getEffectiveEquivalenceData(targetDb) {
   const metadata = loadCardsMetadata();
-  const baseGroups = { ...(metadata.equivalence_groups || {}) };
+  const baseGroups = {};
+  const rawEq = metadata.equivalence_groups || [];
+  if (Array.isArray(rawEq)) {
+    for (const eq of rawEq) {
+      const code = eq.id || eq.code;
+      if (code) baseGroups[code] = { ...eq, id: code, code };
+    }
+  } else if (rawEq && typeof rawEq === 'object') {
+    for (const [k, v] of Object.entries(rawEq)) {
+      const code = v?.id || v?.code || k;
+      baseGroups[code] = { ...v, id: code, code };
+    }
+  }
+
   const settings = targetDb.prepare('SELECT equivalences_override_json FROM club_settings WHERE id = 1').get();
   let overrides = { groups: {}, reqMap: {} };
   try {
@@ -285,10 +298,12 @@ function getEffectiveEquivalenceData(targetDb) {
     }
   } catch {}
 
-  const mergedGroups = { ...baseGroups, ...overrides.groups };
-  for (const [k, v] of Object.entries(mergedGroups)) {
+  const mergedGroups = { ...baseGroups };
+  for (const [k, v] of Object.entries(overrides.groups)) {
     if (v && v.deleted) {
       delete mergedGroups[k];
+    } else if (v) {
+      mergedGroups[k] = { ...mergedGroups[k], ...v, id: k, code: k };
     }
   }
   return { mergedGroups, reqMapOverrides: overrides.reqMap, rawOverrides: overrides };
@@ -297,7 +312,7 @@ function getEffectiveEquivalenceData(targetDb) {
 function computeUnificationAlerts(targetDb) {
   const { mergedGroups, reqMapOverrides } = getEffectiveEquivalenceData(targetDb);
   const reqs = targetDb.prepare(`
-    SELECT r.id, r.code, r.title, r.class_slug, r.base_class_slug, r.equivalence_group, c.name as class_name
+    SELECT r.id, r.code, r.title, r.description, r.class_slug, r.base_class_slug, r.equivalence_group, c.name as class_name
     FROM requirements_catalog r
     JOIN classes_catalog c ON c.slug = r.class_slug
   `).all();
@@ -317,7 +332,13 @@ function computeUnificationAlerts(targetDb) {
     }
   }
 
-  const pfs = targetDb.prepare('SELECT id, name, unit_id FROM pathfinders WHERE active = 1 ORDER BY name ASC').all();
+  const pfs = targetDb.prepare(`
+    SELECT p.id, p.name, p.unit_id, u.name as unit_name
+    FROM pathfinders p
+    LEFT JOIN units u ON u.id = p.unit_id
+    WHERE p.active = 1
+    ORDER BY p.name ASC
+  `).all();
   const enrollments = targetDb.prepare('SELECT pathfinder_id, class_slug FROM class_enrollments').all();
   const progress = targetDb.prepare('SELECT pathfinder_id, requirement_id, status FROM progress_records').all();
 
@@ -352,23 +373,40 @@ function computeUnificationAlerts(targetDb) {
       if (doneReqs.length > 0 && pendingReqs.length > 0) {
         const sourceReq = doneReqs[0];
         const sourceStatus = progMap[`${pf.id}:${sourceReq.id}`];
+        const eqTitle = mergedGroups[eqCode]?.title || eqCode;
         for (const targetReq of pendingReqs) {
           alerts.push({
             id: `${pf.id}:${eqCode}:${targetReq.id}`,
+            pathfinder_id: pf.id,
             pathfinderId: pf.id,
+            pathfinder_name: pf.name,
             pathfinderName: pf.name,
+            unit_id: pf.unit_id,
             unitId: pf.unit_id,
+            unit_name: pf.unit_name || 'Sem Unidade',
+            unitName: pf.unit_name || 'Sem Unidade',
+            equivalence_code: eqCode,
             equivalenceCode: eqCode,
-            equivalenceTitle: mergedGroups[eqCode]?.title || eqCode,
+            equivalence_title: eqTitle,
+            equivalenceTitle: eqTitle,
+            completed_requirement_id: sourceReq.id,
             sourceRequirementId: sourceReq.id,
+            completed_requirement_code: sourceReq.code,
             sourceRequirementCode: sourceReq.code,
-            sourceRequirementTitle: sourceReq.title,
+            completed_requirement_title: sourceReq.description || sourceReq.title,
+            sourceRequirementTitle: sourceReq.description || sourceReq.title,
+            completed_class_name: sourceReq.class_name,
             sourceClassName: sourceReq.class_name,
             sourceStatus,
+            pending_requirement_id: targetReq.id,
             targetRequirementId: targetReq.id,
+            pending_requirement_code: targetReq.code,
             targetRequirementCode: targetReq.code,
-            targetRequirementTitle: targetReq.title,
+            pending_requirement_title: targetReq.description || targetReq.title,
+            targetRequirementTitle: targetReq.description || targetReq.title,
+            pending_class_slug: targetReq.class_slug,
             targetClassSlug: targetReq.class_slug,
+            pending_class_name: targetReq.class_name,
             targetClassName: targetReq.class_name,
           });
         }
@@ -591,8 +629,12 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
     const subItems = JSON.parse(req.sub_items_json || '[]');
     const completedSubs =
       effectiveStatus === 'CONCLUIDO' || effectiveStatus === 'APROVADO'
-        ? subItems.map((s) => s.code)
+        ? subItems.map((s) => s.code || s.key)
         : [];
+
+    const existing = targetDb
+      .prepare('SELECT * FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?')
+      .get(pf.id, req.id);
 
     targetDb
       .prepare(
@@ -613,7 +655,7 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
           updated_at = excluded.updated_at`
       )
       .run(
-        crypto.randomUUID(),
+        existing?.id || crypto.randomUUID(),
         pf.id,
         req.id,
         effectiveStatus,
@@ -627,7 +669,20 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
         now
       );
 
-    schedulePdfWarmup(targetDb);
+    recordAudit({
+      user,
+      actionType: 'PROGRESS_UPDATE',
+      entityType: 'progress_record',
+      entityId: `${pf.id}:${req.id}`,
+      summary: `[MCP] ${pf.name} • ${req.class_slug.toUpperCase()} ${req.code} → ${effectiveStatus}`,
+      beforeData: existing || { status: 'PENDENTE' },
+      afterData: { status: effectiveStatus, notes: args.notes || '' },
+      targetDb,
+    });
+
+    if (!args._skipWarmup) {
+      schedulePdfWarmup(targetDb);
+    }
     return {
       updated: true,
       pathfinderName: pf.name,
@@ -647,13 +702,20 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
       for (const reqId of reqIds) {
         await executeMcpTool(
           'update_requirement_progress',
-          { pathfinderId: pfId, requirementId: reqId, status, notes: args.notes || 'Aprovado em lote via MCP' },
+          {
+            pathfinderId: pfId,
+            requirementId: reqId,
+            status,
+            notes: args.notes || 'Aprovado em lote via MCP',
+            _skipWarmup: true,
+          },
           authContext,
           targetDb
         );
         updatedCount++;
       }
     }
+    if (updatedCount > 0) schedulePdfWarmup(targetDb);
     return { updated: true, updatedCount };
   }
 
@@ -682,12 +744,14 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
           requirementId: alert.targetRequirementId,
           status: alert.sourceStatus || 'APROVADO',
           notes: `Unificado automaticamente via equivalência (${alert.equivalenceTitle} — ${alert.sourceClassName} ${alert.sourceRequirementCode})`,
+          _skipWarmup: true,
         },
         authContext,
         targetDb
       );
       syncedCount++;
     }
+    if (syncedCount > 0) schedulePdfWarmup(targetDb);
     return { synced: true, syncedCount, details: alerts };
   }
 
@@ -701,6 +765,7 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
     const { rawOverrides } = getEffectiveEquivalenceData(targetDb);
     const code = String(args.code).trim().toUpperCase();
     rawOverrides.groups[code] = {
+      id: code,
       code,
       title: args.title,
       description: args.description || 'Unificação personalizada da diretoria.',
@@ -708,6 +773,18 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
     };
 
     if (Array.isArray(args.requirementIds)) {
+      const selectedSet = new Set(args.requirementIds);
+      const prevReqs = targetDb
+        .prepare('SELECT id FROM requirements_catalog WHERE equivalence_group = ?')
+        .all(code);
+      for (const r of prevReqs) {
+        if (!selectedSet.has(r.id)) {
+          rawOverrides.reqMap[r.id] = '';
+          targetDb
+            .prepare("UPDATE requirements_catalog SET equivalence_group = '' WHERE id = ?")
+            .run(r.id);
+        }
+      }
       for (const rId of args.requirementIds) {
         rawOverrides.reqMap[rId] = code;
         targetDb
@@ -793,6 +870,7 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
             requirementId: reqId,
             status: statusToApply,
             notes: `Concluído no evento: ${evt.title}`,
+            _skipWarmup: true,
           },
           authContext,
           targetDb
@@ -802,9 +880,10 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
     }
 
     targetDb
-      .prepare("UPDATE activity_events SET status = 'EXECUTADO', executed_at = ? WHERE id = ?")
+      .prepare("UPDATE activity_events SET status = 'REALIZADO', executed_at = ? WHERE id = ?")
       .run(new Date().toISOString(), args.eventId);
 
+    if (applied > 0) schedulePdfWarmup(targetDb);
     return { executed: true, eventTitle: evt.title, recordsUpdated: applied };
   }
 

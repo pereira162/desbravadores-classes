@@ -1,11 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   CheckCircle2,
   Clock,
-  FileDown,
   ExternalLink,
-  Printer,
   Zap,
   CheckSquare,
   Filter,
@@ -14,10 +12,9 @@ import {
   X,
   Save,
 } from 'lucide-react';
-import { STATUS_CONFIG, OFFICIAL_PDF_BY_BASE_SLUG } from '../constants';
+import { STATUS_CONFIG } from '../constants';
 import { apiRequest, getAssetUrl } from '../api';
 import PdfActionGroup from './PdfActionGroup';
-import InstructorControlSheetModal from './InstructorControlSheetModal';
 
 const BASE_CLASSES = [
   { baseSlug: 'amigo', label: 'Amigo', age: 10, color: '#0072BC' },
@@ -54,11 +51,9 @@ export default function ClassMatrixView({
   const [searchQuery, setSearchQuery] = useState('');
   const [fastClickMode, setFastClickMode] = useState(false);
   const [busyCellKey, setBusyCellKey] = useState(null);
-  const [instructorModalOpen, setInstructorModalOpen] = useState(false);
   const [distributionModalOpen, setDistributionModalOpen] = useState(false);
   const [distributionDraft, setDistributionDraft] = useState({});
   const [savingDistribution, setSavingDistribution] = useState(false);
-  const matrixTableRef = useRef(null);
 
   // Instrutores vinculados a esta classe base
   const classInstructors = useMemo(() => {
@@ -574,30 +569,8 @@ export default function ClassMatrixView({
       ) : (
         <div
           id="matrix-table-container"
-          ref={matrixTableRef}
           className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
         >
-          {/* Cabeçalho exclusivo para o PDF da Matriz */}
-          <div className="hidden pdf-show-block p-4 border-b-2 border-slate-900 bg-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA
-                </div>
-                <h2 className="text-lg font-black uppercase text-slate-950">
-                  MATRIZ DE PROGRESSO DA CLASSE: {regularClass?.name || selectedBaseSlug}
-                  {advancedClass && selectedMode !== 'REGULAR' ? ` & ${advancedClass.name}` : ''}
-                </h2>
-              </div>
-              <div className="text-right text-xs font-bold text-slate-700">
-                <div>Clube: {settings?.club_name || 'Clube de Desbravadores'}</div>
-                <div>
-                  {enrolledPathfinders.length} desbravadores • {filteredRequirements.length} requisitos
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -648,7 +621,7 @@ export default function ClassMatrixView({
                 {groupedSections.map((group) => (
                   <React.Fragment key={group.key}>
                     {/* Linha divisória da Seção */}
-                    <tr className="pdf-item bg-slate-100/90 border-y border-slate-300">
+                    <tr className="bg-slate-100/90 border-y border-slate-300">
                       <td
                         colSpan={enrolledPathfinders.length + 2}
                         className="px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-slate-800"
@@ -671,7 +644,7 @@ export default function ClassMatrixView({
                       return (
                         <tr
                           key={req.id}
-                          className="pdf-item hover:bg-slate-50/70 transition group"
+                          className="hover:bg-slate-50/70 transition group"
                         >
                           {/* Coluna Fixa: Descrição do Requisito */}
                           <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 border-r border-slate-200 align-top">
@@ -751,7 +724,6 @@ export default function ClassMatrixView({
                             return (
                               <td
                                 key={pf.id}
-                                data-pdf-state={`${st}:${completedSubCount}`}
                                 className="p-1.5 border-r border-slate-100 align-middle text-center"
                               >
                                 <button
@@ -768,18 +740,9 @@ export default function ClassMatrixView({
                                     pr?.notes ? `\nObs: ${pr.notes}` : ''
                                   }`}
                                 >
-                                  {isBusy ? (
-                                    <span>...</span>
-                                  ) : st === 'PENDENTE' ? (
-                                    <>
-                                      <span className="pdf-hide">{cfg.shortLabel}</span>
-                                      <span className="hidden pdf-show text-transparent select-none h-4">&nbsp;</span>
-                                    </>
-                                  ) : (
-                                    <span>{cfg.shortLabel}</span>
-                                  )}
+                                  {isBusy ? <span>...</span> : <span>{cfg.shortLabel}</span>}
                                   {subCount > 0 && (
-                                    <span className={`text-[9px] opacity-80 font-normal ${st === 'PENDENTE' ? 'pdf-hide' : ''}`}>
+                                    <span className="text-[9px] opacity-80 font-normal">
                                       {st === 'APROVADO'
                                         ? `${subCount}/${subCount}`
                                         : `${completedSubCount}/${subCount}`}
@@ -799,19 +762,6 @@ export default function ClassMatrixView({
           </div>
         </div>
       )}
-
-      {/* Modal Oficial do Controle do Instrutor em 1 Página A4 */}
-      <InstructorControlSheetModal
-        isOpen={instructorModalOpen}
-        onClose={() => setInstructorModalOpen(false)}
-        initialBaseSlug={selectedBaseSlug}
-        catalog={catalog}
-        pathfinders={pathfinders}
-        units={units}
-        progressMap={progressMap}
-        classesMap={classesMap}
-        settings={settings}
-      />
 
       {/* Modal de Divisão de Desbravadores entre Múltiplos Instrutores da Classe */}
       {distributionModalOpen && (

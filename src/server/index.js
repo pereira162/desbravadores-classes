@@ -1347,12 +1347,35 @@ app.post('/api/progress/bulk', requireAuth, (req, res) => {
 
   db.exec('BEGIN');
   try {
+    const selPfStmt = db.prepare('SELECT * FROM pathfinders WHERE id = ?');
+    const selReqStmt = db.prepare('SELECT * FROM requirements_catalog WHERE id = ?');
+    const selProgStmt = db.prepare(
+      'SELECT * FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?'
+    );
+    const upsertProgStmt = db.prepare(`
+      INSERT INTO progress_records (
+        id, pathfinder_id, requirement_id, status, completed_sub_items_json,
+        notes, completed_at, marked_by_user_id, marked_by_name,
+        approved_by_user_id, approved_by_name, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(pathfinder_id, requirement_id) DO UPDATE SET
+        status = excluded.status,
+        completed_sub_items_json = excluded.completed_sub_items_json,
+        notes = excluded.notes,
+        completed_at = excluded.completed_at,
+        marked_by_user_id = excluded.marked_by_user_id,
+        marked_by_name = excluded.marked_by_name,
+        approved_by_user_id = excluded.approved_by_user_id,
+        approved_by_name = excluded.approved_by_name,
+        updated_at = excluded.updated_at
+    `);
+
     for (const pfId of pathfinder_ids) {
-      const pf = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pfId);
+      const pf = selPfStmt.get(pfId);
       if (!pf) continue;
 
       for (const reqId of requirement_ids) {
-        const reqItem = db.prepare('SELECT * FROM requirements_catalog WHERE id = ?').get(reqId);
+        const reqItem = selReqStmt.get(reqId);
         if (!reqItem) continue;
 
         const perm = checkProgressPermission(req.user, pf, reqItem.class_slug, status, clubSettings);
@@ -1362,9 +1385,7 @@ app.post('/api/progress/bulk', requireAuth, (req, res) => {
         }
 
         const effectiveStatus = perm.effectiveStatus;
-        const existing = db
-          .prepare('SELECT * FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?')
-          .get(pfId, reqId);
+        const existing = selProgStmt.get(pfId, reqId);
 
         const prevState = existing
           ? {
@@ -1397,23 +1418,7 @@ app.post('/api/progress/bulk', requireAuth, (req, res) => {
         const approvedByUserId = effectiveStatus === 'APROVADO' ? req.user.id : null;
         const approvedByName = effectiveStatus === 'APROVADO' ? req.user.name : null;
 
-        db.prepare(`
-          INSERT INTO progress_records (
-            id, pathfinder_id, requirement_id, status, completed_sub_items_json,
-            notes, completed_at, marked_by_user_id, marked_by_name,
-            approved_by_user_id, approved_by_name, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(pathfinder_id, requirement_id) DO UPDATE SET
-            status = excluded.status,
-            completed_sub_items_json = excluded.completed_sub_items_json,
-            notes = excluded.notes,
-            completed_at = excluded.completed_at,
-            marked_by_user_id = excluded.marked_by_user_id,
-            marked_by_name = excluded.marked_by_name,
-            approved_by_user_id = excluded.approved_by_user_id,
-            approved_by_name = excluded.approved_by_name,
-            updated_at = excluded.updated_at
-        `).run(
+        upsertProgStmt.run(
           recordId,
           pfId,
           reqId,
@@ -2066,26 +2071,46 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
     );
     for (const pid of finalAttendees) insAtt.run(eventId, pid);
 
+    const selPfStmt = db.prepare('SELECT * FROM pathfinders WHERE id = ?');
+    const selPfClassesStmt = db.prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?');
+    const selReqStmt = db.prepare('SELECT * FROM requirements_catalog WHERE id = ?');
+    const selProgStmt = db.prepare(
+      'SELECT * FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?'
+    );
+    const upsertEvtProgStmt = db.prepare(`
+      INSERT INTO progress_records (
+        id, pathfinder_id, requirement_id, status, completed_sub_items_json,
+        notes, completed_at, marked_by_user_id, marked_by_name,
+        approved_by_user_id, approved_by_name, event_id, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(pathfinder_id, requirement_id) DO UPDATE SET
+        status = excluded.status,
+        completed_sub_items_json = excluded.completed_sub_items_json,
+        notes = excluded.notes,
+        completed_at = excluded.completed_at,
+        marked_by_user_id = excluded.marked_by_user_id,
+        marked_by_name = excluded.marked_by_name,
+        approved_by_user_id = excluded.approved_by_user_id,
+        approved_by_name = excluded.approved_by_name,
+        event_id = excluded.event_id,
+        updated_at = excluded.updated_at
+    `);
+
     for (const pid of finalAttendees) {
-      const pf = db.prepare('SELECT * FROM pathfinders WHERE id = ?').get(pid);
+      const pf = selPfStmt.get(pid);
       if (!pf) continue;
 
-      const pfClasses = db
-        .prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?')
-        .all(pid)
-        .map((e) => e.class_slug);
+      const pfClasses = selPfClassesStmt.all(pid).map((e) => e.class_slug);
 
       for (const rid of finalReqs) {
-        const reqItem = db.prepare('SELECT * FROM requirements_catalog WHERE id = ?').get(rid);
+        const reqItem = selReqStmt.get(rid);
         if (!reqItem) continue;
 
         if (pfClasses.length > 0 && finalReqs.length > 1 && !pfClasses.includes(reqItem.class_slug)) {
           continue;
         }
 
-        const existing = db
-          .prepare('SELECT * FROM progress_records WHERE pathfinder_id = ? AND requirement_id = ?')
-          .get(pid, rid);
+        const existing = selProgStmt.get(pid, rid);
 
         const prevState = existing
           ? {
@@ -2100,24 +2125,7 @@ app.post('/api/events/:id/execute', requireAuth, (req, res) => {
         const allSubCodes = subItemsCatalog.map((s) => s.code);
         const recId = existing ? existing.id : crypto.randomUUID();
 
-        db.prepare(`
-          INSERT INTO progress_records (
-            id, pathfinder_id, requirement_id, status, completed_sub_items_json,
-            notes, completed_at, marked_by_user_id, marked_by_name,
-            approved_by_user_id, approved_by_name, event_id, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(pathfinder_id, requirement_id) DO UPDATE SET
-            status = excluded.status,
-            completed_sub_items_json = excluded.completed_sub_items_json,
-            notes = excluded.notes,
-            completed_at = excluded.completed_at,
-            marked_by_user_id = excluded.marked_by_user_id,
-            marked_by_name = excluded.marked_by_name,
-            approved_by_user_id = excluded.approved_by_user_id,
-            approved_by_name = excluded.approved_by_name,
-            event_id = excluded.event_id,
-            updated_at = excluded.updated_at
-        `).run(
+        upsertEvtProgStmt.run(
           recId,
           pid,
           rid,
@@ -2478,7 +2486,7 @@ app.put('/api/classes/:baseSlug/instructor-distribution', requireAuth, (req, res
     return res.status(403).json({ error: 'Sem permissão para distribuir desbravadores entre instrutores.' });
   }
 
-  const { assignments = {} } = req.body || {};
+  const assignments = req.body?.assignments || req.body?.distribution || {};
   db.exec('BEGIN');
   try {
     const upd = db.prepare('UPDATE users SET assigned_pathfinders_json = ? WHERE id = ?');

@@ -122,6 +122,7 @@ async function resolvePdfRecord({ docType, params = {}, dbInstance }) {
     await generateAnnualPlanningPdf({
       mode: normalized.mode || 'activities',
       unitId: normalized.unitId || 'ALL',
+      tagFilter: normalized.tagFilter || 'ALL',
       outputPath: filePath,
       dbInstance,
     });

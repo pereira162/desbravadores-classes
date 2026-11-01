@@ -61,7 +61,23 @@ export function setSandboxCurrentUser(user) {
 }
 
 function recomputeUnificationAlerts(state) {
-  const eqGroups = state.catalog?.equivalenceGroups || {};
+  const rawEqGroups = state.catalog?.equivalenceGroups || {};
+  const eqGroups = {};
+  if (Array.isArray(rawEqGroups)) {
+    for (const eq of rawEqGroups) {
+      if (eq && (eq.id || eq.code)) {
+        const k = eq.id || eq.code;
+        eqGroups[k] = { id: k, code: k, ...eq };
+      }
+    }
+  } else if (rawEqGroups && typeof rawEqGroups === 'object') {
+    for (const [k, v] of Object.entries(rawEqGroups)) {
+      if (v && typeof v === 'object') {
+        const key = v.id || v.code || k;
+        eqGroups[key] = { id: key, code: key, ...v };
+      }
+    }
+  }
   const reqs = state.catalog?.requirements || [];
   const pfs = (state.pathfinders || []).filter((p) => p.active !== false);
   const progress = state.progressRecords || [];
@@ -104,24 +120,46 @@ function recomputeUnificationAlerts(state) {
       if (doneList.length > 0 && pendingList.length > 0) {
         const src = doneList[0];
         const srcStatus = progMap[`${pf.id}:${src.id}`];
+        const srcClassName = classBySlug[src.class_slug]?.name || src.class_slug;
+        const eqTitle = eqGroups[eqCode]?.title || eqCode;
         for (const tgt of pendingList) {
+          const tgtClassName = classBySlug[tgt.class_slug]?.name || tgt.class_slug;
           alerts.push({
             id: `${pf.id}:${eqCode}:${tgt.id}`,
+            // snake_case (DashboardView & App.jsx)
+            pathfinder_id: pf.id,
+            pathfinder_name: pf.name,
+            unit_id: pf.unit_id,
+            unit_name: pf.unit_name || 'Sem Unidade',
+            equivalence_code: eqCode,
+            equivalence_title: eqTitle,
+            completed_requirement_id: src.id,
+            completed_requirement_code: src.code,
+            completed_requirement_title: src.title,
+            completed_class_name: srcClassName,
+            source_status: srcStatus,
+            pending_requirement_id: tgt.id,
+            pending_requirement_code: tgt.code,
+            pending_requirement_title: tgt.title,
+            pending_class_slug: tgt.class_slug,
+            pending_class_name: tgtClassName,
+            // camelCase (MCP tools)
             pathfinderId: pf.id,
             pathfinderName: pf.name,
             unitId: pf.unit_id,
+            unitName: pf.unit_name || 'Sem Unidade',
             equivalenceCode: eqCode,
-            equivalenceTitle: eqGroups[eqCode]?.title || eqCode,
+            equivalenceTitle: eqTitle,
             sourceRequirementId: src.id,
             sourceRequirementCode: src.code,
             sourceRequirementTitle: src.title,
-            sourceClassName: classBySlug[src.class_slug]?.name || src.class_slug,
+            sourceClassName: srcClassName,
             sourceStatus: srcStatus,
             targetRequirementId: tgt.id,
             targetRequirementCode: tgt.code,
             targetRequirementTitle: tgt.title,
             targetClassSlug: tgt.class_slug,
-            targetClassName: classBySlug[tgt.class_slug]?.name || tgt.class_slug,
+            targetClassName: tgtClassName,
           });
         }
       }
@@ -649,7 +687,7 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
   }
 
   if (path.startsWith('/api/classes/') && path.endsWith('/instructor-distribution') && method === 'PUT') {
-    const assignments = body?.assignments || {};
+    const assignments = body?.assignments || body?.distribution || {};
     const updateFn = (u) => {
       if (assignments[u.id] !== undefined) {
         return { ...u, assigned_pathfinders: assignments[u.id] };
@@ -658,6 +696,67 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
     };
     state.leaders = (state.leaders || []).map(updateFn);
     state.demoAccounts = (state.demoAccounts || []).map(updateFn);
+    saveSandboxStateToStorage(state);
+    return { success: true };
+  }
+
+  // 10b. Rotas de Convites, Anexos e Reversão de Auditoria no Sandbox
+  if (path.startsWith('/api/progress/') && path.endsWith('/attachments') && method === 'GET') {
+    const parts = path.split('/');
+    const pfId = parts[3];
+    const reqId = parts[4];
+    const rec = (state.progressRecords || []).find(
+      (pr) => pr.pathfinder_id === pfId && pr.requirement_id === reqId
+    );
+    return { attachments: rec?.attachments || [] };
+  }
+
+  if (path.startsWith('/api/pathfinders/') && path.endsWith('/invite') && method === 'POST') {
+    const pfId = path.split('/')[3];
+    const pf = (state.pathfinders || []).find((p) => p.id === pfId);
+    if (!pf) throw new Error('Desbravador não encontrado.');
+    const inviteToken = `dbv-inv-sandbox-${pfId}`;
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?teste=1&invite=${inviteToken}`;
+    return {
+      success: true,
+      email_sent: false,
+      invite_token: inviteToken,
+      invite_url: inviteUrl,
+      message: 'Link de convite gerado no Ambiente de Testes!',
+    };
+  }
+
+  if (path.startsWith('/api/leaders/') && path.endsWith('/send-invite') && method === 'POST') {
+    const targetId = path.split('/')[3];
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?teste=1&invite=inv-${targetId}`;
+    return {
+      success: true,
+      email_sent: false,
+      invite_url: inviteUrl,
+      message: 'Link de convite gerado no Ambiente de Testes!',
+    };
+  }
+
+  if (path.startsWith('/api/audit/') && path.endsWith('/revert') && method === 'POST') {
+    const logId = path.split('/')[3];
+    const entry = (state.auditLogs || []).find((l) => l.id === logId);
+    if (!entry) throw new Error('Registro de auditoria não encontrado.');
+    entry.reverted = true;
+    entry.reverted_by_name = currentUser.name;
+    entry.reverted_at = new Date().toISOString();
+    if (entry.entity_type === 'PROGRESS_RECORD' && entry.previous_state) {
+      const [pfId, reqId] = String(entry.entity_id || '').split(':');
+      const idx = (state.progressRecords || []).findIndex(
+        (pr) => pr.pathfinder_id === pfId && pr.requirement_id === reqId
+      );
+      if (idx >= 0) {
+        state.progressRecords[idx] = {
+          ...state.progressRecords[idx],
+          status: entry.previous_state.status || 'PENDENTE',
+        };
+      }
+    }
+    recomputeUnificationAlerts(state);
     saveSandboxStateToStorage(state);
     return { success: true };
   }
@@ -676,12 +775,22 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
   if (path === '/api/equivalences' && method === 'PUT') {
     const { code, title, description = '', requirement_ids = [] } = body || {};
     const cleanCode = String(code || '').trim().toUpperCase().replace(/\s+/g, '-');
-    state.catalog.equivalenceGroups[cleanCode] = {
+    const newGroup = {
+      id: cleanCode,
       code: cleanCode,
       title,
       description,
       is_custom: true,
     };
+    if (Array.isArray(state.catalog.equivalenceGroups)) {
+      const existingIdx = state.catalog.equivalenceGroups.findIndex(
+        (g) => (g.id || g.code) === cleanCode
+      );
+      if (existingIdx >= 0) state.catalog.equivalenceGroups[existingIdx] = newGroup;
+      else state.catalog.equivalenceGroups.push(newGroup);
+    } else {
+      state.catalog.equivalenceGroups[cleanCode] = newGroup;
+    }
     state.catalog.requirements = (state.catalog.requirements || []).map((r) => {
       if (requirement_ids.includes(r.id)) {
         return { ...r, equivalence_group: cleanCode };
@@ -698,7 +807,13 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
 
   if (path.startsWith('/api/equivalences/') && method === 'DELETE') {
     const cleanCode = decodeURIComponent(path.split('/')[3] || '').toUpperCase();
-    delete state.catalog.equivalenceGroups[cleanCode];
+    if (Array.isArray(state.catalog.equivalenceGroups)) {
+      state.catalog.equivalenceGroups = state.catalog.equivalenceGroups.filter(
+        (g) => (g.id || g.code) !== cleanCode
+      );
+    } else {
+      delete state.catalog.equivalenceGroups[cleanCode];
+    }
     state.catalog.requirements = (state.catalog.requirements || []).map((r) =>
       r.equivalence_group === cleanCode ? { ...r, equivalence_group: '' } : r
     );

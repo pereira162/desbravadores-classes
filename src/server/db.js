@@ -977,7 +977,7 @@ function seedTestDatabaseIfEmpty(targetDb) {
       'ACAMPAMENTO',
       'Parque Ecológico da Serra',
       '2026-05-16',
-      'EXECUTADO',
+      'REALIZADO',
       'Evento realizado com 100% de aproveitamento das unidades.',
       'usr-diretor',
       'Carlos Eduardo (Diretor)',

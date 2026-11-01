@@ -5,7 +5,6 @@ import {
   CheckSquare,
   Square,
   BookOpen,
-  Calendar,
   UserCheck,
   FileText,
   Camera,
@@ -265,7 +264,7 @@ export default function RequirementDetailModal({
               <span className="bg-white/20 px-2 py-0.5 rounded">{ctxInfo.label}</span>
             </div>
             <h3 className="text-lg font-extrabold leading-snug">
-              Requisito {requirement.code} — {requirement.title}
+              Requisito {requirement.code} — {requirement.short_title || requirement.title}
             </h3>
           </div>
           <button
@@ -296,16 +295,6 @@ export default function RequirementDetailModal({
                 <p className="text-sm text-slate-800 leading-relaxed font-medium">
                   {requirement.description}
                 </p>
-
-                {requirement.book_info && (
-                  <div className="mt-2.5 pt-2.5 border-t border-slate-200 text-xs text-slate-600 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>
-                      <strong>Livro Oficial Atual:</strong> {requirement.book_info.livro_atual} |{' '}
-                      <strong>Edição Anterior Aceita:</strong> {requirement.book_info.livro_historico}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Cabeçalho do Desbravador */}

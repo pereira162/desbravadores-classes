@@ -27,24 +27,18 @@ function formatBRDate(dateStr) {
   return dateStr;
 }
 
-/**
- * 1. CONTROLE DO INSTRUTOR (1 Página A4 por grupo de 6 desbravadores)
- */
-async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL', instructorId = 'ALL', outputPath, dbInstance }) {
-  const cfg = CLASS_CONFIG[classSlug] || CLASS_CONFIG.amigo;
-  const settings = dbInstance.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
-  const clubName = settings.club_name || 'Clube de Desbravadores';
+function formatSectionLabel(req) {
+  if (req.section) return req.section;
+  return [req.section_code, req.section_name].filter(Boolean).join('. ') || 'Geral';
+}
 
-  let unitName = 'Geral';
-  if (unitId !== 'ALL') {
-    const uRow = dbInstance.prepare('SELECT name FROM units WHERE id = ?').get(unitId);
-    if (uRow) unitName = uRow.name;
-  }
-
+function getEnrolledPathfindersForPdf(dbInstance, classSlug, unitId = 'ALL', instructorId = 'ALL') {
   let instructorLabel = '';
   let allowedInstructorPfIds = null;
   if (instructorId && instructorId !== 'ALL') {
-    const instRow = dbInstance.prepare('SELECT name, assigned_pathfinders_json FROM users WHERE id = ?').get(instructorId);
+    const instRow = dbInstance
+      .prepare('SELECT name, assigned_pathfinders_json FROM users WHERE id = ?')
+      .get(instructorId);
     if (instRow) {
       instructorLabel = instRow.name;
       try {
@@ -56,7 +50,6 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
     }
   }
 
-  // Carrega desbravadores matriculados nesta classe
   let pfQuery = `
     SELECT DISTINCT p.id, p.name, p.unit_id, u.name as unit_name
     FROM pathfinders p
@@ -74,6 +67,29 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
   if (allowedInstructorPfIds) {
     enrolledPfs = enrolledPfs.filter((p) => allowedInstructorPfIds.has(p.id));
   }
+  return { enrolledPfs, instructorLabel };
+}
+
+/**
+ * 1. CONTROLE DO INSTRUTOR (1 Página A4 por grupo de 6 desbravadores)
+ */
+async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL', instructorId = 'ALL', outputPath, dbInstance }) {
+  const cfg = CLASS_CONFIG[classSlug] || CLASS_CONFIG.amigo;
+  const settings = dbInstance.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
+  const clubName = settings.club_name || 'Clube de Desbravadores';
+
+  let unitName = 'Geral';
+  if (unitId !== 'ALL') {
+    const uRow = dbInstance.prepare('SELECT name FROM units WHERE id = ?').get(unitId);
+    if (uRow) unitName = uRow.name;
+  }
+
+  const { enrolledPfs, instructorLabel } = getEnrolledPathfindersForPdf(
+    dbInstance,
+    classSlug,
+    unitId,
+    instructorId
+  );
 
   // Carrega requisitos da classe
   const reqs = dbInstance.prepare(`
@@ -501,7 +517,7 @@ async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', ou
         doc.rect(margin, y, contentWidth, itemH).fillAndStroke('#ffffff', '#e2e8f0');
 
         doc.fillColor(req.class_color || '#1e293b').fontSize(7).font('Helvetica-Bold')
-          .text(`${req.class_name} • ${req.section}`, margin + 6, y + 5);
+          .text(`${req.class_name} • ${formatSectionLabel(req)}`, margin + 6, y + 5);
 
         doc.fillColor('#0f172a').fontSize(8).font('Helvetica-Bold')
           .text(`${req.code} — ${req.title}`, margin + 6, y + 16, { width: contentWidth - 80 });
@@ -552,7 +568,7 @@ async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', ou
 /**
  * 3. PLANEJAMENTO ANUAL COMPLETO (Por Atividade OU Unificações) — < 200ms
  */
-async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', outputPath, dbInstance }) {
+async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', tagFilter = 'ALL', outputPath, dbInstance }) {
   const settings = dbInstance.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
   const clubName = settings.club_name || 'Clube de Desbravadores';
 
@@ -563,8 +579,6 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
     pfParams.push(unitId);
   }
   const pathfinders = dbInstance.prepare(pfQuery).all(...pfParams);
-  const pfMap = {};
-  for (const pf of pathfinders) pfMap[pf.id] = pf;
 
   const enrollments = dbInstance.prepare('SELECT pathfinder_id, class_slug FROM class_enrollments').all();
   const pfEnrolledClasses = {};
@@ -579,7 +593,7 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
     progressMap[`${pr.pathfinder_id}:${pr.requirement_id}`] = pr.status;
   }
 
-  const reqs = dbInstance.prepare(`
+  let rawReqs = dbInstance.prepare(`
     SELECT r.*, c.name as class_name, c.color_hex as class_color
     FROM requirements_catalog r
     JOIN classes_catalog c ON c.slug = r.class_slug
@@ -587,9 +601,20 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
     ORDER BY c.display_order ASC, r.display_order ASC
   `).all();
 
+  if (tagFilter && tagFilter !== 'ALL') {
+    rawReqs = rawReqs.filter((r) => {
+      try {
+        const tags = JSON.parse(r.tags_json || '[]');
+        return Array.isArray(tags) && tags.includes(tagFilter);
+      } catch {
+        return false;
+      }
+    });
+  }
+
   // Enriquecer demandas
   const enrichedReqs = [];
-  for (const req of reqs) {
+  for (const req of rawReqs) {
     const enrolledPfs = pathfinders.filter((p) => pfEnrolledClasses[p.id]?.has(req.class_slug));
     const pendingPfs = [];
     let approved = 0;
@@ -647,10 +672,22 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
 
       const cardsJsonPath = path.join(DATA_DIR, 'cartoes-classes.json');
       const cardsData = JSON.parse(fs.readFileSync(cardsJsonPath, 'utf8'));
-      const eqGroups = cardsData.equivalence_groups || [];
+      const groupsMap = new Map();
+      for (const eq of cardsData.equivalence_groups || []) {
+        if (eq && (eq.id || eq.code)) groupsMap.set(eq.id || eq.code, eq);
+      }
+      try {
+        const parsedOv = JSON.parse(settings.equivalences_override_json || '{}');
+        const customGroups = parsedOv.groups || {};
+        for (const [k, g] of Object.entries(customGroups)) {
+          groupsMap.set(k, { id: g.id || g.code || k, title: g.title || k, description: g.description || '' });
+        }
+      } catch {}
+      const eqGroups = Array.from(groupsMap.values());
 
       for (const eq of eqGroups) {
-        const groupReqs = enrichedReqs.filter((r) => r.equivalence_group === eq.id);
+        const eqCode = eq.id || eq.code;
+        const groupReqs = enrichedReqs.filter((r) => r.equivalence_group === eqCode);
         if (groupReqs.length === 0) continue;
 
         const uniquePendingPfsMap = new Map();
@@ -711,7 +748,7 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
         doc.rect(margin, y, contentWidth, itemH).fillAndStroke('#ffffff', '#e2e8f0');
 
         doc.fillColor(req.class_color || '#334155').fontSize(7).font('Helvetica-Bold')
-          .text(`${req.class_name} • ${req.section}`, margin + 6, y + 5);
+          .text(`${req.class_name} • ${formatSectionLabel(req)}`, margin + 6, y + 5);
 
         doc.fillColor('#0f172a').fontSize(8).font('Helvetica-Bold')
           .text(`Requisito ${req.code} — ${req.title}`, margin + 6, y + 14, { width: contentWidth - 120 });
@@ -751,38 +788,12 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
   const settings = dbInstance.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
   const clubName = settings.club_name || 'Clube de Desbravadores';
 
-  let instructorLabel = '';
-  let allowedInstructorPfIds = null;
-  if (instructorId && instructorId !== 'ALL') {
-    const instRow = dbInstance.prepare('SELECT name, assigned_pathfinders_json FROM users WHERE id = ?').get(instructorId);
-    if (instRow) {
-      instructorLabel = instRow.name;
-      try {
-        const parsed = JSON.parse(instRow.assigned_pathfinders_json || '[]');
-        if (Array.isArray(parsed) && parsed.length > 0 && !parsed.includes('*')) {
-          allowedInstructorPfIds = new Set(parsed);
-        }
-      } catch {}
-    }
-  }
-
-  let pfQuery = `
-    SELECT DISTINCT p.id, p.name, u.name as unit_name
-    FROM pathfinders p
-    JOIN class_enrollments ce ON ce.pathfinder_id = p.id
-    LEFT JOIN units u ON u.id = p.unit_id
-    WHERE p.active = 1 AND ce.class_slug IN (?, ?)
-  `;
-  const pfParams = [classSlug, `${classSlug}-avancado`];
-  if (unitId !== 'ALL') {
-    pfQuery += ' AND p.unit_id = ?';
-    pfParams.push(unitId);
-  }
-  pfQuery += ' ORDER BY p.name ASC';
-  let enrolledPfs = dbInstance.prepare(pfQuery).all(...pfParams);
-  if (allowedInstructorPfIds) {
-    enrolledPfs = enrolledPfs.filter((p) => allowedInstructorPfIds.has(p.id));
-  }
+  const { enrolledPfs, instructorLabel } = getEnrolledPathfindersForPdf(
+    dbInstance,
+    classSlug,
+    unitId,
+    instructorId
+  );
 
   let reqQuery = `
     SELECT r.*, c.name as class_name, c.class_type

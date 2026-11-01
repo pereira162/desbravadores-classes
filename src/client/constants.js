@@ -84,15 +84,6 @@ export const EXECUTION_CONTEXT_LABELS = {
   CASA_INDIVIDUAL: { label: 'Em Casa / Individual', badge: 'bg-amber-100 text-amber-800' },
 };
 
-export const OFFICIAL_PDF_BY_BASE_SLUG = {
-  amigo: '/data/pdfs/1_amigo.pdf',
-  companheiro: '/data/pdfs/2_companheiro.pdf',
-  pesquisador: '/data/pdfs/3_pesquisador.pdf',
-  pioneiro: '/data/pdfs/4_pioneiro.pdf',
-  excursionista: '/data/pdfs/5_excursionista.pdf',
-  guia: '/data/pdfs/6_guia.pdf',
-};
-
 export function calculateAge(birthDateStr, refYear = 2026) {
   if (!birthDateStr) return null;
   const year = parseInt(String(birthDateStr).slice(0, 4), 10);

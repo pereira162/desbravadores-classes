@@ -1,19 +1,15 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Search,
   Filter,
   Layers,
   ListFilter,
   CheckCircle2,
-  Clock,
-  AlertTriangle,
   Users,
   CalendarPlus,
   CheckSquare,
   ChevronDown,
   ChevronUp,
-  FileDown,
-  Printer,
   Sparkles,
   RotateCcw,
   Plus,
@@ -49,8 +45,6 @@ export default function DemandPlanningView({
   const [viewMode, setViewMode] = useState('REQUIREMENTS'); // REQUIREMENTS | EQUIVALENCE
   const [sortBy, setSortBy] = useState('MOST_PENDING'); // MOST_PENDING | CARD_ORDER
   const [expandedIds, setExpandedIds] = useState({});
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const planningRef = useRef(null);
 
   // Modal de Criar / Editar Unificação (Equivalence Group)
   const [eqModalOpen, setEqModalOpen] = useState(false);
@@ -686,30 +680,9 @@ export default function DemandPlanningView({
       </div>
 
       {/* =====================================================================
-          CONTEÚDO DO PLANEJAMENTO (CAPTURADO PARA PDF)
+          CONTEÚDO DO PLANEJAMENTO
          ===================================================================== */}
-      <div id="planning-content-container" ref={planningRef} className="space-y-4">
-        {/* Cabeçalho exclusivo para o PDF do Planejamento Anual */}
-        <div className="hidden pdf-show-block pdf-item bg-white rounded-2xl border-b-2 border-slate-900 p-4 mb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA
-              </div>
-              <h1 className="text-lg font-black uppercase text-slate-950">
-                PLANEJAMENTO ANUAL DE CLASSES —{' '}
-                {viewMode === 'EQUIVALENCE'
-                  ? `UNIFICAÇÕES ENTRE CLASSES (${equivalenceGroupsData.length} GRUPOS)`
-                  : `MAPA DE DEMANDAS POR ATIVIDADE (${filteredRequirements.length} ATIVIDADES)`}
-              </h1>
-            </div>
-            <div className="text-right text-xs font-bold text-slate-700">
-              <div>Ano Curricular: 2026</div>
-              <div>{totalPendingParticipations} pendências de desbravadores mapeadas</div>
-            </div>
-          </div>
-        </div>
-
+      <div id="planning-content-container" className="space-y-4">
         {viewMode === 'EQUIVALENCE' ? (
           <div className="space-y-4">
           {equivalenceGroupsData.map((group) => {
@@ -717,7 +690,7 @@ export default function DemandPlanningView({
             return (
               <div
                 key={group.id}
-                className="pdf-item bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-break-inside-avoid"
+                className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-break-inside-avoid"
               >
                 <div className="p-4 sm:p-5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
@@ -792,10 +765,12 @@ export default function DemandPlanningView({
                               {req.classInfo?.name}
                             </span>
                             <span className="text-xs font-extrabold text-slate-900">
-                              {req.code} — {req.title}
+                              {req.code} — {req.short_title || req.title}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-600 leading-relaxed">{req.description}</p>
+                          {req.description && req.description !== (req.short_title || req.title) && (
+                            <p className="text-xs text-slate-600 leading-relaxed">{req.description}</p>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
@@ -865,7 +840,7 @@ export default function DemandPlanningView({
               return (
                 <div
                   key={req.id}
-                  className="pdf-item bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition overflow-hidden print-break-inside-avoid"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition overflow-hidden print-break-inside-avoid"
                 >
                   <div className="p-4 sm:p-5">
                     <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -897,11 +872,13 @@ export default function DemandPlanningView({
 
                         <div>
                           <h3 className="text-base font-extrabold text-slate-900">
-                            Requisito {req.code} — {req.title}
+                            Requisito {req.code} — {req.short_title || req.title}
                           </h3>
-                          <p className="text-xs sm:text-sm text-slate-700 mt-1 leading-relaxed">
-                            {req.description}
-                          </p>
+                          {req.description && req.description !== (req.short_title || req.title) && (
+                            <p className="text-xs sm:text-sm text-slate-700 mt-1 leading-relaxed">
+                              {req.description}
+                            </p>
+                          )}
                         </div>
 
                         {/* Sub-itens resumidos se existirem */}
