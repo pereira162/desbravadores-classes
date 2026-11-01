@@ -33,7 +33,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through network first, fallback to cache
+  // Navegação e páginas HTML NUNCA são cacheadas (sempre diretas da rede para garantir código novo)
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    return;
+  }
+
   if (event.request.method !== 'GET') return;
   
   event.respondWith(
