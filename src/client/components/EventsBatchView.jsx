@@ -65,6 +65,34 @@ export default function EventsBatchView({
   useModalDismiss(createOpen, () => setCreateOpen(false), 'ModalCriarEvento');
   useModalDismiss(Boolean(executingEvent), () => setExecutingEvent(null), 'ModalExecutarEvento');
 
+  useEffect(() => {
+    const handleLocalEsc = (e) => {
+      const isEsc =
+        e.key === 'Escape' ||
+        e.key === 'Esc' ||
+        e.code === 'Escape' ||
+        e.keyCode === 27 ||
+        e.which === 27;
+      if (!isEsc) return;
+
+      if (createOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCreateOpen(false);
+      } else if (executingEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        setExecutingEvent(null);
+      }
+    };
+    window.addEventListener('keydown', handleLocalEsc, true);
+    document.addEventListener('keydown', handleLocalEsc, true);
+    return () => {
+      window.removeEventListener('keydown', handleLocalEsc, true);
+      document.removeEventListener('keydown', handleLocalEsc, true);
+    };
+  }, [createOpen, executingEvent]);
+
   // Se veio um rascunho da tela de Planejamento de Demanda Anual, abre o modal preenchido
   useEffect(() => {
     if (pendingEventDraft) {
@@ -358,7 +386,16 @@ export default function EventsBatchView({
 
       {/* Modal Criar Evento */}
       {createOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setCreateOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="text-base font-extrabold flex items-center gap-2">
@@ -526,7 +563,16 @@ export default function EventsBatchView({
 
       {/* Modal Executar Evento & Aprovar Presença em Lote */}
       {executingEvent && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setExecutingEvent(null);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div>

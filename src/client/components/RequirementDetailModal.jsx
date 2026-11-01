@@ -123,6 +123,35 @@ export default function RequirementDetailModal({
   useModalDismiss(isOpen, onClose, 'ModalDetalhesRequisito');
   useModalDismiss(Boolean(previewAttachment), () => setPreviewAttachment(null), 'LightboxFotoRequisito');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleLocalEsc = (e) => {
+      const isEsc =
+        e.key === 'Escape' ||
+        e.key === 'Esc' ||
+        e.code === 'Escape' ||
+        e.keyCode === 27 ||
+        e.which === 27;
+      if (!isEsc) return;
+
+      if (previewAttachment) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPreviewAttachment(null);
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleLocalEsc, true);
+    document.addEventListener('keydown', handleLocalEsc, true);
+    return () => {
+      window.removeEventListener('keydown', handleLocalEsc, true);
+      document.removeEventListener('keydown', handleLocalEsc, true);
+    };
+  }, [isOpen, previewAttachment, onClose]);
+
   if (!isOpen || !requirement) return null;
 
   const subItems = requirement.sub_items || [];
@@ -249,7 +278,18 @@ export default function RequirementDetailModal({
     Boolean(progressRecord?.submitted_by_pathfinder);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+    <div
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+          if (!previewAttachment) {
+            e.stopPropagation();
+            onClose();
+          }
+        }
+      }}
+      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+    >
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
         {/* Header colorido conforme a classe */}
         <div
@@ -759,6 +799,13 @@ export default function RequirementDetailModal({
       {/* Lightbox para Visualizar Foto Anexada em Tamanho Real */}
       {previewAttachment && (
         <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setPreviewAttachment(null);
+            }
+          }}
           onClick={() => setPreviewAttachment(null)}
           className="fixed inset-0 z-60 bg-black/85 flex flex-col items-center justify-center p-4"
         >

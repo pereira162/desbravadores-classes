@@ -89,6 +89,38 @@ export default function PathfindersView({
   useModalDismiss(unitModalOpen, () => setUnitModalOpen(false), 'ModalUnidade');
   useModalDismiss(Boolean(inviteModalPf), () => setInviteModalPf(null), 'ModalConviteDesbravador');
 
+  useEffect(() => {
+    const handleLocalEsc = (e) => {
+      const isEsc =
+        e.key === 'Escape' ||
+        e.key === 'Esc' ||
+        e.code === 'Escape' ||
+        e.keyCode === 27 ||
+        e.which === 27;
+      if (!isEsc) return;
+
+      if (pfModalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPfModalOpen(false);
+      } else if (unitModalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setUnitModalOpen(false);
+      } else if (inviteModalPf) {
+        e.preventDefault();
+        e.stopPropagation();
+        setInviteModalPf(null);
+      }
+    };
+    window.addEventListener('keydown', handleLocalEsc, true);
+    document.addEventListener('keydown', handleLocalEsc, true);
+    return () => {
+      window.removeEventListener('keydown', handleLocalEsc, true);
+      document.removeEventListener('keydown', handleLocalEsc, true);
+    };
+  }, [pfModalOpen, unitModalOpen, inviteModalPf]);
+
   const isPathfinderUser = currentUser?.role === 'DESBRAVADOR';
   const canManageRegistry =
     ['ADMIN', 'GESTOR', 'DIRETOR', 'SECRETARIO'].includes(currentUser?.role) ||
@@ -1116,7 +1148,16 @@ export default function PathfindersView({
 
       {/* Modal Cadastrar / Editar Desbravador */}
       {pfModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setPfModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="text-base font-extrabold">
@@ -1319,7 +1360,16 @@ export default function PathfindersView({
 
       {/* Modal Completo de Gerenciamento de Unidades (Criar, Editar e Excluir) */}
       {unitModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setUnitModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="text-base font-extrabold">
@@ -1530,7 +1580,16 @@ export default function PathfindersView({
 
       {/* Modal de Link de Conta Individual do Desbravador */}
       {inviteModalPf && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setInviteModalPf(null);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 bg-teal-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">

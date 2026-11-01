@@ -1,8 +1,6 @@
 // SGC Classes - Service Worker
-const CACHE_NAME = 'sgc-classes-cache-v1';
+const CACHE_NAME = 'sgc-classes-cache-v3';
 const ASSETS_TO_CACHE = [
-  '/desbravadores-classes/',
-  '/desbravadores-classes/index.html',
   '/desbravadores-classes/manifest.json',
   '/desbravadores-classes/icons/icon-192.png',
   '/desbravadores-classes/icons/icon-512.png'

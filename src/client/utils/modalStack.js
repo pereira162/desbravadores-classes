@@ -8,44 +8,67 @@ import { useEffect, useRef } from 'react';
  * 2. Fechamento global via tecla ESC (mesmo com foco em formulários/inputs)
  * 3. Fechamento global via botão Voltar do Celular (Android / Mobile Back Button / Navegador)
  * 4. Sincronização limpa do histórico (não acumula entradas dummy quando fechado via ESC, X ou clique fora)
+ * 5. Armazenamento no objeto `window.__dbvModalStack` para persistência entre dynamic chunks
  */
 
-const stack = [];
+if (typeof window !== 'undefined') {
+  if (!window.__dbvModalStack) {
+    window.__dbvModalStack = [];
+  }
+}
+
+function getStack() {
+  if (typeof window !== 'undefined') {
+    if (!window.__dbvModalStack) window.__dbvModalStack = [];
+    return window.__dbvModalStack;
+  }
+  return [];
+}
+
 let suppressNextPopstate = 0;
 let isBackActionInProgress = false;
 let globalListenersInitialized = false;
+
+function handleGlobalEscape(e) {
+  const isEsc =
+    e.key === 'Escape' ||
+    e.key === 'Esc' ||
+    e.code === 'Escape' ||
+    e.keyCode === 27 ||
+    e.which === 27;
+
+  if (isEsc) {
+    const stack = getStack();
+    if (stack.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      const top = stack[stack.length - 1];
+      if (top && typeof top.close === 'function') {
+        top.close();
+      }
+    }
+  }
+}
 
 function initGlobalListeners() {
   if (globalListenersInitialized || typeof window === 'undefined') return;
   globalListenersInitialized = true;
 
-  // 1. Listener Global de Tecla Escape (Fase de captura: intercepta antes de qualquer outro handler)
-  window.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        if (stack.length > 0) {
-          e.preventDefault();
-          e.stopPropagation();
-          const top = stack[stack.length - 1];
-          if (top && typeof top.close === 'function') {
-            top.close();
-          }
-        }
-      }
-    },
-    true
-  );
+  // Listeners Globais de Tecla Escape (Fase de captura no window e document para interceptar de qualquer lugar)
+  window.addEventListener('keydown', handleGlobalEscape, true);
+  document.addEventListener('keydown', handleGlobalEscape, true);
+  window.addEventListener('keyup', handleGlobalEscape, true);
+  document.addEventListener('keyup', handleGlobalEscape, true);
 
-  // 2. Listener Global de Botão Voltar (Mobile Android / Histórico do Navegador)
+  // Listener Global de Botão Voltar (Mobile Android / Histórico do Navegador)
   window.addEventListener('popstate', () => {
     if (suppressNextPopstate > 0) {
       suppressNextPopstate--;
       return;
     }
 
+    const stack = getStack();
     if (stack.length > 0) {
-      // O botão voltar do celular já consumiu a entrada de histórico
       isBackActionInProgress = true;
       try {
         const top = stack[stack.length - 1];
@@ -71,7 +94,6 @@ function initGlobalListeners() {
 export function registerModal(id, closeFn, name = 'modal') {
   initGlobalListeners();
 
-  // Insere uma entrada dummy no histórico para capturar o botão Voltar do celular
   let pushed = false;
   try {
     window.history.pushState({ dbvModalId: id, name }, '');
@@ -79,6 +101,7 @@ export function registerModal(id, closeFn, name = 'modal') {
   } catch {}
 
   const entry = { id, name, close: closeFn, pushedHistory: pushed };
+  const stack = getStack();
   stack.push(entry);
 
   return () => {
@@ -91,11 +114,10 @@ export function registerModal(id, closeFn, name = 'modal') {
  * @param {string} id ID do modal
  */
 export function unregisterModal(id) {
+  const stack = getStack();
   const index = stack.findIndex((m) => m.id === id);
   if (index !== -1) {
     const [entry] = stack.splice(index, 1);
-    // Se foi fechado pelo usuário (botão X, ESC, submit, clique fora) e NÃO pelo voltar do celular,
-    // revertemos a entrada de histórico dummy
     if (entry.pushedHistory && !isBackActionInProgress) {
       suppressNextPopstate++;
       try {
@@ -120,6 +142,26 @@ export function useModalDismiss(isOpen, onClose, modalName = 'modal') {
   useEffect(() => {
     if (!isOpen) return;
 
+    // Listener direto local no escopo do componente para máxima redundância
+    const handleDirectEscape = (e) => {
+      const isEsc =
+        e.key === 'Escape' ||
+        e.key === 'Esc' ||
+        e.code === 'Escape' ||
+        e.keyCode === 27 ||
+        e.which === 27;
+
+      if (isEsc) {
+        const stack = getStack();
+        const isTop = stack.length === 0 || stack[stack.length - 1]?.id === modalId;
+        if (isTop) {
+          e.preventDefault();
+          e.stopPropagation();
+          onCloseRef.current?.();
+        }
+      }
+    };
+
     const modalId = `${modalName}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const unregister = registerModal(
       modalId,
@@ -129,7 +171,12 @@ export function useModalDismiss(isOpen, onClose, modalName = 'modal') {
       modalName
     );
 
+    window.addEventListener('keydown', handleDirectEscape, true);
+    document.addEventListener('keydown', handleDirectEscape, true);
+
     return () => {
+      window.removeEventListener('keydown', handleDirectEscape, true);
+      document.removeEventListener('keydown', handleDirectEscape, true);
       unregister();
     };
   }, [isOpen, modalName]);

@@ -189,6 +189,38 @@ export default function LeadersSettingsView({
   useModalDismiss(Boolean(restoreModalFile), () => setRestoreModalFile(null), 'ModalRestaurarBackup');
   useModalDismiss(cloneModalOpen, () => setCloneModalOpen(false), 'ModalClonarTeste');
 
+  useEffect(() => {
+    const handleLocalEsc = (e) => {
+      const isEsc =
+        e.key === 'Escape' ||
+        e.key === 'Esc' ||
+        e.code === 'Escape' ||
+        e.keyCode === 27 ||
+        e.which === 27;
+      if (!isEsc) return;
+
+      if (leaderModalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setLeaderModalOpen(false);
+      } else if (restoreModalFile) {
+        e.preventDefault();
+        e.stopPropagation();
+        setRestoreModalFile(null);
+      } else if (cloneModalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCloneModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleLocalEsc, true);
+    document.addEventListener('keydown', handleLocalEsc, true);
+    return () => {
+      window.removeEventListener('keydown', handleLocalEsc, true);
+      document.removeEventListener('keydown', handleLocalEsc, true);
+    };
+  }, [leaderModalOpen, restoreModalFile, cloneModalOpen]);
+
   const fetchServerBackups = async () => {
     if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role)) return;
     setLoadingBackups(true);
@@ -1378,7 +1410,16 @@ export default function LeadersSettingsView({
 
       {/* Modal Criar / Editar Líder */}
       {leaderModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setLeaderModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="text-base font-extrabold">
@@ -1745,7 +1786,16 @@ export default function LeadersSettingsView({
 
       {/* Modal de Confirmação de Restauração */}
       {restoreModalFile && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setRestoreModalFile(null);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+        >
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-3">
@@ -1805,7 +1855,16 @@ export default function LeadersSettingsView({
 
       {/* Modal de Confirmação de Clonagem de Dados de Teste */}
       {cloneModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+        <div
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+              e.stopPropagation();
+              setCloneModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+        >
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-3">

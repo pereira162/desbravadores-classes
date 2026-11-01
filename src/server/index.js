@@ -3673,14 +3673,26 @@ schedulePdfWarmup(db);
 // ============================================================================
 const DIST_DIR = path.resolve(__dirname, '../../dist');
 if (fs.existsSync(DIST_DIR)) {
-  app.use(express.static(DIST_DIR));
-  app.use('/desbravadores-classes', express.static(DIST_DIR));
+  const staticOpts = {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html') || filePath.endsWith('sw.js')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    },
+  };
+  app.use(express.static(DIST_DIR, staticOpts));
+  app.use('/desbravadores-classes', express.static(DIST_DIR, staticOpts));
   app.get('/', (req, res) => {
     const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
     return res.redirect(301, `/desbravadores-classes/${query}`);
   });
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/data')) return next();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(DIST_DIR, 'index.html'));
   });
 }
