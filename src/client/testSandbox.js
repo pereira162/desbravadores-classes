@@ -721,7 +721,11 @@ export async function handleSandboxRequest({ path, method = 'GET', body, apiBase
     const assignments = body?.assignments || body?.distribution || {};
     const updateFn = (u) => {
       if (assignments[u.id] !== undefined) {
-        return { ...u, assigned_pathfinders: assignments[u.id] };
+        return {
+          ...u,
+          assigned_pathfinders: assignments[u.id],
+          assigned_pathfinders_json: JSON.stringify(assignments[u.id]),
+        };
       }
       return u;
     };

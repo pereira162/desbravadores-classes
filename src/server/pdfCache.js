@@ -60,13 +60,21 @@ function computeDataVersion(docType, params, dbInstance) {
       const clsSlug = params.classSlug || 'amigo';
       // Desbravadores inscritos na classe (adicionado, removido, nome alterado, unidade alterada ou inativado)
       const pfs = dbInstance.prepare(`
-        SELECT p.id, p.name, p.unit_id, p.active, p.updated_at
+        SELECT p.id, p.name, p.unit_id, p.active
         FROM pathfinders p
         JOIN class_enrollments ce ON ce.pathfinder_id = p.id
         WHERE ce.class_slug IN (?, ?)
         ORDER BY p.id ASC
       `).all(clsSlug, `${clsSlug}-avancado`);
       const pfHash = crypto.createHash('md5').update(JSON.stringify(pfs)).digest('hex').slice(0, 8);
+
+      // Distribuição de desbravadores por instrutor / líderes de classe
+      const instUsers = dbInstance.prepare(`
+        SELECT id, name, role, assigned_classes_json, assigned_pathfinders_json
+        FROM users
+        ORDER BY id ASC
+      `).all();
+      const instHash = crypto.createHash('md5').update(JSON.stringify(instUsers)).digest('hex').slice(0, 8);
 
       // Progresso dos requisitos da classe
       const prog = dbInstance.prepare(`
@@ -76,13 +84,13 @@ function computeDataVersion(docType, params, dbInstance) {
         WHERE r.base_class_slug = ?
       `).get(clsSlug);
 
-      stats = `${clubStats}:${pfHash}:${prog?.max_up || ''}:${prog?.cnt || 0}`;
+      stats = `${clubStats}:${pfHash}:${instHash}:${prog?.max_up || ''}:${prog?.cnt || 0}`;
     } else if (docType === 'PF_CARD') {
       const pf = dbInstance.prepare(`
-        SELECT id, name, unit_id, active, birth_date, updated_at
+        SELECT id, name, unit_id, active, birth_date
         FROM pathfinders WHERE id = ?
       `).get(params.pathfinderId);
-      const enrs = dbInstance.prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ?').all(params.pathfinderId);
+      const enrs = dbInstance.prepare('SELECT class_slug FROM class_enrollments WHERE pathfinder_id = ? ORDER BY class_slug ASC').all(params.pathfinderId);
       const prog = dbInstance.prepare(`
         SELECT MAX(updated_at) as max_up, COUNT(*) as cnt
         FROM progress_records
@@ -90,14 +98,15 @@ function computeDataVersion(docType, params, dbInstance) {
       `).get(params.pathfinderId);
       stats = `${clubStats}:${JSON.stringify(pf)}:${JSON.stringify(enrs)}:${prog?.max_up || ''}:${prog?.cnt || 0}`;
     } else if (docType === 'PLANNING') {
-      const pfs = dbInstance.prepare('SELECT MAX(updated_at) as max_up, COUNT(*) as cnt FROM pathfinders WHERE active = 1').get();
+      const pfs = dbInstance.prepare('SELECT COUNT(*) as cnt FROM pathfinders WHERE active = 1').get();
       const prog = dbInstance.prepare('SELECT MAX(updated_at) as max_up, COUNT(*) as cnt FROM progress_records').get();
-      const evs = dbInstance.prepare('SELECT MAX(updated_at) as max_up, COUNT(*) as cnt FROM events').get();
-      stats = `${clubStats}:${pfs?.max_up || ''}-${pfs?.cnt || 0}:${prog?.max_up || ''}-${prog?.cnt || 0}:${evs?.max_up || ''}-${evs?.cnt || 0}`;
+      const evs = dbInstance.prepare('SELECT MAX(created_at) as max_up, COUNT(*) as cnt FROM activity_events').get();
+      stats = `${clubStats}:${pfs?.cnt || 0}:${prog?.max_up || ''}-${prog?.cnt || 0}:${evs?.max_up || ''}-${evs?.cnt || 0}`;
     }
     const raw = `${docType}:${JSON.stringify(params)}:${stats}`;
     return crypto.createHash('md5').update(raw).digest('hex').slice(0, 12);
-  } catch {
+  } catch (err) {
+    console.error('[computeDataVersion Error]:', err);
     return 'v1';
   }
 }
@@ -251,6 +260,33 @@ function createEphemeralMemoryDatabaseFromSandbox(sandboxState) {
         );
       }
     }
+  }
+
+  // Popula users / leaders para suportar turmas divididas por instrutor e permissões
+  const insertUser = memDb.prepare(`
+    INSERT INTO users (id, name, email, password_hash, role, unit_id, assigned_classes_json, assigned_pathfinders_json, custom_role_title, active, created_at)
+    VALUES (?, ?, ?, 'demo', ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const allUsersMap = new Map();
+  for (const u of (sandboxState.leaders || [])) {
+    if (u && u.id) allUsersMap.set(u.id, u);
+  }
+  for (const u of (sandboxState.demoAccounts || [])) {
+    if (u && u.id && !allUsersMap.has(u.id)) allUsersMap.set(u.id, u);
+  }
+  for (const u of allUsersMap.values()) {
+    insertUser.run(
+      u.id,
+      u.name,
+      u.email || `${u.id}@clube.org`,
+      u.role || 'INSTRUTOR',
+      u.unit_id || null,
+      typeof u.assigned_classes_json === 'string' ? u.assigned_classes_json : JSON.stringify(u.assigned_classes || []),
+      typeof u.assigned_pathfinders_json === 'string' ? u.assigned_pathfinders_json : JSON.stringify(u.assigned_pathfinders || []),
+      u.custom_role_title || '',
+      u.active !== 0 ? 1 : 0,
+      u.created_at || new Date().toISOString()
+    );
   }
 
   // Popula activity_events se houver

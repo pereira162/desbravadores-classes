@@ -622,10 +622,10 @@ export default function ClassMatrixView({
                 {groupedSections.map((group) => (
                   <React.Fragment key={group.key}>
                     {/* Linha divisória da Seção */}
-                    <tr className="bg-slate-100/90 border-y border-slate-300">
+                    <tr className="bg-slate-100/95 dark:bg-slate-800/95 border-y border-slate-300 dark:border-slate-700">
                       <td
                         colSpan={enrolledPathfinders.length + 2}
-                        className="px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-slate-800"
+                        className="px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200"
                       >
                         <span
                           className={`inline-block px-2 py-0.5 rounded mr-2 text-[10px] text-white ${
@@ -645,10 +645,10 @@ export default function ClassMatrixView({
                       return (
                         <tr
                           key={req.id}
-                          className="hover:bg-slate-50/70 transition group"
+                          className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition group"
                         >
                           {/* Coluna Fixa: Descrição do Requisito */}
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-3 sm:px-4 py-3 border-r border-slate-200 align-top min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px]">
+                          <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-850 px-3 sm:px-4 py-3 border-r border-slate-200 dark:border-slate-800 align-top min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px]">
                             <div className="flex items-start gap-2.5">
                               <span
                                 className="px-2 py-0.5 rounded text-[11px] font-extrabold text-white shrink-0 mt-0.5"

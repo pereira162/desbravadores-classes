@@ -43,7 +43,7 @@ function getEnrolledPathfindersForPdf(dbInstance, classSlug, unitId = 'ALL', ins
       instructorLabel = instRow.name;
       try {
         const parsed = JSON.parse(instRow.assigned_pathfinders_json || '[]');
-        if (Array.isArray(parsed) && parsed.length > 0 && !parsed.includes('*')) {
+        if (Array.isArray(parsed) && !parsed.includes('*')) {
           allowedInstructorPfIds = new Set(parsed);
         }
       } catch {}
@@ -64,7 +64,7 @@ function getEnrolledPathfindersForPdf(dbInstance, classSlug, unitId = 'ALL', ins
   }
   pfQuery += ' ORDER BY p.name ASC';
   let enrolledPfs = dbInstance.prepare(pfQuery).all(...pfParams);
-  if (allowedInstructorPfIds) {
+  if (allowedInstructorPfIds !== null) {
     enrolledPfs = enrolledPfs.filter((p) => allowedInstructorPfIds.has(p.id));
   }
   return { enrolledPfs, instructorLabel };
@@ -112,17 +112,24 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
     progressMap[`${pr.pathfinder_id}:${pr.requirement_id}`] = pr.status;
   }
 
-  // Divide desbravadores em blocos de 6
-  const COLS_PER_SHEET = 6;
-  const sheetCount = Math.max(1, Math.ceil(enrolledPfs.length / COLS_PER_SHEET));
-  const sheets = [];
-  for (let s = 0; s < sheetCount; s++) {
-    const cols = [];
-    for (let c = 0; c < COLS_PER_SHEET; c++) {
-      cols.push(enrolledPfs[s * COLS_PER_SHEET + c] || null);
+  // Divide desbravadores em blocos equilibrados de no máximo 6 por folha
+  const MAX_PER_SHEET = 6;
+  const totalPfs = enrolledPfs.length;
+  let sheets = [];
+  if (totalPfs <= MAX_PER_SHEET) {
+    sheets = [enrolledPfs];
+  } else {
+    const numSheets = Math.ceil(totalPfs / MAX_PER_SHEET);
+    const baseSize = Math.floor(totalPfs / numSheets);
+    const remainder = totalPfs % numSheets;
+    let currentIndex = 0;
+    for (let i = 0; i < numSheets; i++) {
+      const size = baseSize + (i < remainder ? 1 : 0);
+      sheets.push(enrolledPfs.slice(currentIndex, currentIndex + size));
+      currentIndex += size;
     }
-    sheets.push(cols);
   }
+  if (sheets.length === 0) sheets = [[]];
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -170,9 +177,10 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
       y += 58;
 
       // TABELA DE REQUISITOS
+      const colsCount = Math.max(1, cols.length);
       const colCodW = 28;
-      const colColW = 22; // 6 colunas = 132pt
-      const colReqW = contentWidth - colCodW - (colColW * COLS_PER_SHEET); // ~405pt
+      const colColW = Math.max(22, Math.min(36, Math.floor(160 / colsCount)));
+      const colReqW = contentWidth - colCodW - (colColW * colsCount);
       const headerH = 70;
 
       // Header row
@@ -184,7 +192,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
         .text('REQUISITOS OFICIAIS DA CLASSE', margin + colCodW + 6, y + 28, { width: colReqW - 12 });
 
       // Nomes dos desbravadores rotacionados -90 graus
-      for (let c = 0; c < COLS_PER_SHEET; c++) {
+      for (let c = 0; c < colsCount; c++) {
         const pf = cols[c];
         const cellX = margin + colCodW + colReqW + (c * colColW);
         doc.rect(cellX, y, colColW, headerH).fillAndStroke('#f1f5f9', '#94a3b8');
@@ -214,12 +222,12 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
       );
       const distinctSectionsCount = distinctSections.size;
 
-      const footH = 36; // Reserva estrita para o bloco de assinaturas
+      const footH = 38; // Reserva estrita para o bloco de assinaturas
       const footY = pageHeight - margin - footH;
-      const availableTableH = footY - y - 6; // Termina 6pt antes das assinaturas
-      const totalUnits = reqs.length + (distinctSectionsCount * 0.8);
-      const rowH = Math.min(15.5, availableTableH / Math.max(1, totalUnits));
-      const secH = Math.max(9.5, rowH * 0.8);
+      const availableTableH = Math.max(200, footY - y - 8); // Termina 8pt antes das assinaturas
+      const totalUnits = reqs.length + (distinctSectionsCount * 0.75);
+      const rowH = Math.min(15, availableTableH / Math.max(1, totalUnits));
+      const secH = rowH * 0.75;
 
       let lastSection = null;
       for (const req of reqs) {
@@ -253,7 +261,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
             ellipsis: true,
           });
 
-        for (let c = 0; c < COLS_PER_SHEET; c++) {
+        for (let c = 0; c < colsCount; c++) {
           const pf = cols[c];
           const cellX = margin + colCodW + colReqW + (c * colColW);
           doc.rect(cellX, y, colColW, rowH).fillAndStroke('#ffffff', '#cbd5e1');
@@ -576,7 +584,16 @@ async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', ou
 /**
  * 3. PLANEJAMENTO ANUAL COMPLETO (Por Atividade OU Unificações) — < 200ms
  */
-async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', tagFilter = 'ALL', outputPath, dbInstance }) {
+async function generateAnnualPlanningPdf({
+  mode = 'activities',
+  unitId = 'ALL',
+  tagFilter = 'ALL',
+  baseClassFilter = 'ALL',
+  classTypeFilter = 'ALL',
+  onlyPending = true,
+  outputPath,
+  dbInstance,
+}) {
   const settings = dbInstance.prepare('SELECT * FROM club_settings WHERE id = 1').get() || {};
   const clubName = settings.club_name || 'Clube de Desbravadores';
 
@@ -602,12 +619,20 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
   }
 
   let rawReqs = dbInstance.prepare(`
-    SELECT r.*, c.name as class_name, c.color_hex as class_color
+    SELECT r.*, c.name as class_name, c.color_hex as class_color, c.base_slug as class_base_slug, c.class_type as class_type
     FROM requirements_catalog r
     JOIN classes_catalog c ON c.slug = r.class_slug
     WHERE r.code NOT IN ('I.1', 'I.2')
     ORDER BY c.display_order ASC, r.display_order ASC
   `).all();
+
+  // Aplica filtros de classe base e tipo de classe
+  if (baseClassFilter && baseClassFilter !== 'ALL') {
+    rawReqs = rawReqs.filter((r) => r.base_class_slug === baseClassFilter || r.class_base_slug === baseClassFilter);
+  }
+  if (classTypeFilter && classTypeFilter !== 'ALL') {
+    rawReqs = rawReqs.filter((r) => r.class_type === classTypeFilter);
+  }
 
   if (tagFilter && tagFilter !== 'ALL') {
     rawReqs = rawReqs.filter((r) => {
@@ -621,7 +646,7 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
   }
 
   // Enriquecer demandas
-  const enrichedReqs = [];
+  let enrichedReqs = [];
   for (const req of rawReqs) {
     const enrolledPfs = pathfinders.filter((p) => pfEnrolledClasses[p.id]?.has(req.class_slug));
     const pendingPfs = [];
@@ -640,6 +665,11 @@ async function generateAnnualPlanningPdf({ mode = 'activities', unitId = 'ALL', 
       pendingCount: pendingPfs.length,
       pendingPfs,
     });
+  }
+
+  // Se o filtro onlyPending estiver ativo, exibe apenas os requisitos que têm desbravadores pendentes (> 0)
+  if (onlyPending) {
+    enrichedReqs = enrichedReqs.filter((r) => r.pendingCount > 0);
   }
 
   return new Promise((resolve, reject) => {
@@ -841,25 +871,34 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
     const pageHeight = 595.28;
     const contentWidth = pageWidth - margin * 2; // ~805pt
 
-    // Divide desbravadores em blocos de até 6 por conjunto de páginas
-    const COLS_PER_BLOCK = 6;
-    const blockCount = Math.max(1, Math.ceil(enrolledPfs.length / COLS_PER_BLOCK));
-    const blocks = [];
-    for (let b = 0; b < blockCount; b++) {
-      const cols = [];
-      for (let c = 0; c < COLS_PER_BLOCK; c++) {
-        cols.push(enrolledPfs[b * COLS_PER_BLOCK + c] || null);
+    // Divide desbravadores em blocos equilibrados de no máximo 6 por grupo de páginas
+    // Exemplo: se forem 8, divide em 4+4; se forem 10, divide em 5+5; se forem 6, 6; se forem 7, 4+3
+    const MAX_PER_BLOCK = 6;
+    const totalPfs = enrolledPfs.length;
+    let blocks = [];
+    if (totalPfs <= MAX_PER_BLOCK) {
+      blocks = [enrolledPfs];
+    } else {
+      const numBlocks = Math.ceil(totalPfs / MAX_PER_BLOCK);
+      const baseSize = Math.floor(totalPfs / numBlocks);
+      const remainder = totalPfs % numBlocks;
+      let currentIndex = 0;
+      for (let i = 0; i < numBlocks; i++) {
+        const size = baseSize + (i < remainder ? 1 : 0);
+        blocks.push(enrolledPfs.slice(currentIndex, currentIndex + size));
+        currentIndex += size;
       }
-      blocks.push(cols);
     }
-
-    const colCodW = 32;
-    const colPfW = 48; // 6 colunas = 288pt
-    const colReqW = contentWidth - colCodW - (colPfW * COLS_PER_BLOCK); // ~485pt
-    const headerTableH = 50;
+    if (blocks.length === 0) blocks = [[]];
 
     for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
       const currentCols = blocks[bIdx];
+      const colsInBlock = Math.max(1, currentCols.length);
+      const colCodW = 32;
+      // Largura da coluna de cada desbravador proporcional e espaçosa (mínimo 60pt, até 90pt)
+      const colPfW = Math.max(54, Math.min(84, Math.floor(340 / colsInBlock)));
+      const colReqW = contentWidth - colCodW - (colPfW * colsInBlock);
+      const headerTableH = 46;
       let pageInBlock = 1;
 
       const startNewPage = () => {
@@ -867,38 +906,35 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
         let y = margin;
 
         // Cabeçalho institucional do documento
-        doc.rect(margin, y, contentWidth, 38).fillAndStroke('#0f172a', '#0f172a');
+        doc.rect(margin, y, contentWidth, 36).fillAndStroke('#0f172a', '#0f172a');
         doc.fillColor('#94a3b8').fontSize(7).font('Helvetica-Bold')
-          .text('MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA', margin + 8, y + 5);
-        doc.fillColor(cfg.color).fontSize(10.5).font('Helvetica-Bold')
-          .text(`MATRIZ COMPLETA DE REQUISITOS: ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 14);
-        doc.fillColor('#ffffff').fontSize(7.5).font('Helvetica')
-          .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length}` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 26);
-        y += 42;
+          .text('MINISTÉRIO DOS DESBRAVADORES • DIVISÃO SUL-AMERICANA', margin + 8, y + 4);
+        doc.fillColor(cfg.color).fontSize(10).font('Helvetica-Bold')
+          .text(`MATRIZ COMPLETA DE REQUISITOS: ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 13);
+        doc.fillColor('#ffffff').fontSize(7).font('Helvetica')
+          .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length} (${currentCols.length} desbravadores)` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 24);
+        y += 40;
 
         // Cabeçalho da tabela com os desbravadores do bloco
         doc.rect(margin, y, colCodW, headerTableH).fillAndStroke('#e2e8f0', '#94a3b8');
         doc.rect(margin + colCodW, y, colReqW, headerTableH).fillAndStroke('#e2e8f0', '#94a3b8');
         doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
-          .text('CÓD', margin, y + 20, { width: colCodW, align: 'center' })
-          .text('REQUISITOS OFICIAIS DETALHADOS (TEXTO INTEGRAL & SUBITENS)', margin + colCodW + 8, y + 20, { width: colReqW - 16 });
+          .text('CÓD', margin, y + 18, { width: colCodW, align: 'center' })
+          .text('REQUISITOS OFICIAIS DETALHADOS (TEXTO INTEGRAL & SUBITENS)', margin + colCodW + 8, y + 18, { width: colReqW - 16 });
 
-        for (let c = 0; c < COLS_PER_BLOCK; c++) {
+        for (let c = 0; c < colsInBlock; c++) {
           const pf = currentCols[c];
           const cellX = margin + colCodW + colReqW + (c * colPfW);
           doc.rect(cellX, y, colPfW, headerTableH).fillAndStroke('#f1f5f9', '#94a3b8');
 
           if (pf) {
-            doc.save();
-            doc.rotate(-90, { origin: [cellX + colPfW / 2, y + headerTableH / 2] });
-            doc.fillColor('#0f172a').fontSize(7).font('Helvetica-Bold')
-              .text(pf.name.replace(/\(.*\)/g, '').trim().slice(0, 20), cellX + colPfW / 2 - 22, y + headerTableH / 2 - 3.5, {
-                width: 44,
-                align: 'left',
+            doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica-Bold')
+              .text(pf.name, cellX + 3, y + 8, {
+                width: colPfW - 6,
+                align: 'center',
+                height: headerTableH - 12,
               });
-            doc.restore();
           } else {
-            // Coluna vazia para preenchimento manual se necessário
             doc.fillColor('#94a3b8').fontSize(6).font('Helvetica')
               .text('Nome:', cellX + 4, y + 8, { width: colPfW - 8, align: 'left' });
           }
@@ -978,7 +1014,7 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
         }
 
         // Células dos desbravadores
-        for (let c = 0; c < COLS_PER_BLOCK; c++) {
+        for (let c = 0; c < colsInBlock; c++) {
           const pf = currentCols[c];
           const cellX = margin + colCodW + colReqW + (c * colPfW);
           doc.rect(cellX, curY, colPfW, rowH).fillAndStroke('#ffffff', '#cbd5e1');

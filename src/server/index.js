@@ -2541,6 +2541,8 @@ app.put('/api/classes/:baseSlug/instructor-distribution', requireAuth, (req, res
         upd.run(JSON.stringify(pfIds), instructorId);
       }
     }
+    const nowIso = new Date().toISOString();
+    db.prepare('UPDATE club_settings SET updated_at = ? WHERE id = 1').run(nowIso);
     db.exec('COMMIT');
     schedulePdfWarmup(db);
     res.json({ success: true });
