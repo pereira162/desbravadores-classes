@@ -48,8 +48,10 @@ const LeadersSettingsView = lazy(() => import('./components/LeadersSettingsView'
 const AuditLogsView = lazy(() => import('./components/AuditLogsView'));
 const DocumentationModal = lazy(() => import('./components/DocumentationModal'));
 const McpSettingsAndChatModal = lazy(() => import('./components/McpSettingsAndChatModal'));
+import { useModalDismiss } from './utils/modalStack';
 
 function PwaInstallGuideModal({ isOpen, onClose }) {
+  useModalDismiss(isOpen, onClose, 'ModalGuiaPwa');
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
@@ -389,109 +391,8 @@ export default function App() {
     } catch {}
   }, [user?.role, user?.id]);
 
-  // Fecha modais com a tecla ESC ou botão voltar do mobile (Android / Navegador)
-  const modalHistoryPushedRef = useRef(false);
-
-  useEffect(() => {
-    const handleGlobalKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        if (detailModal.isOpen) {
-          setDetailModal({ isOpen: false, requirement: null, pathfinder: null });
-          return;
-        }
-        if (bulkModal.isOpen) {
-          setBulkModal({ isOpen: false, requirements: [] });
-          return;
-        }
-        if (showOnboardingTour) {
-          handleCloseTour();
-          return;
-        }
-        if (showFeedbackModal) {
-          setShowFeedbackModal(false);
-          return;
-        }
-        if (showDocsModal) {
-          setShowDocsModal(false);
-          return;
-        }
-        if (showMcpModal) {
-          setShowMcpModal(false);
-          return;
-        }
-        if (showInstallGuideModal) {
-          setShowInstallGuideModal(false);
-          return;
-        }
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [
-    detailModal.isOpen,
-    bulkModal.isOpen,
-    showOnboardingTour,
-    showFeedbackModal,
-    showDocsModal,
-    showMcpModal,
-    showInstallGuideModal,
-    handleCloseTour,
-  ]);
-
-  useEffect(() => {
-    const hasAnyModal =
-      detailModal.isOpen ||
-      bulkModal.isOpen ||
-      showOnboardingTour ||
-      showFeedbackModal ||
-      showDocsModal ||
-      showMcpModal ||
-      showInstallGuideModal;
-
-    if (hasAnyModal) {
-      if (!modalHistoryPushedRef.current) {
-        try {
-          window.history.pushState({ dbvModalOpen: true }, '');
-          modalHistoryPushedRef.current = true;
-        } catch {}
-      }
-
-      const handlePopState = () => {
-        modalHistoryPushedRef.current = false;
-        if (detailModal.isOpen) {
-          setDetailModal({ isOpen: false, requirement: null, pathfinder: null });
-        } else if (bulkModal.isOpen) {
-          setBulkModal({ isOpen: false, requirements: [] });
-        } else if (showOnboardingTour) {
-          handleCloseTour();
-        } else if (showFeedbackModal) {
-          setShowFeedbackModal(false);
-        } else if (showDocsModal) {
-          setShowDocsModal(false);
-        } else if (showMcpModal) {
-          setShowMcpModal(false);
-        } else if (showInstallGuideModal) {
-          setShowInstallGuideModal(false);
-        }
-      };
-
-      window.addEventListener('popstate', handlePopState);
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
-    } else {
-      modalHistoryPushedRef.current = false;
-    }
-  }, [
-    detailModal.isOpen,
-    bulkModal.isOpen,
-    showOnboardingTour,
-    showFeedbackModal,
-    showDocsModal,
-    showMcpModal,
-    showInstallGuideModal,
-    handleCloseTour,
-  ]);
+  // Todos os modais, janelas e popups do sistema agora são gerenciados pela pilha
+  // dinâmica LIFO em `src/client/utils/modalStack.js` (ESC e Voltar Mobile com hierarquia rigorosa).
 
   // Normaliza e enriquece o catálogo e os registros com escopo estrito por padrão (RBAC)
   const normalizedData = useMemo(() => {

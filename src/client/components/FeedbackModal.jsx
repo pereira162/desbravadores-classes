@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../api';
 import { getCapturedBrowserLogs, getLastErrorStack } from '../logger';
+import { useModalDismiss } from '../utils/modalStack';
 
 export default function FeedbackModal({ isOpen, onClose, user }) {
   const [category, setCategory] = useState('FEEDBACK');
@@ -29,17 +30,8 @@ export default function FeedbackModal({ isOpen, onClose, user }) {
     }
   }, [user]);
 
-  // Fecha ao pressionar ESC
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Registro na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(isOpen, onClose, 'ModalFeedback');
 
   if (!isOpen) return null;
 

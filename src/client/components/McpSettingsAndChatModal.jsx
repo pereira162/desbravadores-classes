@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { apiRequest, getAssetUrl } from '../api';
+import { useModalDismiss } from '../utils/modalStack';
 
 const QUICK_PROMPTS = [
   'Resumo do Clube',
@@ -84,17 +85,8 @@ export default function McpSettingsAndChatModal({ isOpen, onClose, user, leaders
     }
   };
 
-  // Fecha o modal ao pressionar ESC
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Registro na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(isOpen, onClose, 'ModalMcpChat');
 
   if (!isOpen) return null;
 

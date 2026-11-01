@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, CheckSquare, Square, Users, CheckCircle2, Calendar, FileText } from 'lucide-react';
 import { STATUS_CONFIG } from '../constants';
 import DateInput from './DateInput';
+import { useModalDismiss } from '../utils/modalStack';
 
 export default function BulkSignModal({
   isOpen,
@@ -51,17 +52,8 @@ export default function BulkSignModal({
     setError('');
   }, [isOpen, eligiblePathfinders, requirements, progressMap]);
 
-  // Fecha o modal ao pressionar ESC
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Registro na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(isOpen, onClose, 'ModalAssinaturaLote');
 
   if (!isOpen || !requirements || requirements.length === 0) return null;
 

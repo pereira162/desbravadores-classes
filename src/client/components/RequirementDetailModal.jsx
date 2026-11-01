@@ -18,6 +18,7 @@ import {
 import { STATUS_CONFIG, EXECUTION_CONTEXT_LABELS, formatDateBR } from '../constants';
 import DateInput from './DateInput';
 import { apiRequest } from '../api';
+import { useModalDismiss } from '../utils/modalStack';
 
 // Comprime imagens no navegador para envio rápido e leve
 function compressImageFile(file, maxDimension = 1200, quality = 0.8) {
@@ -118,17 +119,9 @@ export default function RequirementDetailModal({
     }
   }, [isOpen, requirement, pathfinder, progressRecord]);
 
-  // Fecha o modal ao pressionar ESC
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Registro na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(isOpen, onClose, 'ModalDetalhesRequisito');
+  useModalDismiss(Boolean(previewAttachment), () => setPreviewAttachment(null), 'LightboxFotoRequisito');
 
   if (!isOpen || !requirement) return null;
 

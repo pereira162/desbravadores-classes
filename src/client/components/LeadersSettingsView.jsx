@@ -31,6 +31,7 @@ import {
 import { ROLE_CONFIG } from '../constants';
 import DateInput from './DateInput';
 import { API_BASE_URL, getStoredToken, isTestMode, apiRequest } from '../api';
+import { useModalDismiss } from '../utils/modalStack';
 
 const EXTRA_PERMISSIONS_OPTIONS = [
   {
@@ -182,6 +183,11 @@ export default function LeadersSettingsView({
   const [backupErrorMsg, setBackupErrorMsg] = useState(null);
   const [restoreModalFile, setRestoreModalFile] = useState(null);
   const [cloneModalOpen, setCloneModalOpen] = useState(false);
+
+  // Registro de modais na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(leaderModalOpen, () => setLeaderModalOpen(false), 'ModalLider');
+  useModalDismiss(Boolean(restoreModalFile), () => setRestoreModalFile(null), 'ModalRestaurarBackup');
+  useModalDismiss(cloneModalOpen, () => setCloneModalOpen(false), 'ModalClonarTeste');
 
   const fetchServerBackups = async () => {
     if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role)) return;

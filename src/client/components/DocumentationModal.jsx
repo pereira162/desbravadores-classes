@@ -14,6 +14,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import { useModalDismiss } from '../utils/modalStack';
 
 const DOC_SECTIONS = [
   {
@@ -53,17 +54,8 @@ export default function DocumentationModal({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
-  // Fecha ao pressionar ESC
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Registro na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(isOpen, onClose, 'ModalDocumentacao');
 
   if (!isOpen) return null;
 

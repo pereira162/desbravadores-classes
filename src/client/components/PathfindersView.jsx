@@ -28,6 +28,7 @@ import {
 } from '../constants';
 import DateInput from './DateInput';
 import PdfActionGroup from './PdfActionGroup';
+import { useModalDismiss } from '../utils/modalStack';
 
 export default function PathfindersView({
   catalog,
@@ -82,6 +83,11 @@ export default function PathfindersView({
   const [loadingInvite, setLoadingInvite] = useState(false);
   const [sendingInviteEmail, setSendingInviteEmail] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Registro de modais na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(pfModalOpen, () => setPfModalOpen(false), 'ModalDesbravador');
+  useModalDismiss(unitModalOpen, () => setUnitModalOpen(false), 'ModalUnidade');
+  useModalDismiss(Boolean(inviteModalPf), () => setInviteModalPf(null), 'ModalConviteDesbravador');
 
   const isPathfinderUser = currentUser?.role === 'DESBRAVADOR';
   const canManageRegistry =

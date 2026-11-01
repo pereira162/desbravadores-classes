@@ -20,6 +20,7 @@ import {
   MousePointerClick,
   CheckSquare,
 } from 'lucide-react';
+import { useModalDismiss } from '../utils/modalStack';
 
 const TOUR_STEPS_BY_ROLE = {
   DIRETOR: [
@@ -554,17 +555,8 @@ export default function OnboardingTour({ user, isOpen, onClose, onSelectTab, act
     };
   }, [isOpen, currentStep.targetSelector, stepIdx, steps.length]);
 
-  // Fecha a trilha de ensino ao pressionar ESC
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Registro na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(isOpen, onClose, 'ModalTrilhaEnsino');
 
   if (!isOpen || !user) return null;
 

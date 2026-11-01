@@ -15,6 +15,7 @@ import {
 import { STATUS_CONFIG } from '../constants';
 import { apiRequest, getAssetUrl } from '../api';
 import PdfActionGroup from './PdfActionGroup';
+import { useModalDismiss } from '../utils/modalStack';
 
 const BASE_CLASSES = [
   { baseSlug: 'amigo', label: 'Amigo', age: 10, color: '#0072BC' },
@@ -54,6 +55,9 @@ export default function ClassMatrixView({
   const [distributionModalOpen, setDistributionModalOpen] = useState(false);
   const [distributionDraft, setDistributionDraft] = useState({});
   const [savingDistribution, setSavingDistribution] = useState(false);
+
+  // Registro de modais na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(distributionModalOpen, () => setDistributionModalOpen(false), 'ModalDistribuicaoInstrutores');
 
   // Instrutores vinculados a esta classe base
   const classInstructors = useMemo(() => {

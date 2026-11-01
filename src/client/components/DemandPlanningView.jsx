@@ -21,6 +21,7 @@ import {
 import { STATUS_CONFIG, EXECUTION_CONTEXT_LABELS } from '../constants';
 import PdfActionGroup from './PdfActionGroup';
 import { apiRequest } from '../api';
+import { useModalDismiss } from '../utils/modalStack';
 
 export default function DemandPlanningView({
   catalog,
@@ -57,6 +58,9 @@ export default function DemandPlanningView({
   const [eqSmartCluster, setEqSmartCluster] = useState('ALL');
   const [eqClassFilter, setEqClassFilter] = useState('ALL');
   const [savingEq, setSavingEq] = useState(false);
+
+  // Registro de modais na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(eqModalOpen, () => setEqModalOpen(false), 'ModalUnificacao');
 
   const canEditEquivalences =
     ['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role) ||

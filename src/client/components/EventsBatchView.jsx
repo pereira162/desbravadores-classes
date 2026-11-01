@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { formatDateBR } from '../constants';
 import DateInput from './DateInput';
+import { useModalDismiss } from '../utils/modalStack';
 
 const EVENT_TYPES = [
   { id: 'ACAMPAMENTO', label: 'Acampamento / Pernoite', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
@@ -60,17 +61,9 @@ export default function EventsBatchView({
   const [execNotes, setExecNotes] = useState('');
   const [runningExecute, setRunningExecute] = useState(false);
 
-  // Fecha modais locais com tecla ESC
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        if (createOpen) setCreateOpen(false);
-        if (executingEvent) setExecutingEvent(null);
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [createOpen, executingEvent]);
+  // Registro de modais na pilha hierárquica global (ESC e Voltar Mobile)
+  useModalDismiss(createOpen, () => setCreateOpen(false), 'ModalCriarEvento');
+  useModalDismiss(Boolean(executingEvent), () => setExecutingEvent(null), 'ModalExecutarEvento');
 
   // Se veio um rascunho da tela de Planejamento de Demanda Anual, abre o modal preenchido
   useEffect(() => {
