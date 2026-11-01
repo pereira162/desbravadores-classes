@@ -112,29 +112,40 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
     progressMap[`${pr.pathfinder_id}:${pr.requirement_id}`] = pr.status;
   }
 
-  // Divide desbravadores em blocos equilibrados de no máximo 6 por folha
-  const MAX_PER_SHEET = 6;
+  // Divide desbravadores em blocos de até 6 por folha.
+  // Se houver menos de 6 desbravadores, preenche o restante com null (espaço em branco para preenchimento manual a caneta).
+  const COLS_PER_SHEET = 6;
   const totalPfs = enrolledPfs.length;
   let sheets = [];
-  if (totalPfs <= MAX_PER_SHEET) {
-    sheets = [enrolledPfs];
+  if (totalPfs <= COLS_PER_SHEET) {
+    const chunk = [...enrolledPfs];
+    while (chunk.length < COLS_PER_SHEET) {
+      chunk.push(null);
+    }
+    sheets = [chunk];
   } else {
-    const numSheets = Math.ceil(totalPfs / MAX_PER_SHEET);
+    const numSheets = Math.ceil(totalPfs / COLS_PER_SHEET);
     const baseSize = Math.floor(totalPfs / numSheets);
     const remainder = totalPfs % numSheets;
     let currentIndex = 0;
     for (let i = 0; i < numSheets; i++) {
       const size = baseSize + (i < remainder ? 1 : 0);
-      sheets.push(enrolledPfs.slice(currentIndex, currentIndex + size));
+      const chunk = enrolledPfs.slice(currentIndex, currentIndex + size);
+      while (chunk.length < COLS_PER_SHEET) {
+        chunk.push(null);
+      }
+      sheets.push(chunk);
       currentIndex += size;
     }
   }
-  if (sheets.length === 0) sheets = [[]];
+  if (sheets.length === 0) {
+    sheets = [[null, null, null, null, null, null]];
+  }
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
-      orientation: 'portrait',
+      layout: 'portrait',
       margin: 15,
       autoFirstPage: false,
       info: {
@@ -148,7 +159,7 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
 
     for (let sheetIdx = 0; sheetIdx < sheets.length; sheetIdx++) {
       const cols = sheets[sheetIdx];
-      doc.addPage({ size: 'A4', margin: 15 });
+      doc.addPage({ size: 'A4', layout: 'portrait', margin: 15 });
 
       const pageWidth = doc.page.width;
       const pageHeight = doc.page.height;
@@ -176,11 +187,11 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
 
       y += 58;
 
-      // TABELA DE REQUISITOS
-      const colsCount = Math.max(1, cols.length);
+      // TABELA DE REQUISITOS (Exatamente 6 colunas por folha)
+      const colsCount = 6;
       const colCodW = 28;
-      const colColW = Math.max(22, Math.min(36, Math.floor(160 / colsCount)));
-      const colReqW = contentWidth - colCodW - (colColW * colsCount);
+      const colColW = 26; // 6 * 26 = 156pt
+      const colReqW = contentWidth - colCodW - (colColW * colsCount); // 565 - 28 - 156 = 381pt
       const headerH = 70;
 
       // Header row
@@ -207,6 +218,16 @@ async function generateInstructorControlPdf({ classSlug = 'amigo', unitId = 'ALL
           doc.rotate(-90, { origin: [cellX + colColW / 2, y + headerH / 2] });
           doc.fillColor('#0f172a').fontSize(7).font('Helvetica-Bold')
             .text(shortName.slice(0, 22), cellX + colColW / 2 - 32, y + headerH / 2 - 3.5, {
+              width: 64,
+              align: 'left',
+            });
+          doc.restore();
+        } else {
+          // Espaço em branco para o instrutor preencher com caneta
+          doc.save();
+          doc.rotate(-90, { origin: [cellX + colColW / 2, y + headerH / 2] });
+          doc.fillColor('#64748b').fontSize(6).font('Helvetica')
+            .text('Nome: ________________', cellX + colColW / 2 - 32, y + headerH / 2 - 3.5, {
               width: 64,
               align: 'left',
             });
@@ -362,7 +383,7 @@ async function generatePathfinderCardPdf({ pathfinderId, mode = 'simplified', ou
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
-      orientation: 'portrait',
+      layout: 'portrait',
       margin: 18,
       autoFirstPage: true,
       info: {
@@ -675,7 +696,7 @@ async function generateAnnualPlanningPdf({
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
-      orientation: 'portrait',
+      layout: 'portrait',
       margin: 18,
       autoFirstPage: true,
       info: {
@@ -854,7 +875,7 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
     return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
-      orientation: 'landscape',
+      layout: 'landscape',
       margin: 18,
       autoFirstPage: false,
       info: {
@@ -872,37 +893,46 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
     const contentWidth = pageWidth - margin * 2; // ~805pt
 
     // Divide desbravadores em blocos equilibrados de no máximo 6 por grupo de páginas
-    // Exemplo: se forem 8, divide em 4+4; se forem 10, divide em 5+5; se forem 6, 6; se forem 7, 4+3
-    const MAX_PER_BLOCK = 6;
+    // Se houver menos de 6 desbravadores no bloco, preenche até 6 com null para anotações manuais a caneta
+    const COLS_PER_BLOCK = 6;
     const totalPfs = enrolledPfs.length;
     let blocks = [];
-    if (totalPfs <= MAX_PER_BLOCK) {
-      blocks = [enrolledPfs];
+    if (totalPfs <= COLS_PER_BLOCK) {
+      const chunk = [...enrolledPfs];
+      while (chunk.length < COLS_PER_BLOCK) {
+        chunk.push(null);
+      }
+      blocks = [chunk];
     } else {
-      const numBlocks = Math.ceil(totalPfs / MAX_PER_BLOCK);
+      const numBlocks = Math.ceil(totalPfs / COLS_PER_BLOCK);
       const baseSize = Math.floor(totalPfs / numBlocks);
       const remainder = totalPfs % numBlocks;
       let currentIndex = 0;
       for (let i = 0; i < numBlocks; i++) {
         const size = baseSize + (i < remainder ? 1 : 0);
-        blocks.push(enrolledPfs.slice(currentIndex, currentIndex + size));
+        const chunk = enrolledPfs.slice(currentIndex, currentIndex + size);
+        while (chunk.length < COLS_PER_BLOCK) {
+          chunk.push(null);
+        }
+        blocks.push(chunk);
         currentIndex += size;
       }
     }
-    if (blocks.length === 0) blocks = [[]];
+    if (blocks.length === 0) {
+      blocks = [[null, null, null, null, null, null]];
+    }
 
     for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
       const currentCols = blocks[bIdx];
-      const colsInBlock = Math.max(1, currentCols.length);
+      const colsInBlock = 6;
       const colCodW = 32;
-      // Largura da coluna de cada desbravador proporcional e espaçosa (mínimo 60pt, até 90pt)
-      const colPfW = Math.max(54, Math.min(84, Math.floor(340 / colsInBlock)));
-      const colReqW = contentWidth - colCodW - (colPfW * colsInBlock);
+      const colPfW = 54; // 6 colunas * 54pt = 324pt
+      const colReqW = contentWidth - colCodW - (colPfW * colsInBlock); // ~449.89pt
       const headerTableH = 46;
       let pageInBlock = 1;
 
       const startNewPage = () => {
-        doc.addPage({ size: 'A4', orientation: 'landscape', margin: 18 });
+        doc.addPage({ size: 'A4', layout: 'landscape', margin: 18 });
         let y = margin;
 
         // Cabeçalho institucional do documento
@@ -912,7 +942,7 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
         doc.fillColor(cfg.color).fontSize(10).font('Helvetica-Bold')
           .text(`MATRIZ COMPLETA DE REQUISITOS: ${cfg.name.toUpperCase()} & ${cfg.advancedName.toUpperCase()}`, margin + 8, y + 13);
         doc.fillColor('#ffffff').fontSize(7).font('Helvetica')
-          .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length} (${currentCols.length} desbravadores)` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 24);
+          .text(`Clube: ${clubName}${instructorLabel ? ` • Instrutor(a): ${instructorLabel}` : ''}${blocks.length > 1 ? ` • Grupo ${bIdx + 1} de ${blocks.length}` : ''} • Pág. ${pageInBlock}`, margin + 8, y + 24);
         y += 40;
 
         // Cabeçalho da tabela com os desbravadores do bloco
@@ -935,8 +965,9 @@ async function generateClassMatrixPdf({ classSlug = 'amigo', mode = 'BOTH', unit
                 height: headerTableH - 12,
               });
           } else {
-            doc.fillColor('#94a3b8').fontSize(6).font('Helvetica')
-              .text('Nome:', cellX + 4, y + 8, { width: colPfW - 8, align: 'left' });
+            doc.fillColor('#64748b').fontSize(6).font('Helvetica')
+              .text('Nome:', cellX + 3, y + 8, { width: colPfW - 6, align: 'center' })
+              .text('________________', cellX + 3, y + 20, { width: colPfW - 6, align: 'center' });
           }
         }
 
