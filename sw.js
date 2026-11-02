@@ -1,50 +1,23 @@
-// SGC Classes - Service Worker
-const CACHE_NAME = 'sgc-classes-cache-v1';
-const ASSETS_TO_CACHE = [
-  '/desbravadores-classes/',
-  '/desbravadores-classes/index.html',
-  '/desbravadores-classes/manifest.json',
-  '/desbravadores-classes/icons/icon-192.png',
-  '/desbravadores-classes/icons/icon-512.png'
-];
+// SGC Classes - Service Worker Uninstaller / Cache Cleaner
+// Garante que nenhum Service Worker legado fique preso na máquina do usuário
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
-        console.warn('SW cache.addAll partially failed:', err);
-      });
-    })
-  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keyList) => {
-      return Promise.all(
-        keyList.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
+    caches.keys().then((keys) => {
+      return Promise.all(keys.map((k) => caches.delete(k)));
+    }).then(() => {
+      return self.registration.unregister();
+    }).then(() => {
+      return self.clients.claim();
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through network first, fallback to cache
-  if (event.request.method !== 'GET') return;
-  
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        return networkResponse;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
-  );
+  // Pass-through direto para a rede sem qualquer cache intermediário
+  return;
 });
