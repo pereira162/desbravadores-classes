@@ -62,29 +62,6 @@ export default function DemandPlanningView({
   // Registro de modais na pilha hierárquica global (ESC e Voltar Mobile)
   useModalDismiss(eqModalOpen, () => setEqModalOpen(false), 'ModalUnificacao');
 
-  useEffect(() => {
-    const handleLocalEsc = (e) => {
-      const isEsc =
-        e.key === 'Escape' ||
-        e.key === 'Esc' ||
-        e.code === 'Escape' ||
-        e.keyCode === 27 ||
-        e.which === 27;
-      if (!isEsc) return;
-
-      if (eqModalOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-        setEqModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleLocalEsc, true);
-    document.addEventListener('keydown', handleLocalEsc, true);
-    return () => {
-      window.removeEventListener('keydown', handleLocalEsc, true);
-      document.removeEventListener('keydown', handleLocalEsc, true);
-    };
-  }, [eqModalOpen]);
 
   const canEditEquivalences =
     ['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role) ||
@@ -1073,14 +1050,10 @@ export default function DemandPlanningView({
       {/* Modal Criar / Editar Unificação entre Requisitos com Recomendações Inteligentes */}
       {eqModalOpen && (
         <div
-          tabIndex={-1}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-              e.stopPropagation();
-              setEqModalOpen(false);
-            }
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !savingEq) setEqModalOpen(false);
           }}
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
         >
           <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">

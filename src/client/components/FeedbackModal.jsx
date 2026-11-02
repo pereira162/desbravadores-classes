@@ -33,28 +33,6 @@ export default function FeedbackModal({ isOpen, onClose, user }) {
   // Registro na pilha hierárquica global (ESC e Voltar Mobile)
   useModalDismiss(isOpen, onClose, 'ModalFeedback');
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleLocalEsc = (e) => {
-      const isEsc =
-        e.key === 'Escape' ||
-        e.key === 'Esc' ||
-        e.code === 'Escape' ||
-        e.keyCode === 27 ||
-        e.which === 27;
-      if (!isEsc) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
-    };
-    window.addEventListener('keydown', handleLocalEsc, true);
-    document.addEventListener('keydown', handleLocalEsc, true);
-    return () => {
-      window.removeEventListener('keydown', handleLocalEsc, true);
-      document.removeEventListener('keydown', handleLocalEsc, true);
-    };
-  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -92,14 +70,10 @@ export default function FeedbackModal({ isOpen, onClose, user }) {
 
   return (
     <div
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-          e.stopPropagation();
-          onClose();
-        }
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !sending) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4 animate-fade-in"
     >
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         {/* Header */}

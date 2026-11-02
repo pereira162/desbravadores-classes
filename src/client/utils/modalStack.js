@@ -2,13 +2,14 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Gerenciador Unificado de Pilha de Modais e Popups (LIFO)
- * 
- * Funcionalidades:
- * 1. Fechamento estritamente ordenado por hierarquia (LIFO - Last In, First Out)
- * 2. Fechamento global via tecla ESC (mesmo com foco em formulários/inputs)
- * 3. Fechamento global via botão Voltar do Celular (Android / Mobile Back Button / Navegador)
- * 4. Sincronização limpa do histórico (não acumula entradas dummy quando fechado via ESC, X ou clique fora)
- * 5. Armazenamento no objeto `window.__dbvModalStack` para persistência entre dynamic chunks
+ *
+ * Princípios de Código Limpo:
+ * 1. Ponto Único de Controle: Um único listener global no window (fase de captura)
+ *    para interceptar ESC de forma consistente em qualquer input, formulário ou componente.
+ * 2. Ordem Hierárquica Estrita: O último modal aberto é sempre o primeiro a fechar (LIFO).
+ * 3. Suporte Mobile Nativo: Intercepta o botão "Voltar" do navegador/Android (popstate)
+ *    fechando o modal em vez de sair da página.
+ * 4. Zero Duplicação: Sem listeners manuais repetidos em cada componente.
  */
 
 if (typeof window !== 'undefined') {
@@ -25,11 +26,11 @@ function getStack() {
   return [];
 }
 
-let suppressNextPopstate = 0;
+let suppressPopstateCount = 0;
 let isBackActionInProgress = false;
-let globalListenersInitialized = false;
+let globalListenersAttached = false;
 
-function handleGlobalEscape(e) {
+function handleGlobalKeyDown(e) {
   const isEsc =
     e.key === 'Escape' ||
     e.key === 'Esc' ||
@@ -37,62 +38,57 @@ function handleGlobalEscape(e) {
     e.keyCode === 27 ||
     e.which === 27;
 
-  if (isEsc) {
-    const stack = getStack();
-    if (stack.length > 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      const top = stack[stack.length - 1];
-      if (top && typeof top.close === 'function') {
-        top.close();
-      }
+  if (!isEsc) return;
+
+  const stack = getStack();
+  if (stack.length > 0) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Fecha apenas o modal do topo (o mais recente)
+    const top = stack[stack.length - 1];
+    if (top && typeof top.close === 'function') {
+      top.close();
     }
   }
 }
 
-function initGlobalListeners() {
-  if (globalListenersInitialized || typeof window === 'undefined') return;
-  globalListenersInitialized = true;
+function handleGlobalPopState() {
+  if (suppressPopstateCount > 0) {
+    suppressPopstateCount--;
+    return;
+  }
 
-  // Listeners Globais de Tecla Escape (Fase de captura no window e document para interceptar de qualquer lugar)
-  window.addEventListener('keydown', handleGlobalEscape, true);
-  document.addEventListener('keydown', handleGlobalEscape, true);
-  window.addEventListener('keyup', handleGlobalEscape, true);
-  document.addEventListener('keyup', handleGlobalEscape, true);
-
-  // Listener Global de Botão Voltar (Mobile Android / Histórico do Navegador)
-  window.addEventListener('popstate', () => {
-    if (suppressNextPopstate > 0) {
-      suppressNextPopstate--;
-      return;
-    }
-
-    const stack = getStack();
-    if (stack.length > 0) {
-      isBackActionInProgress = true;
-      try {
-        const top = stack[stack.length - 1];
-        if (top && typeof top.close === 'function') {
-          top.close();
-        }
-      } finally {
-        setTimeout(() => {
-          isBackActionInProgress = false;
-        }, 60);
+  const stack = getStack();
+  if (stack.length > 0) {
+    isBackActionInProgress = true;
+    try {
+      const top = stack[stack.length - 1];
+      if (top && typeof top.close === 'function') {
+        top.close();
       }
+    } finally {
+      setTimeout(() => {
+        isBackActionInProgress = false;
+      }, 50);
     }
-  });
+  }
+}
+
+function ensureGlobalListeners() {
+  if (globalListenersAttached || typeof window === 'undefined') return;
+  globalListenersAttached = true;
+
+  // Fase de captura (true) garante prioridade absoluta antes de qualquer elemento filho
+  window.addEventListener('keydown', handleGlobalKeyDown, true);
+  window.addEventListener('popstate', handleGlobalPopState);
 }
 
 /**
  * Registra um modal aberto na pilha global
- * @param {string} id ID único do modal
- * @param {() => void} closeFn Função para fechar o modal
- * @param {string} name Nome do modal para depuração
- * @returns {() => void} Função de desregistro
  */
 export function registerModal(id, closeFn, name = 'modal') {
-  initGlobalListeners();
+  ensureGlobalListeners();
 
   let pushed = false;
   try {
@@ -110,8 +106,7 @@ export function registerModal(id, closeFn, name = 'modal') {
 }
 
 /**
- * Desregistra um modal da pilha e limpa o histórico caso não tenha sido acionado pelo botão voltar
- * @param {string} id ID do modal
+ * Remove um modal da pilha e desfaz o pushState caso tenha sido fechado por ESC/botão
  */
 export function unregisterModal(id) {
   const stack = getStack();
@@ -119,21 +114,21 @@ export function unregisterModal(id) {
   if (index !== -1) {
     const [entry] = stack.splice(index, 1);
     if (entry.pushedHistory && !isBackActionInProgress) {
-      suppressNextPopstate++;
+      suppressPopstateCount++;
       try {
         window.history.back();
       } catch {
-        suppressNextPopstate = Math.max(0, suppressNextPopstate - 1);
+        suppressPopstateCount = Math.max(0, suppressPopstateCount - 1);
       }
     }
   }
 }
 
 /**
- * Hook React para registrar automaticamente um modal na pilha de fechamento hierárquico
+ * Hook limpo e declarativo para qualquer modal, popup ou janela
  * @param {boolean} isOpen Se o modal está aberto
- * @param {() => void} onClose Callback para fechar o modal
- * @param {string} modalName Nome descritivo do modal
+ * @param {() => void} onClose Callback chamado para fechar
+ * @param {string} modalName Identificador para depuração
  */
 export function useModalDismiss(isOpen, onClose, modalName = 'modal') {
   const onCloseRef = useRef(onClose);
@@ -142,42 +137,13 @@ export function useModalDismiss(isOpen, onClose, modalName = 'modal') {
   useEffect(() => {
     if (!isOpen) return;
 
-    // Listener direto local no escopo do componente para máxima redundância
-    const handleDirectEscape = (e) => {
-      const isEsc =
-        e.key === 'Escape' ||
-        e.key === 'Esc' ||
-        e.code === 'Escape' ||
-        e.keyCode === 27 ||
-        e.which === 27;
-
-      if (isEsc) {
-        const stack = getStack();
-        const isTop = stack.length === 0 || stack[stack.length - 1]?.id === modalId;
-        if (isTop) {
-          e.preventDefault();
-          e.stopPropagation();
-          onCloseRef.current?.();
-        }
-      }
-    };
-
-    const modalId = `${modalName}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const unregister = registerModal(
+    const modalId = `${modalName}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    return registerModal(
       modalId,
       () => {
         onCloseRef.current?.();
       },
       modalName
     );
-
-    window.addEventListener('keydown', handleDirectEscape, true);
-    document.addEventListener('keydown', handleDirectEscape, true);
-
-    return () => {
-      window.removeEventListener('keydown', handleDirectEscape, true);
-      document.removeEventListener('keydown', handleDirectEscape, true);
-      unregister();
-    };
   }, [isOpen, modalName]);
 }

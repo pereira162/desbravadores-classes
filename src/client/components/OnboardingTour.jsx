@@ -558,28 +558,6 @@ export default function OnboardingTour({ user, isOpen, onClose, onSelectTab, act
   // Registro na pilha hierárquica global (ESC e Voltar Mobile)
   useModalDismiss(isOpen, onClose, 'ModalTrilhaEnsino');
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleLocalEsc = (e) => {
-      const isEsc =
-        e.key === 'Escape' ||
-        e.key === 'Esc' ||
-        e.code === 'Escape' ||
-        e.keyCode === 27 ||
-        e.which === 27;
-      if (!isEsc) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
-    };
-    window.addEventListener('keydown', handleLocalEsc, true);
-    document.addEventListener('keydown', handleLocalEsc, true);
-    return () => {
-      window.removeEventListener('keydown', handleLocalEsc, true);
-      document.removeEventListener('keydown', handleLocalEsc, true);
-    };
-  }, [isOpen, onClose]);
 
   if (!isOpen || !user) return null;
 

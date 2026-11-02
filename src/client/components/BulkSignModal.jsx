@@ -55,28 +55,6 @@ export default function BulkSignModal({
   // Registro na pilha hierárquica global (ESC e Voltar Mobile)
   useModalDismiss(isOpen, onClose, 'ModalAssinaturaLote');
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleLocalEsc = (e) => {
-      const isEsc =
-        e.key === 'Escape' ||
-        e.key === 'Esc' ||
-        e.code === 'Escape' ||
-        e.keyCode === 27 ||
-        e.which === 27;
-      if (!isEsc) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
-    };
-    window.addEventListener('keydown', handleLocalEsc, true);
-    document.addEventListener('keydown', handleLocalEsc, true);
-    return () => {
-      window.removeEventListener('keydown', handleLocalEsc, true);
-      document.removeEventListener('keydown', handleLocalEsc, true);
-    };
-  }, [isOpen, onClose]);
 
   if (!isOpen || !requirements || requirements.length === 0) return null;
 
@@ -116,14 +94,10 @@ export default function BulkSignModal({
 
   return (
     <div
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-          e.stopPropagation();
-          onClose();
-        }
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !saving) onClose();
       }}
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
     >
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">

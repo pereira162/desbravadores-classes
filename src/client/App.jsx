@@ -55,14 +55,10 @@ function PwaInstallGuideModal({ isOpen, onClose }) {
   if (!isOpen) return null;
   return (
     <div
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-          e.stopPropagation();
-          onClose();
-        }
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
     >
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-scale-up space-y-4">
         <div className="flex items-center justify-between">

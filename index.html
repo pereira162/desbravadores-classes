@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>SGC Classes — Gestão de Classes e Planejamento do Clube de Desbravadores</title>
     <link rel="icon" type="image/png" href="/desbravadores-classes/icons/icon-192.png" />
     <link rel="manifest" href="/desbravadores-classes/manifest.json" />
@@ -12,6 +15,23 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SGC Classes" />
     <link rel="apple-touch-icon" href="/desbravadores-classes/icons/icon-192.png" />
+    <script>
+      // Garante desregistro imediato de qualquer Service Worker legado e limpeza de caches
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) {
+            regs[i].unregister();
+          }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          for (var i = 0; i < keys.length; i++) {
+            caches.delete(keys[i]);
+          }
+        });
+      }
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-amber-500 selection:text-white">
     <div id="root"></div>
