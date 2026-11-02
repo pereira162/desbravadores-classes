@@ -13,8 +13,10 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Award,
 } from 'lucide-react';
 import { useModalDismiss } from '../utils/modalStack';
+import SpecialtiesCatalogSection from './SpecialtiesCatalogSection';
 
 const DOC_SECTIONS = [
   {
@@ -46,6 +48,11 @@ const DOC_SECTIONS = [
     id: 'mcp',
     label: '6. Inteligência Artificial & MCP',
     icon: Bot,
+  },
+  {
+    id: 'specialties',
+    label: '7. Manual de Especialidades (599)',
+    icon: Award,
   },
 ];
 
@@ -371,6 +378,16 @@ export default function DocumentationModal({ isOpen, onClose }) {
                     Também é possível conectar via HTTP JSON-RPC no endpoint <code>POST {window.location.origin}/api/mcp/rpc</code> enviando o cabeçalho <code>X-MCP-API-Key</code>.
                   </p>
                 </div>
+              </section>
+            )}
+
+            {(activeSection === 'specialties' || searchQuery) && (
+              <section className="space-y-4">
+                <h3 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-500" />
+                  7. Catálogo & Manual de Especialidades dos Desbravadores (DSA)
+                </h3>
+                <SpecialtiesCatalogSection />
               </section>
             )}
           </div>

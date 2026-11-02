@@ -10,8 +10,13 @@ import {
 
 export { resetEphemeralTestSession, setSandboxCurrentUser, getSandboxCurrentUser };
 
-// Base URL do backend na VM Oracle ou vazio em desenvolvimento local
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+// Base URL do backend na VM Oracle ou relativo em desenvolvimento local
+export const API_BASE_URL = (() => {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return '';
+  }
+  return (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+})();
 
 export function isTestMode() {
   if (typeof window === 'undefined') return false;

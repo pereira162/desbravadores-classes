@@ -21,6 +21,7 @@ import {
   Moon,
   Monitor,
   RotateCcw,
+  GitMerge,
 } from 'lucide-react';
 import {
   apiRequest,
@@ -45,6 +46,7 @@ import FeedbackModal from './components/FeedbackModal';
 const DemandPlanningView = lazy(() => import('./components/DemandPlanningView'));
 const EventsBatchView = lazy(() => import('./components/EventsBatchView'));
 const LeadersSettingsView = lazy(() => import('./components/LeadersSettingsView'));
+const UnificationsManagementView = lazy(() => import('./components/UnificationsManagementView'));
 const AuditLogsView = lazy(() => import('./components/AuditLogsView'));
 const DocumentationModal = lazy(() => import('./components/DocumentationModal'));
 const McpSettingsAndChatModal = lazy(() => import('./components/McpSettingsAndChatModal'));
@@ -130,6 +132,7 @@ const NAV_ITEMS = [
   { id: 'DEMAND', label: 'Planejamento Anual', icon: Compass },
   { id: 'MATRIX', label: 'Matriz das Classes', icon: Grid },
   { id: 'PATHFINDERS', label: 'Desbravadores & Cartões', icon: Users },
+  { id: 'UNIFICATIONS', label: 'Unificações & Absorções', icon: GitMerge },
   { id: 'EVENTS', label: 'Eventos & Lotes', icon: Tent },
   { id: 'LEADERS', label: 'Líderes & Clube', icon: Shield },
   { id: 'AUDIT', label: 'Auditoria & Logs', icon: History },
@@ -1407,6 +1410,15 @@ export default function App() {
               onInvitePathfinder={handleInvitePathfinder}
               onOpenRequirementDetail={handleOpenRequirementDetail}
               settings={normalizedData.settings}
+            />
+          )}
+
+          {activeTab === 'UNIFICATIONS' && user.role !== 'DESBRAVADOR' && (
+            <UnificationsManagementView
+              user={user}
+              catalog={normalizedData.catalog}
+              pathfinders={normalizedData.pathfinders}
+              onRefreshCatalog={() => fetchBootstrapData(false)}
             />
           )}
 

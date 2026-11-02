@@ -414,6 +414,60 @@ function computeUnificationAlerts(targetDb) {
     }
   }
 
+  // Integra recomendações do motor de absorções oficiais (U-01 a U-40)
+  try {
+    const { computeAbsorptionRecommendations } = require('./unificationsHandler');
+    const absorptions = computeAbsorptionRecommendations(targetDb);
+    const existingIds = new Set(alerts.map((a) => `${a.pathfinderId}:${a.targetRequirementId}`));
+
+    for (const abs of absorptions) {
+      const key = `${abs.pathfinderId}:${abs.targetRequirementId}`;
+      if (!existingIds.has(key)) {
+        existingIds.add(key);
+        alerts.push({
+          id: abs.id,
+          pathfinder_id: abs.pathfinderId,
+          pathfinderId: abs.pathfinderId,
+          pathfinder_name: abs.pathfinderName,
+          pathfinderName: abs.pathfinderName,
+          unit_id: abs.unitId,
+          unitId: abs.unitId,
+          unit_name: abs.unitName,
+          unitName: abs.unitName,
+          equivalence_code: abs.unificationCode,
+          equivalenceCode: abs.unificationCode,
+          equivalence_title: abs.unificationTitle,
+          equivalenceTitle: abs.unificationTitle,
+          completed_requirement_id: abs.sourceRequirementId,
+          sourceRequirementId: abs.sourceRequirementId,
+          completed_requirement_code: abs.sourceRequirementCode,
+          sourceRequirementCode: abs.sourceRequirementCode,
+          completed_requirement_title: abs.sourceRequirementTitle,
+          sourceRequirementTitle: abs.sourceRequirementTitle,
+          completed_class_name: abs.sourceClassName,
+          sourceClassName: abs.sourceClassName,
+          pending_requirement_id: abs.targetRequirementId,
+          targetRequirementId: abs.targetRequirementId,
+          pending_requirement_code: abs.targetRequirementCode,
+          targetRequirementCode: abs.targetRequirementCode,
+          pending_requirement_title: abs.targetRequirementTitle,
+          targetRequirementTitle: abs.targetRequirementTitle,
+          pending_class_slug: abs.targetClassSlug,
+          targetClassSlug: abs.targetClassSlug,
+          pending_class_name: abs.targetClassName,
+          targetClassName: abs.targetClassName,
+          rule_type: abs.ruleType,
+          ruleType: abs.ruleType,
+          rule_label: abs.ruleLabel,
+          ruleLabel: abs.ruleLabel,
+          reason: abs.reason,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[MCP] Erro ao integrar recomendações de absorção:', err.message);
+  }
+
   return alerts;
 }
 

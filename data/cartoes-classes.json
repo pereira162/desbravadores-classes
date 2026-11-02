@@ -145,64 +145,1315 @@
   ],
   "equivalence_groups": [
     {
-      "id": "EQ-MEMBRO-ATIVO",
-      "title": "Membro Ativo e Frequência no Clube",
-      "description": "Ser membro ativo e regular do Clube de Desbravadores durante o ano de atividades."
+      "id": "U-01",
+      "code": "U-01",
+      "title": "Idade Mínima (10 a 15 anos)",
+      "fullTitle": "Idade Mínima (10 a 15 anos) — *Unificado (6 em 1)*",
+      "description": "Progressivo automático: cumprir a idade da classe mais avançada (15 anos em Guia) engloba as idades anteriores (10 a 14 anos).",
+      "systemRule": "Baixa automática por idade: se `idade_aluno >= idade_classe`, marca concluído.",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "GERAIS",
+      "specialties": [],
+      "hierarchicalScale": [
+        {
+          "num": 177,
+          "id": "GUIA_I_1",
+          "label": "15 anos (Guia)",
+          "rank": 6
+        },
+        {
+          "num": 141,
+          "id": "EXCURSIONISTA_I_1",
+          "label": "14 anos (Excursionista)",
+          "rank": 5
+        },
+        {
+          "num": 107,
+          "id": "PIONEIRO_I_1",
+          "label": "13 anos (Pioneiro)",
+          "rank": 4
+        },
+        {
+          "num": 73,
+          "id": "PESQUISADOR_I_1",
+          "label": "12 anos (Pesquisador)",
+          "rank": 3
+        },
+        {
+          "num": 35,
+          "id": "COMPANHEIRO_I_1",
+          "label": "11 anos (Companheiro)",
+          "rank": 2
+        },
+        {
+          "num": 1,
+          "id": "AMIGO_I_1",
+          "label": "10 anos (Amigo)",
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 6,
+      "requirementIds": [
+        "AMIGO_I_1",
+        "COMPANHEIRO_I_1",
+        "PESQUISADOR_I_1",
+        "PIONEIRO_I_1",
+        "EXCURSIONISTA_I_1",
+        "GUIA_I_1"
+      ]
     },
     {
-      "id": "EQ-CURSO-LEITURA",
-      "title": "Curso de Leitura Oficial do Ano (DSA)",
-      "description": "Ler o livro oficial do ano do Curso de Leitura dos Desbravadores indicado pela DSA."
+      "id": "U-02",
+      "code": "U-02",
+      "title": "Ser Membro Ativo do Clube de Desbravadores",
+      "fullTitle": "Ser Membro Ativo do Clube de Desbravadores — *Unificado (6 em 1)*",
+      "description": "Idêntico nas 6 classes: a frequência e membresia ativa no Clube valem para todas simultaneamente.",
+      "systemRule": "Baixa automática global: estar ativo no cadastro do Clube valida as 6 classes.",
+      "levelText": "🟢 Nível 1: Equivalência 100% Igual (`AUTO_EQUAL`)",
+      "levels": [
+        "N1"
+      ],
+      "ruleCode": "AUTO_EQUAL",
+      "scenario": "strict",
+      "category": "GERAIS",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 6,
+      "requirementIds": [
+        "AMIGO_I_2",
+        "COMPANHEIRO_I_2",
+        "PESQUISADOR_I_2",
+        "PIONEIRO_I_2",
+        "EXCURSIONISTA_I_2",
+        "GUIA_I_2"
+      ]
     },
     {
-      "id": "EQ-CLASSE-BIBLICA",
-      "title": "Participação na Classe Bíblica do Clube",
-      "description": "Participar ativamente das reuniões da Classe Bíblica do Clube durante o período anual."
+      "id": "U-03",
+      "code": "U-03",
+      "title": "Participar Ativamente e Ajudar a Organizar a Classe Bíblica do Clube",
+      "fullTitle": "Participar Ativamente e Ajudar a Organizar a Classe Bíblica do Clube — *Unificado (4 em 1)*",
+      "description": "Mesma atividade: participar da Classe Bíblica (Amigo I.6, Companheiro I.6, Pesquisador I.6) ajudando na sua organização (Pesquisador VI.2).",
+      "systemRule": "Presença na Classe Bíblica valida AM, CO e PE; atuar na equipe organizadora valida PE VI.2.",
+      "levelText": "🟢 Nível 1 + 🔵 Nível 2 (`AUTO_EQUAL` / `HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N1",
+        "N2"
+      ],
+      "ruleCode": "AUTO_EQUAL",
+      "scenario": "strict",
+      "category": "GERAIS",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 4,
+      "requirementIds": [
+        "AMIGO_I_6",
+        "COMPANHEIRO_I_6",
+        "PESQUISADOR_I_6",
+        "PESQUISADOR_VI_2"
+      ]
     },
     {
-      "id": "EQ-CAMINHADA-EXCURSIONISMO",
-      "title": "Caminhada ao Ar Livre e Excursionismo Pedestre (5 a 20 km)",
-      "description": "Participar da caminhada rústica na natureza (ao percorrer a maior distância, cumprem-se todas as distâncias menores)."
+      "id": "U-04",
+      "code": "U-04",
+      "title": "Ler o Livro do Curso de Leitura do Ano e Resumir (1 parágrafo → 2 parágrafos → 1 página)",
+      "fullTitle": "Ler o Livro do Curso de Leitura do Ano e Resumir (1 parágrafo → 2 parágrafos → 1 página) — *Unificado (6 em 1)*",
+      "description": "Escalonado no mesmo livro anual: fazer o resumo de 1 página (Pioneiro/Excursionista/Guia) já engloba 2 parágrafos (Pesquisador), 1 parágrafo (Companheiro) e a leitura simples (Amigo).",
+      "systemRule": "Entregar resumo de 1 página (PI/EX/GU) valida automaticamente 2 parágrafos (PE), 1 parágrafo (CO) e leitura (AM).",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "GERAIS",
+      "specialties": [],
+      "hierarchicalScale": [
+        {
+          "num": 180,
+          "id": "GUIA_I_4",
+          "label": "Resumo de 1 página (Guia)",
+          "rank": 4
+        },
+        {
+          "num": 144,
+          "id": "EXCURSIONISTA_I_4",
+          "label": "Resumo de 1 página (Excursionista)",
+          "rank": 4
+        },
+        {
+          "num": 110,
+          "id": "PIONEIRO_I_4",
+          "label": "Resumo de 1 página (Pioneiro)",
+          "rank": 4
+        },
+        {
+          "num": 76,
+          "id": "PESQUISADOR_I_4",
+          "label": "Resumo de 2 parágrafos (Pesquisador)",
+          "rank": 3
+        },
+        {
+          "num": 38,
+          "id": "COMPANHEIRO_I_4",
+          "label": "Resumo de 1 parágrafo (Companheiro)",
+          "rank": 2
+        },
+        {
+          "num": 4,
+          "id": "AMIGO_I_4",
+          "label": "Leitura do livro (Amigo)",
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 6,
+      "requirementIds": [
+        "AMIGO_I_4",
+        "COMPANHEIRO_I_4",
+        "PESQUISADOR_I_4",
+        "PIONEIRO_I_4",
+        "EXCURSIONISTA_I_4",
+        "GUIA_I_4"
+      ]
     },
     {
-      "id": "EQ-ACAMPAMENTO-PRATICO",
-      "title": "Acampamento Prático de Fim de Semana",
-      "description": "Participar do acampamento de fim de semana com a unidade ou clube envolvendo montagem de barraca, culinária e vida campestre."
+      "id": "U-05",
+      "code": "U-05",
+      "title": "Voto e Lei do Desbravador (Memorizar, Explicar, Ilustrar e Debater/Representar/Redigir)",
+      "fullTitle": "Voto e Lei do Desbravador (Memorizar, Explicar, Ilustrar e Debater/Representar/Redigir) — *Unificado (3 em 1)*",
+      "description": "Mesmo objeto: memorizar e explicar Voto e Lei (Amigo I.3), ilustrar criativamente o Voto (Companheiro I.3) e demonstrar compreensão da Lei via representação, debate ou redação (Pesquisador I.3).",
+      "systemRule": "1 única aula de Ideais no calendário; sistema pede check individual (memorizar AM, ilustrar CO, redigir/debater PE).",
+      "levelText": "🟡 Nível 4: Mesma Oficina, Entregas por Nível (`SHARED_EVENT`)",
+      "levels": [
+        "N4"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "GERAIS",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 3,
+      "requirementIds": [
+        "AMIGO_I_3",
+        "COMPANHEIRO_I_3",
+        "PESQUISADOR_I_3"
+      ]
     },
     {
-      "id": "EQ-PROJETO-COMUNITARIO",
-      "title": "Projeto Comunitário da Igreja ou Cidade",
-      "description": "Planejar e executar projeto comunitário oficial de auxílio à comunidade ou bairro."
+      "id": "U-06",
+      "code": "U-06",
+      "title": "A Criação (Gn 1-2), Diário de 7 Dias da Criação e História do Dilúvio/Fósseis (EN-017 / AM-EB-006)",
+      "fullTitle": "A Criação (Gn 1-2), Diário de 7 Dias da Criação e História do Dilúvio/Fósseis (EN-017 / AM-EB-006) — *Unificado (3 em 1)*",
+      "description": "Mesmo tema bíblico-natural (Gênesis 1 a 8): memorizar o que Deus criou em cada dia + 10 pragas/12 tribos/39 livros AT (Amigo II.1), recapitular a Criação fazendo diário de 7 dias (Companheiro VII.3) e estudar o Dilúvio e fossilização (Pioneiro VII.1).",
+      "systemRule": "Estudo de Gn 1–8 ou conclusão de `EN-017 Fósseis` / `AM-EB-006 Criação` libera os requisitos vinculados.",
+      "levelText": "🟡 Nível 3/4: Estudo Integrado + Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [
+        "EN-017",
+        "AM-EB-006"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 3,
+      "requirementIds": [
+        "AMIGO_II_1",
+        "COMPANHEIRO_VII_3",
+        "PIONEIRO_VII_1"
+      ]
     },
     {
-      "id": "EQ-SERVICO-COMUNITARIO-HORAS",
-      "title": "Dedicação de 2 Horas em Serviço ao Próximo",
-      "description": "Dedicar 2 horas prestando socorro, alimentos ou apoio a pessoas doentes ou carentes."
+      "id": "U-07",
+      "code": "U-07",
+      "title": "A Lei de Deus / 10 Mandamentos e Princípios de Comportamento Moral (AM-EB-019)",
+      "fullTitle": "A Lei de Deus / 10 Mandamentos e Princípios de Comportamento Moral (AM-EB-019) — *Unificado (2 em 1)*",
+      "description": "Mesmo texto bíblico (Êxodo 20): memorizar os 10 Mandamentos + 27 livros NT (Companheiro II.1) e fazer apresentação sobre o respeito à Lei de Deus e autoridades civis com 10 princípios morais (Excursionista Av. 1).",
+      "systemRule": "Estudo de Êxodo 20 (10 Mandamentos) ou `AM-EB-019 Lei de Deus` unifica a aula de CO e a apresentação de EX-AV.",
+      "levelText": "🟡 Nível 3/4: Mesmo Texto Bíblico (`SHARED_EVENT`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [
+        "AM-EB-019"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "COMPANHEIRO_II_1",
+        "EXCURSIONISTA_AVANCADO_AV_1"
+      ]
     },
     {
-      "id": "EQ-CERIMONIAS-E-EVENTOS",
-      "title": "Participação em Cerimônia Oficial do Clube",
-      "description": "Participar ativamente da organização ou execução de cerimônia de investidura, admissão em lenço ou Dia Mundial do Desbravador."
+      "id": "U-08",
+      "code": "U-08",
+      "title": "O Sermão da Montanha, Bem-Aventuranças (Mateus 5-7) e Livro 'O Maior Discurso de Cristo'",
+      "fullTitle": "O Sermão da Montanha, Bem-Aventuranças (Mateus 5-7) e Livro 'O Maior Discurso de Cristo' — *Unificado (3 em 1)*",
+      "description": "Mesmo texto bíblico (Mateus 5 a 7): escolher 'O Sermão da Montanha' em Companheiro (II.4c), memorizar/explicar as Bem-Aventuranças do Sermão da Montanha em Pioneiro (II.1a) e ler o livro 'O Maior Discurso de Cristo' (comentário do Sermão da Montanha) com resumo de 1 página em Guia Avançado (Req. 2).",
+      "systemRule": "Estudo de Mateus 5–7 (Sermão do Monte) + leitura de *O Maior Discurso de Cristo*.",
+      "levelText": "🔵 Nível 2 + 🟡 Nível 3: Mesmo Texto (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 3,
+      "requirementIds": [
+        "COMPANHEIRO_II_4",
+        "PIONEIRO_II_1",
+        "GUIA_AVANCADO_AV_2"
+      ]
     },
     {
-      "id": "EQ-SERMAO-DA-MONTANHA",
-      "title": "Estudo das Bem-Aventuranças / Sermão da Montanha",
-      "description": "Estudar, memorizar e demonstrar conhecimento do Sermão da Montanha / Bem-Aventuranças (Mt 5)."
+      "id": "U-09",
+      "code": "U-09",
+      "title": "História de Nicodemos (João 3) e Metamorfose da Lagarta/Borboleta (EN-008)",
+      "fullTitle": "História de Nicodemos (João 3) e Metamorfose da Lagarta/Borboleta (EN-008) — *Unificado (2 em 1)*",
+      "description": "Mesma passagem bíblica (João 3): escolher a história de 'João 3 – Nicodemos' sobre como Jesus salva (Pesquisador II.4a) e recapitular a história de Nicodemos relacionando-a ao ciclo da lagarta/borboleta (Excursionista VII.1).",
+      "systemRule": "Ao escolher 'João 3 – Nicodemos' em PE II.4a ou concluir `EN-008 Mariposas e Borboletas`, unifica com EX VII.1.",
+      "levelText": "🟢 Nível 1 / 🟡 Nível 3: Mesmo Texto (`AUTO_EQUAL` / `SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N1",
+        "N3"
+      ],
+      "ruleCode": "AUTO_EQUAL",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [
+        "EN-008"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "PESQUISADOR_II_4",
+        "EXCURSIONISTA_VII_1"
+      ]
     },
     {
-      "id": "EQ-ESP-ARTES-MANUAIS",
-      "title": "Especialidade em Artes e Habilidades Manuais",
-      "description": "Completar uma especialidade oficial na área de Artes e Habilidades Manuais ou Artesanato (exigida igualmente em Amigo, Companheiro e Pesquisador)."
+      "id": "U-10",
+      "code": "U-10",
+      "title": "O Espírito Santo e o Fruto do Espírito no Crescimento Cristão (AM-EB-005)",
+      "fullTitle": "O Espírito Santo e o Fruto do Espírito no Crescimento Cristão (AM-EB-005) — *Unificado (2 em 1)*",
+      "description": "Mesmo tema doutrinário (intra-classe Excursionista): memorizar o Fruto do Espírito + 12 Apóstolos (Excursionista II.1) e estudar a pessoa e o papel do Espírito Santo no crescimento espiritual (Excursionista II.3).",
+      "systemRule": "1 aula sobre Espírito Santo e Fruto do Espírito (ou especialidade `AM-EB-005`) atende ambos os itens de EX.",
+      "levelText": "🟡 Nível 3/4: Estudo Doutrinário Único (`SHARED_EVENT`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [
+        "AM-EB-005"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "EXCURSIONISTA_II_1",
+        "EXCURSIONISTA_II_3"
+      ]
     },
     {
-      "id": "EQ-ESP-NATUREZA-LIVRE",
-      "title": "Nova Especialidade em Estudo da Natureza (Livre Escolha)",
-      "description": "Completar uma nova especialidade oficial em Estudo da Natureza de livre escolha não realizada anteriormente (exigida em Pioneiro e Excursionista)."
+      "id": "U-11",
+      "code": "U-11",
+      "title": "Eventos Finais, Segunda Vinda de Cristo e As 3 Mensagens Angélicas / 7 Igrejas / Nova Jerusalém (Apocalipse - AM-052 / AM-EB-025)",
+      "fullTitle": "Eventos Finais, Segunda Vinda de Cristo e As 3 Mensagens Angélicas / 7 Igrejas / Nova Jerusalém (Apocalipse - AM-052 / AM-EB-025) — *Unificado (2 em 1)*",
+      "description": "Mesmo tema escatológico: estudar em Unidade os eventos finais e a Segunda Vinda de Cristo (Excursionista II.4) junto às 3 Mensagens Angélicas (Ap 14:6-12), 7 Igrejas e 12 fundamentos da Nova Jerusalém (Guia II.1).",
+      "systemRule": "1 estudo sobre Segunda Vinda e Apocalipse (ou `AM-052` / `AM-EB-025`) atende EX II.4 e GU II.1.",
+      "levelText": "🟡 Nível 3/4: Estudo Escatológico Único (`SHARED_EVENT`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [
+        "AM-052",
+        "AM-EB-025"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "EXCURSIONISTA_II_4",
+        "GUIA_II_1"
+      ]
     },
     {
-      "id": "EQ-MOVEL-ACAMPAMENTO",
-      "title": "Construção de Móvel de Acampamento com Amarras",
-      "description": "Construir e utilizar móvel de acampamento em tamanho real com as amarras básicas e pioneiria."
+      "id": "U-12",
+      "code": "U-12",
+      "title": "Histórias de Pioneiros Adventistas (J. N. Andrews e Pioneiros Nacionais - AM-043)",
+      "fullTitle": "Histórias de Pioneiros Adventistas (J. N. Andrews e Pioneiros Nacionais - AM-043) — *Unificado (2 em 1)*",
+      "description": "Escalonado no mesmo tema: ler e resumir 3 histórias de pioneiros adventistas e contá-las no Clube (Guia II.5), incluindo J. N. Andrews e um pioneiro do país para discutir a comissão missionária de Mt 28:18-20 (Pesquisador Av. 2).",
+      "systemRule": "Apresentar 3 histórias de pioneiros (GU II.5, incluindo J. N. Andrews) já cumpre automaticamente PE-AV 2 (1 história).",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [],
+      "hierarchicalScale": [
+        {
+          "num": 186,
+          "id": "GUIA_II_5",
+          "label": "Resumir e contar 3 histórias de pioneiros (Guia)",
+          "rank": 2
+        },
+        {
+          "num": 97,
+          "id": "PESQUISADOR_AVANCADO_AV_2",
+          "label": "História de J. N. Andrews ou pioneiro nacional (Pesquisador Av.)",
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 2,
+      "requirementIds": [
+        "PESQUISADOR_AVANCADO_AV_2",
+        "GUIA_II_5"
+      ]
+    },
+    {
+      "id": "U-13",
+      "code": "U-13",
+      "title": "Leitura de 'Primeiros Escritos' de Ellen White (Primeira Visão págs. 13-20 e Visão de Órion pág. 41)",
+      "fullTitle": "Leitura de 'Primeiros Escritos' de Ellen White (Primeira Visão págs. 13-20 e Visão de Órion pág. 41) — *Unificado (2 em 1)*",
+      "description": "Mesmo livro fonte: ler e discutir a primeira visão de Ellen White em 'Primeiros Escritos' págs. 13-20 (Companheiro Av. 2) e o significado espiritual de Órion em 'Primeiros Escritos' pág. 41 com identificação de Órion e Alfa Centauri (Pesquisador VII.1).",
+      "systemRule": "1 encontro de leitura de *Primeiros Escritos* (págs. 13–20 e pág. 41) + observação de Órion.",
+      "levelText": "🟡 Nível 4: Mesmo Livro-Fonte (`SHARED_EVENT`)",
+      "levels": [
+        "N4"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "ESPIRITUAL",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "COMPANHEIRO_AVANCADO_AV_2",
+        "PESQUISADOR_VII_1"
+      ]
+    },
+    {
+      "id": "U-14",
+      "code": "U-14",
+      "title": "Estudo sobre a Observância do Sábado e Prática de 5 Atividades/Jogos na Natureza no Sábado à Tarde (AM-EB-020)",
+      "fullTitle": "Estudo sobre a Observância do Sábado e Prática de 5 Atividades/Jogos na Natureza no Sábado à Tarde (AM-EB-020) — *Unificado (4 em 1)*",
+      "description": "Mesmo tema e prática: estudar na Bíblia e conversar em Unidade sobre o significado da observância do sábado (Excursionista II.5 e Excursionista Av. 6d) e realizar 1h de jogos/caminhada na natureza (Companheiro VII.1) aplicando as 5 atividades na natureza para o sábado à tarde (Excursionista Av. 4).",
+      "systemRule": "Estudo bíblico do sábado + realizar 5 atividades na natureza no sábado à tarde (EX-AV 4) já engloba 1h de jogos na natureza (CO VII.1).",
+      "levelText": "🔵 Nível 2 + 🟡 Nível 3: Prática de Sábado (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "SERVICO",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 4,
+      "requirementIds": [
+        "COMPANHEIRO_VII_1",
+        "EXCURSIONISTA_II_5",
+        "EXCURSIONISTA_AVANCADO_AV_4",
+        "EXCURSIONISTA_AVANCADO_AV_6"
+      ]
+    },
+    {
+      "id": "U-15",
+      "code": "U-15",
+      "title": "Convidar Amigos/Visitantes para Classe Bíblica, Pequeno Grupo, Escola Sabatina ou Clube + Palestra sobre Influenciar Amigos",
+      "fullTitle": "Convidar Amigos/Visitantes para Classe Bíblica, Pequeno Grupo, Escola Sabatina ou Clube + Palestra sobre Influenciar Amigos — *Unificado (6 em 1)*",
+      "description": "Mesma ação evangelística escalonada: preparar 1 página/palestra sobre como influenciar amigos para Cristo (Guia Av. 4) e levar 3 amigos não adventistas para a Classe Bíblica/Clube/Escola Sabatina/reuniões e atividade social da igreja cumpre Amigo Av. 3 (2 amigos), Pesquisador Av. 3 (1 pessoa), Pioneiro II.5 (3+ pessoas), Excursionista III.1 (1 amigo) e Guia Av. 3a (2 amigos em 2 reuniões).",
+      "systemRule": "Convidar >= 3 amigos não adventistas para Classe Bíblica/Clube e 2 reuniões da igreja dá baixa automática em PI, AM-AV, PE-AV, EX e GU-AV.",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "SERVICO",
+      "specialties": [],
+      "hierarchicalScale": [
+        {
+          "num": 206,
+          "id": "GUIA_AVANCADO_AV_4",
+          "label": "Escrever 1 pág/palestra de como influenciar amigos (Guia Av.)",
+          "rank": 3
+        },
+        {
+          "num": 205,
+          "id": "GUIA_AVANCADO_AV_3",
+          "label": "Trazer 2 amigos para 2 reuniões da igreja (Guia Av.)",
+          "rank": 3
+        },
+        {
+          "num": 116,
+          "id": "PIONEIRO_II_5",
+          "label": "Convidar 3 ou mais pessoas para Classe Bíblica/PG (Pioneiro)",
+          "rank": 3
+        },
+        {
+          "num": 28,
+          "id": "AMIGO_AVANCADO_AV_3",
+          "label": "Levar 2 amigos não adventistas à ES ou Clube (Amigo Av.)",
+          "rank": 2
+        },
+        {
+          "num": 152,
+          "id": "EXCURSIONISTA_III_1",
+          "label": "Convidar 1 amigo para atividade social (Excursionista)",
+          "rank": 1
+        },
+        {
+          "num": 98,
+          "id": "PESQUISADOR_AVANCADO_AV_3",
+          "label": "Convidar 1 pessoa para Clube/Classe Bíblica/PG (Pesquisador Av.)",
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 6,
+      "requirementIds": [
+        "AMIGO_AVANCADO_AV_3",
+        "PESQUISADOR_AVANCADO_AV_3",
+        "PIONEIRO_II_5",
+        "EXCURSIONISTA_III_1",
+        "GUIA_AVANCADO_AV_3",
+        "GUIA_AVANCADO_AV_4"
+      ]
+    },
+    {
+      "id": "U-16",
+      "code": "U-16",
+      "title": "Projeto Comunitário e Humanitário Prático (2h de Serviço / Bom Samaritano / Auxílio a Carentes e Doentes)",
+      "fullTitle": "Projeto Comunitário e Humanitário Prático (2h de Serviço / Bom Samaritano / Auxílio a Carentes e Doentes) — *Unificado (9 em 1)*",
+      "description": "Mesma ação comunitária escalonada: planejar, organizar e executar um projeto comunitário de pelo menos 2 horas envolvendo um amigo, visitando/ajudando na prática 3 ou mais pessoas/famílias em necessidade e encenando o Bom Samaritano cumpre: Amigo III.1, Companheiro III.1, Companheiro III.2, Companheiro Av. 3, Pesquisador III.1, Pioneiro III.2, Pioneiro Av. 2, Excursionista III.2 e Guia III.1.",
+      "systemRule": "1 Projeto Comunitário planejado/executado (>= 2h, com amigo, ajudando >= 3 pessoas/famílias) dá baixa nos 9 requisitos comunitários.",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "SERVICO",
+      "specialties": [],
+      "hierarchicalScale": [
+        {
+          "num": 153,
+          "id": "EXCURSIONISTA_III_2",
+          "label": "Projeto comunitário do planejamento à execução (Excursionista)",
+          "rank": 3
+        },
+        {
+          "num": 132,
+          "id": "PIONEIRO_AVANCADO_AV_2",
+          "label": "Bom Samaritano e auxílio prático a 3+ pessoas (Pioneiro Av.)",
+          "rank": 3
+        },
+        {
+          "num": 188,
+          "id": "GUIA_III_1",
+          "label": "Organizar visita a doente ou adotar família carente (Guia)",
+          "rank": 2
+        },
+        {
+          "num": 45,
+          "id": "COMPANHEIRO_III_1",
+          "label": "Planejar e dedicar 2h servindo a comunidade (Companheiro)",
+          "rank": 2
+        },
+        {
+          "num": 10,
+          "id": "AMIGO_III_1",
+          "label": "Dedicar 2h ajudando alguém (visita, alimento, ecológico) (Amigo)",
+          "rank": 2
+        },
+        {
+          "num": 63,
+          "id": "COMPANHEIRO_AVANCADO_AV_3",
+          "label": "Atividade missionária/comunitária com um amigo (Companheiro Av.)",
+          "rank": 2
+        },
+        {
+          "num": 83,
+          "id": "PESQUISADOR_III_1",
+          "label": "Conhecer projetos comunitários e participar de um (Pesquisador)",
+          "rank": 1
+        },
+        {
+          "num": 119,
+          "id": "PIONEIRO_III_2",
+          "label": "Trabalhar em projeto comunitário da igreja/escola (Pioneiro)",
+          "rank": 1
+        },
+        {
+          "num": 46,
+          "id": "COMPANHEIRO_III_2",
+          "label": "Participar de projeto que beneficiará comunidade (Companheiro)",
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 9,
+      "requirementIds": [
+        "AMIGO_III_1",
+        "COMPANHEIRO_III_1",
+        "COMPANHEIRO_III_2",
+        "COMPANHEIRO_AVANCADO_AV_3",
+        "PESQUISADOR_III_1",
+        "PIONEIRO_III_2",
+        "PIONEIRO_AVANCADO_AV_2",
+        "EXCURSIONISTA_III_2",
+        "GUIA_III_1"
+      ]
+    },
+    {
+      "id": "U-17",
+      "code": "U-17",
+      "title": "Treinamento de Evangelismo Pessoal, Visita Pastoral, 3 Atividades Missionárias e Especialidades Aventuras com Cristo (AM-016) e Testemunho Juvenil (AM-010)",
+      "fullTitle": "Treinamento de Evangelismo Pessoal, Visita Pastoral, 3 Atividades Missionárias e Especialidades Aventuras com Cristo (AM-016) e Testemunho Juvenil (AM-010) — *Unificado (7 em 1)*",
+      "description": "Especialidade contém o requisito: realizar o seminário de Ministério Pessoal/Evangelismo (Pioneiro VI.1 e Guia III.2), acompanhar o pastor/ancião numa visita missionária ou estudo bíblico (Excursionista Av. 2) e atuar em 3 atividades/projetos missionários (Pesquisador III.2 = 3; Pioneiro III.1 = 2) cumpre simultaneamente os requisitos internos das especialidades obrigatórias Aventuras com Cristo (Excursionista VI.3) e Testemunho Juvenil (Excursionista Av. 3).",
+      "systemRule": "Concluir `AM-016 Aventuras com Cristo` e `AM-010 Testemunho Juvenil` (com visita pastoral e 3 ações missionárias) dá baixa nos 7 requisitos.",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "SERVICO",
+      "specialties": [
+        "AM-016",
+        "AM-010"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 7,
+      "requirementIds": [
+        "PESQUISADOR_III_2",
+        "PIONEIRO_III_1",
+        "PIONEIRO_VI_1",
+        "EXCURSIONISTA_VI_3",
+        "EXCURSIONISTA_AVANCADO_AV_2",
+        "EXCURSIONISTA_AVANCADO_AV_3",
+        "GUIA_III_2"
+      ]
+    },
+    {
+      "id": "U-18",
+      "code": "U-18",
+      "title": "Visita a Órgão Público e Organização de Atividade Recreativa para Pessoas com Necessidades Específicas",
+      "fullTitle": "Visita a Órgão Público e Organização de Atividade Recreativa para Pessoas com Necessidades Específicas — *Unificado (2 em 1)*",
+      "description": "Ação cívico-inclusiva conjunta: visitar um órgão/instituição pública do bairro/cidade para descobrir como o Clube pode ajudar (Pesquisador IV.2) e organizar uma das 5 atividades recreativas para pessoas com necessidades específicas atendidas (Excursionista IV.2).",
+      "systemRule": "1 visita a órgão/instituição pública (PE IV.2) organizando ali 1 atividade recreativa inclusiva (EX IV.2).",
+      "levelText": "🟡 Nível 4: Saída Cívico-Comunitária Única (`SHARED_EVENT`)",
+      "levels": [
+        "N4"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "SERVICO",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "PESQUISADOR_IV_2",
+        "EXCURSIONISTA_IV_2"
+      ]
+    },
+    {
+      "id": "U-19",
+      "code": "U-19",
+      "title": "Cidadania, Boas Maneiras, Regra Áurea, Diversidade e Especialidades de Asseio e Cortesia Cristã (AM-011) e Cidadania Cristã (AM-006)",
+      "fullTitle": "Cidadania, Boas Maneiras, Regra Áurea, Diversidade e Especialidades de Asseio e Cortesia Cristã (AM-011) e Cidadania Cristã (AM-006) — *Unificado (7 em 1)*",
+      "description": "Especialidade contém o requisito: as especialidades Asseio e Cortesia Cristã (Pesquisador Av. 4a) e Cidadania Cristã (Pioneiro Av. 1) exigem: explicar como ser um bom cidadão no lar e na escola (Amigo III.2), praticar a Regra Áurea de Mt 7:12 e qualidades de um amigo (Amigo IV.1), demonstrar boas maneiras à mesa e com diferentes idades (Amigo Av. 4), respeitar diferentes culturas, raça e sexo (Companheiro IV.1) e relacionar-se como jovem adventista com vizinhos, escola e sociedade (Excursionista III.3).",
+      "systemRule": "Concluir `AM-011 Asseio e Cortesia Cristã` e `AM-006 Cidadania Cristã` cumpre os 7 requisitos de cidadania, boas maneiras e convivência.",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "RELACIONAMENTOS",
+      "specialties": [
+        "AM-011",
+        "AM-006"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 7,
+      "requirementIds": [
+        "AMIGO_III_2",
+        "AMIGO_IV_1",
+        "AMIGO_AVANCADO_AV_4",
+        "COMPANHEIRO_IV_1",
+        "PESQUISADOR_AVANCADO_AV_4",
+        "PIONEIRO_AVANCADO_AV_1",
+        "EXCURSIONISTA_III_3"
+      ]
+    },
+    {
+      "id": "U-20",
+      "code": "U-20",
+      "title": "Hinos (Nacional e Desbravadores), Bandeiras (Nacional, DBV e Bandeirim) e Especialidade de Ordem Unida (AR-047)",
+      "fullTitle": "Hinos (Nacional e Desbravadores), Bandeiras (Nacional, DBV e Bandeirim) e Especialidade de Ordem Unida (AR-047) — *Unificado (5 em 1)*",
+      "description": "Especialidade contém o requisito: a especialidade de Ordem Unida (AR-047, obrigatória em Excursionista Av. 10) engloba o civismo e uso de símbolos: Hino Nacional (Amigo IV.2), Hino dos Desbravadores (Amigo Av. 1), Bandeira Nacional (Companheiro Av. 1) e Bandeira dos Desbravadores/Bandeirim de Unidade (Pesquisador Av. 1).",
+      "systemRule": "Concluir `AR-047 Ordem Unida` (com Hinos e Bandeiras Nacional/DBV) dá baixa nos 5 requisitos de civismo.",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "RELACIONAMENTOS",
+      "specialties": [
+        "AR-047"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 5,
+      "requirementIds": [
+        "AMIGO_IV_2",
+        "AMIGO_AVANCADO_AV_1",
+        "COMPANHEIRO_AVANCADO_AV_1",
+        "PESQUISADOR_AVANCADO_AV_1",
+        "EXCURSIONISTA_AVANCADO_AV_10"
+      ]
+    },
+    {
+      "id": "U-21",
+      "code": "U-21",
+      "title": "Debate e Avaliação Pessoal sobre Autoestima, Amizade e Pressão de Grupo",
+      "fullTitle": "Debate e Avaliação Pessoal sobre Autoestima, Amizade e Pressão de Grupo — *Unificado (3 em 1)*",
+      "description": "Mesmos temas de debate: realizar um debate/avaliação sobre 'Autoestima' e 'Pressão de Grupo nas Amizades' cumpre integralmente Pesquisador IV.1 (Pressão de grupo), Pioneiro IV.1a/b (Autoestima e Amizade) e Excursionista IV.1a/d (Autoestima e Pressão de grupo).",
+      "systemRule": "1 roda de conversa avaliativa sobre 'Autoestima, Amizade e Pressão de Grupo' dá baixa automática em PE IV.1, PI IV.1 e EX IV.1.",
+      "levelText": "🟢 Nível 1: Equivalência 100% Igual (`AUTO_EQUAL`)",
+      "levels": [
+        "N1"
+      ],
+      "ruleCode": "AUTO_EQUAL",
+      "scenario": "strict",
+      "category": "RELACIONAMENTOS",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 3,
+      "requirementIds": [
+        "PESQUISADOR_IV_1",
+        "PIONEIRO_IV_1",
+        "EXCURSIONISTA_IV_1"
+      ]
+    },
+    {
+      "id": "U-22",
+      "code": "U-22",
+      "title": "Palestra e Conversa sobre Respeito e Relacionamento com os Pais (e Escolha Profissional / Namoro / Sexo)",
+      "fullTitle": "Palestra e Conversa sobre Respeito e Relacionamento com os Pais (e Escolha Profissional / Namoro / Sexo) — *Unificado (2 em 1)*",
+      "description": "Mesmo tema familiar: conversar sobre respeito aos pais e listar como cuidam de você (Companheiro Av. 4) integrado à aula/palestra sobre 'Como se relacionar com os pais' + 1 segundo tema de Guia (IV.1b).",
+      "systemRule": "1 palestra sobre Relacionamento com os Pais (CO-AV 4 e GU IV.1b) + temas juvenis de Guia.",
+      "levelText": "🟡 Nível 4: Palestra Conjunta (`SHARED_EVENT`)",
+      "levels": [
+        "N4"
+      ],
+      "ruleCode": "SHARED_EVENT",
+      "scenario": "strict",
+      "category": "RELACIONAMENTOS",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "COMPANHEIRO_AVANCADO_AV_4",
+        "GUIA_IV_1"
+      ]
+    },
+    {
+      "id": "U-23",
+      "code": "U-23",
+      "title": "Temperança: Daniel 1, Prevenção ao Cigarro, Álcool e Drogas, Seminário e Especialidade de Temperança (AM-013)",
+      "fullTitle": "Temperança: Daniel 1, Prevenção ao Cigarro, Álcool e Drogas, Seminário e Especialidade de Temperança (AM-013) — *Unificado (7 em 1)*",
+      "description": "Especialidade contém o requisito: a especialidade de Temperança (AM-013, obrigatória em Excursionista V.1) exige estudar Daniel 1:8 e assinar o compromisso de abstinência (Amigo V.2), estudar os prejuízos do cigarro e assinar compromisso antifumo (Companheiro V.3), fazer cartaz/exposição sobre drogas e tabagismo (Companheiro Av. 6), discutir efeitos do álcool/drogas e redigir compromisso (Pesquisador V.1), ler o livro Temperança de Ellen White ou escrever artigo de saúde (Guia V.2a/c) e assistir seminário/palestra sobre Drogas (+ 1 tema em Guia Av. 8d).",
+      "systemRule": "Concluir `AM-013 Temperança` + seminário antidrogas/álcool/fumo dá baixa nos 7 requisitos de abstinência e compromissos.",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "SAUDE",
+      "specialties": [
+        "AM-013"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 7,
+      "requirementIds": [
+        "AMIGO_V_2",
+        "COMPANHEIRO_V_3",
+        "COMPANHEIRO_AVANCADO_AV_6",
+        "PESQUISADOR_V_1",
+        "EXCURSIONISTA_V_1",
+        "GUIA_V_2",
+        "GUIA_AVANCADO_AV_8"
+      ]
+    },
+    {
+      "id": "U-24",
+      "code": "U-24",
+      "title": "Os 8 Remédios Naturais e Vantagens do Estilo de Vida Adventista (CS-040 Remédios da Natureza)",
+      "fullTitle": "Os 8 Remédios Naturais e Vantagens do Estilo de Vida Adventista (CS-040 Remédios da Natureza) — *Unificado (2 em 1)*",
+      "description": "Mesmo tema de saúde: discutir as vantagens do estilo de vida adventista segundo a Bíblia (Pioneiro V.2) e apresentar os 8 remédios naturais dados por Deus (Guia V.1).",
+      "systemRule": "Apresentação dos 8 Remédios Naturais / especialidade `CS-040 Remédios da Natureza` cumpre PI V.2 e GU V.1.",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "SAUDE",
+      "specialties": [
+        "CS-040"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "PIONEIRO_V_2",
+        "GUIA_V_1"
+      ]
+    },
+    {
+      "id": "U-25",
+      "code": "U-25",
+      "title": "Dieta Saudável, Quadro dos Grupos de Alimentos e Cardápio Vegetariano de 3 Dias (CS-008 Nutrição)",
+      "fullTitle": "Dieta Saudável, Quadro dos Grupos de Alimentos e Cardápio Vegetariano de 3 Dias (CS-008 Nutrição) — *Unificado (2 em 1)*",
+      "description": "Mesmo tema nutricional: aprender princípios de dieta saudável montando quadro de grupos de alimentos (Amigo V.3) e planejar cardápio vegetariano de 3 dias para o acampamento da Unidade (Pesquisador Av. 9).",
+      "systemRule": "Oficina da especialidade `CS-008 Nutrição` cumpre o quadro de alimentos (AM V.3) e o cardápio vegetariano de 3 dias (PE-AV 9).",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "SAUDE",
+      "specialties": [
+        "CS-008"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "AMIGO_V_3",
+        "PESQUISADOR_AVANCADO_AV_9"
+      ]
+    },
+    {
+      "id": "U-26",
+      "code": "U-26",
+      "title": "Aptidão Física, 1 Co 9:24-27, Programa Diário de Exercícios, Prova Esportiva e Especialidade de Cultura Física (AR-002)",
+      "fullTitle": "Aptidão Física, 1 Co 9:24-27, Programa Diário de Exercícios, Prova Esportiva e Especialidade de Cultura Física (AR-002) — *Unificado (5 em 1)*",
+      "description": "Especialidade contém o requisito: a especialidade de Cultura Física (AR-002, opção de Amigo V.1b e de liderança em Guia V.2d) exige: explicar 1 Co 9:24-27 e princípios de exercícios regulares (Companheiro V.1 e V.2), preparar e assinar programa pessoal de exercícios diários (Pioneiro V.1) e realizar atividade prática de corrida/natação/ciclismo/caminhada com relatório (Pioneiro Av. 3).",
+      "systemRule": "Concluir `AR-002 Cultura Física` (liderada pelo Guia V.2d) com rotina diária e prova prática dá baixa nos 5 requisitos físicos.",
+      "levelText": "🟣 Nível 3 + 🔵 Nível 2 (`SPECIALTY_ABSORPTION` / `HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "SAUDE",
+      "specialties": [
+        "AR-002"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 5,
+      "requirementIds": [
+        "AMIGO_V_1",
+        "COMPANHEIRO_V_1",
+        "COMPANHEIRO_V_2",
+        "PIONEIRO_V_1",
+        "PIONEIRO_AVANCADO_AV_3"
+      ]
+    },
+    {
+      "id": "U-27",
+      "code": "U-27",
+      "title": "Primeiros Socorros Básico (CS-003), Resgate Básico (CS-012) e Ferimentos por Animais Peçonhentos (EN-069)",
+      "fullTitle": "Primeiros Socorros Básico (CS-003), Resgate Básico (CS-012) e Ferimentos por Animais Peçonhentos (EN-069) — *Unificado (3 em 1)*",
+      "description": "Mesma trilha de socorrismo: completar Primeiros Socorros Básico (Pesquisador VIII.2b, cujo currículo inclui atendimento a picadas/ferimentos de animais peçonhentos e não peçonhentos de Excursionista Av. 8) e avançar na prática para Resgate Básico (Pioneiro VIII.3).",
+      "systemRule": "Curso conjunto de `CS-003 Primeiros Socorros Básico` (inclui animais peçonhentos EX-AV 8) + `CS-012 Resgate Básico`.",
+      "levelText": "🟣 Nível 3 + 🔵 Nível 2 (`SPECIALTY_ABSORPTION` / `HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "LIDERANCA",
+      "specialties": [
+        "CS-003",
+        "CS-012"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 3,
+      "requirementIds": [
+        "PESQUISADOR_VIII_2",
+        "PIONEIRO_VIII_3",
+        "EXCURSIONISTA_AVANCADO_AV_8"
+      ]
+    },
+    {
+      "id": "U-28",
+      "code": "U-28",
+      "title": "Organização e Participação em Cerimônia Especial do Clube (Investidura, Admissão em Lenço ou Dia Mundial DBV)",
+      "fullTitle": "Organização e Participação em Cerimônia Especial do Clube (Investidura, Admissão em Lenço ou Dia Mundial DBV) — *Unificado (2 em 1)*",
+      "description": "Mesmo evento do Clube: Pesquisador Av. 6 organiza o evento especial e Companheiro Av. 8 participa e sugere ideias criativas para a mesma cerimônia.",
+      "systemRule": "Na mesma cerimônia (Investidura, Lenço ou Dia Mundial), PE-AV 6 organiza e CO-AV 8 participa/sugere ideias.",
+      "levelText": "🟢 Nível 1: Mesmo Evento Oficial (`AUTO_EQUAL`)",
+      "levels": [
+        "N1"
+      ],
+      "ruleCode": "AUTO_EQUAL",
+      "scenario": "strict",
+      "category": "LIDERANCA",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "COMPANHEIRO_AVANCADO_AV_8",
+        "PESQUISADOR_AVANCADO_AV_6"
+      ]
+    },
+    {
+      "id": "U-29",
+      "code": "U-29",
+      "title": "Organograma da Igreja Local e da Estrutura Administrativa da Divisão Sul-Americana",
+      "fullTitle": "Organograma da Igreja Local e da Estrutura Administrativa da Divisão Sul-Americana — *Unificado (2 em 1)*",
+      "description": "Escalonado no mesmo tema: preparar o organograma da igreja local e funções dos departamentos (Excursionista VI.1) e o organograma da Igreja Adventista na Divisão (Guia VI.1).",
+      "systemRule": "Montar o organograma completo (Igreja Local -> Associação -> União -> Divisão) cumpre EX VI.1 (local) e GU VI.1 (Divisão).",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "LIDERANCA",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "EXCURSIONISTA_VI_1",
+        "GUIA_VI_1"
+      ]
+    },
+    {
+      "id": "U-30",
+      "code": "U-30",
+      "title": "Participação em Atividade Social e Programas de Departamentos da Igreja Local",
+      "fullTitle": "Participação em Atividade Social e Programas de Departamentos da Igreja Local — *Unificado (2 em 1)*",
+      "description": "Escalonado: participar de 2 programas envolvendo diferentes departamentos da igreja local (Excursionista VI.2), sendo 1 deles uma atividade social da igreja (Pioneiro VI.2).",
+      "systemRule": "Participar de 2 programas de departamentos da igreja (EX VI.2, sendo 1 social) já cumpre automaticamente PI VI.2 (1 atividade social).",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "LIDERANCA",
+      "specialties": [],
+      "hierarchicalScale": [
+        {
+          "num": 159,
+          "id": "EXCURSIONISTA_VI_2",
+          "label": "Participar de 2 programas de departamentos da igreja (Excursionista)",
+          "rank": 2
+        },
+        {
+          "num": 124,
+          "id": "PIONEIRO_VI_2",
+          "label": "Participar de 1 atividade social da igreja (Pioneiro)",
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 2,
+      "requirementIds": [
+        "PIONEIRO_VI_2",
+        "EXCURSIONISTA_VI_2"
+      ]
+    },
+    {
+      "id": "U-31",
+      "code": "U-31",
+      "title": "Gestão Financeira Cristã: Especialidades de Mordomia (AM-EB-021) e Orçamento Familiar (HD-006)",
+      "fullTitle": "Gestão Financeira Cristã: Especialidades de Mordomia (AM-EB-021) e Orçamento Familiar (HD-006) — *Unificado (2 em 1)*",
+      "description": "Mesmo eixo financeiro (Guia Av. 1 e Guia Av. 10): ambas trabalham planejamento financeiro familiar, fidelidade nos dízimos/ofertas e controle de gastos.",
+      "systemRule": "Oficina conjunta de `AM-EB-021 Mordomia` e `HD-006 Orçamento Familiar` (também cobre Finanças Pessoais de EX IV.1c).",
+      "levelText": "🟣 Nível 3: Dupla de Especialidades Irmãs (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "LIDERANCA",
+      "specialties": [
+        "AM-EB-021",
+        "HD-006"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 2,
+      "requirementIds": [
+        "GUIA_AVANCADO_AV_1",
+        "GUIA_AVANCADO_AV_10"
+      ]
+    },
+    {
+      "id": "U-32",
+      "code": "U-32",
+      "title": "Catálogo Botânico/Zoológico (10 a 25 Espécies) + Especialidades de Flores (EN-005) e Árvores/Aves (EN-006 / EN-003)",
+      "fullTitle": "Catálogo Botânico/Zoológico (10 a 25 Espécies) + Especialidades de Flores (EN-005) e Árvores/Aves (EN-006 / EN-003) — *Unificado (5 em 1)*",
+      "description": "Escalonado + Especialidade: identificar 25 flores silvestres e 25 folhas de árvores (Pioneiro Av. 9a/c) engloba as 10 flores silvestres de Amigo Av. 6 (+ 10 insetos) e as 12 árvores nativas de Companheiro Av. 7 (+ 12 aves nativas), cumprindo diretamente as especialidades de Árvores/Aves (Companheiro VII.2) e Flores (Pesquisador VII.2).",
+      "systemRule": "Catálogo de 25 flores e 25 folhas/árvores (PI-AV 9) engloba 10 flores (AM-AV 6) e 12 árvores (CO-AV 7) + especialidades `EN-005`/`EN-006`.",
+      "levelText": "🔵 Nível 2 + 🟣 Nível 3 (`HIERARCHICAL_SCALE` / `SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "NATUREZA",
+      "specialties": [
+        "EN-005",
+        "EN-006"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 5,
+      "requirementIds": [
+        "AMIGO_AVANCADO_AV_6",
+        "COMPANHEIRO_VII_2",
+        "COMPANHEIRO_AVANCADO_AV_7",
+        "PESQUISADOR_VII_2",
+        "PIONEIRO_AVANCADO_AV_9"
+      ]
+    },
+    {
+      "id": "U-33",
+      "code": "U-33",
+      "title": "Plantas Silvestres Comestíveis vs. Plantas Tóxicas/Venenosas + Especialidade EN-043 (Estudo da Natureza Livre)",
+      "fullTitle": "Plantas Silvestres Comestíveis vs. Plantas Tóxicas/Venenosas + Especialidade EN-043 (Estudo da Natureza Livre) — *Unificado (4 em 1)*",
+      "description": "Especialidade contém o requisito: a especialidade Plantas Silvestres Comestíveis (EN-043) cumpre a especialidade livre de Estudo da Natureza de Pioneiro (VII.2) ou Excursionista (VII.2) e exige identificar 10+ plantas silvestres comestíveis (Pioneiro Av. 7a) sabendo diferenciá-las de plantas tóxicas/venenosas (Excursionista Av. 7).",
+      "systemRule": "Cursar `EN-043 Plantas Silvestres Comestíveis` cumpre a vaga de Natureza (PI/EX VII.2) e os requisitos práticos PI-AV 7a e EX-AV 7.",
+      "levelText": "🟣 Nível 3: Absorção por Especialidade (`SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N3"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "NATUREZA",
+      "specialties": [
+        "EN-043"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 4,
+      "requirementIds": [
+        "PIONEIRO_VII_2",
+        "PIONEIRO_AVANCADO_AV_7",
+        "EXCURSIONISTA_VII_2",
+        "EXCURSIONISTA_AVANCADO_AV_7"
+      ]
+    },
+    {
+      "id": "U-34",
+      "code": "U-34",
+      "title": "Expedição de Caminhada Escalonada (5 km → 6 km → 10 km → 20 km), Regras de Caminhada, Técnicas de Trilhas e Excursionismo com Mochila (AR-056)",
+      "fullTitle": "Expedição de Caminhada Escalonada (5 km → 6 km → 10 km → 20 km), Regras de Caminhada, Técnicas de Trilhas e Excursionismo com Mochila (AR-056) — *Unificado (7 em 1)*",
+      "description": "Mesma atividade física escalonada: planejar e executar a expedição da especialidade Excursionismo Pedestre com Mochila (Companheiro Av. 11) com regras de caminhada/perdido (Amigo VIII.3), lista de roupa/calçado/equipamento (Pesquisador Av. 5) e técnicas de trilhas em diferentes terrenos (Excursionista Av. 9), validando os marcos de 5 km (Amigo VI.1), 6 km (Companheiro Av. 5), 10 km (Pesquisador Av. 5 / Pioneiro Av. 3a) e 20 km com pernoite e anotações (Excursionista VIII.1).",
+      "systemRule": "Trilha de 20 km > 10 km > 6 km > 5 km com regras, lista de equipamentos e `AR-056 Excursionismo com Mochila`: a distância maior valida as menores.",
+      "levelText": "🔵 Nível 2: Escalonado / Hierárquico (`HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ACAMPAMENTO",
+      "specialties": [
+        "AR-056"
+      ],
+      "hierarchicalScale": [
+        {
+          "num": 163,
+          "id": "EXCURSIONISTA_VIII_1",
+          "label": "Caminhada de 20 km com pernoite e anotações (Excursionista)",
+          "distanceKm": 20,
+          "rank": 4
+        },
+        {
+          "num": 100,
+          "id": "PESQUISADOR_AVANCADO_AV_5",
+          "label": "Caminhada de 10 km com lista de equipamentos (Pesquisador Av.)",
+          "distanceKm": 10,
+          "rank": 3
+        },
+        {
+          "num": 133,
+          "id": "PIONEIRO_AVANCADO_AV_3",
+          "label": "Caminhar 10 km com relatório (Pioneiro Av.)",
+          "distanceKm": 10,
+          "rank": 3
+        },
+        {
+          "num": 65,
+          "id": "COMPANHEIRO_AVANCADO_AV_5",
+          "label": "Caminhada de 6 km com relatório (Companheiro Av.)",
+          "distanceKm": 6,
+          "rank": 2
+        },
+        {
+          "num": 17,
+          "id": "AMIGO_VI_1",
+          "label": "Planejamento e execução de caminhada de 5 km (Amigo)",
+          "distanceKm": 5,
+          "rank": 1
+        },
+        {
+          "num": 23,
+          "id": "AMIGO_VIII_3",
+          "label": "10 regras de caminhada e conduta perdido (Amigo)",
+          "rank": 0
+        },
+        {
+          "num": 174,
+          "id": "EXCURSIONISTA_AVANCADO_AV_9",
+          "label": "Técnicas para percorrer trilhas em diferentes terrenos (Excursionista Av.)",
+          "rank": 0
+        },
+        {
+          "num": 71,
+          "id": "COMPANHEIRO_AVANCADO_AV_11",
+          "label": "Especialidade de Excursionismo pedestre com mochila (Companheiro Av.)",
+          "rank": 0
+        }
+      ],
+      "requirementsCount": 7,
+      "requirementIds": [
+        "AMIGO_VI_1",
+        "AMIGO_VIII_3",
+        "COMPANHEIRO_AVANCADO_AV_5",
+        "COMPANHEIRO_AVANCADO_AV_11",
+        "PESQUISADOR_AVANCADO_AV_5",
+        "EXCURSIONISTA_VIII_1",
+        "EXCURSIONISTA_AVANCADO_AV_9"
+      ]
+    },
+    {
+      "id": "U-35",
+      "code": "U-35",
+      "title": "Orientação e Navegação: Pista de 10 Sinais, Pontos Cardeais sem Bússola, Rosa dos Ventos, GPS e Especialidade Mapa e Bússola (AR-021)",
+      "fullTitle": "Orientação e Navegação: Pista de 10 Sinais, Pontos Cardeais sem Bússola, Rosa dos Ventos, GPS e Especialidade Mapa e Bússola (AR-021) — *Unificado (4 em 1)*",
+      "description": "Mesma técnica progressiva: preparar/seguir pista de 10 sinais (Amigo VIII.4), achar pontos cardeais sem bússola e desenhar Rosa dos Ventos (Companheiro VIII.1), localizar endereços com bússola/GPS (Pesquisador VIII.3) e completar a especialidade de Mapa e Bússola (Pioneiro Av. 4).",
+      "systemRule": "Oficina de `AR-021 Mapa e Bússola` + GPS + Pista de 10 sinais cobre orientação sem bússola (CO), urbana (PE) e avançada (PI-AV).",
+      "levelText": "🟣 Nível 3 + 🔵 Nível 2 (`SPECIALTY_ABSORPTION` / `HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ACAMPAMENTO",
+      "specialties": [
+        "AR-021"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 4,
+      "requirementIds": [
+        "AMIGO_VIII_4",
+        "COMPANHEIRO_VIII_1",
+        "PESQUISADOR_VIII_3",
+        "PIONEIRO_AVANCADO_AV_4"
+      ]
+    },
+    {
+      "id": "U-36",
+      "code": "U-36",
+      "title": "Nós (14 Nós + Quadro de 15 Nós), 4 Amarras Básicas, Construção de Móvel em Tamanho Real e Portal + Especialidade de Pioneirias (AR-101)",
+      "fullTitle": "Nós (14 Nós + Quadro de 15 Nós), 4 Amarras Básicas, Construção de Móvel em Tamanho Real e Portal + Especialidade de Pioneirias (AR-101) — *Unificado (7 em 1)*",
+      "description": "Mesma prática escalonada de pioneiria: aprender os 14 nós de Amigo (VIII.1) + 4 novos dos 9 nós de Companheiro (VIII.3) monta o quadro de 15 nós (Companheiro Av. 10); fazer as 4 amarras básicas construindo em Unidade 1 móvel em tamanho real e 1 portal cumpre Pesquisador Av. 8, Excursionista VIII.2 (Pioneirias), Excursionista Av. 5 e Guia VIII.3.",
+      "systemRule": "14 nós (AM) + 4 novos (CO) = Quadro de 15 nós (CO-AV 10); construir 1 móvel em tamanho real + portal com 4 amarras valida PE-AV 8, EX VIII.2, EX-AV 5 e GU VIII.3.",
+      "levelText": "🔵 Nível 2 + 🟣 Nível 3 (`HIERARCHICAL_SCALE` / `SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ACAMPAMENTO",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 7,
+      "requirementIds": [
+        "AMIGO_VIII_1",
+        "COMPANHEIRO_VIII_3",
+        "COMPANHEIRO_AVANCADO_AV_10",
+        "PESQUISADOR_AVANCADO_AV_8",
+        "EXCURSIONISTA_VIII_2",
+        "EXCURSIONISTA_AVANCADO_AV_5",
+        "GUIA_VIII_3"
+      ]
+    },
+    {
+      "id": "U-37",
+      "code": "U-37",
+      "title": "Faca/Machadinha, Fogo Natural, Fogo Refletor, Fogo na Chuva, Cozinhar 1 a 3 Refeições ao Ar Livre e Especialidade de Fogueiras (AR-020)",
+      "fullTitle": "Faca/Machadinha, Fogo Natural, Fogo Refletor, Fogo na Chuva, Cozinhar 1 a 3 Refeições ao Ar Livre e Especialidade de Fogueiras (AR-020) — *Unificado (9 em 1)*",
+      "description": "Especialidade contém o requisito + escalonamento: a especialidade Fogueiras e Cozinha ao Ar Livre (AR-020, Pioneiro Av. 10) exige segurança e uso de faca/machadinha (Amigo Av. 8 e Pioneiro Av. 5), fogueira com materiais naturais (Amigo Av. 7), fogo refletor (Pioneiro VIII.1), fogo na chuva (Pioneiro Av. 6) e preparo de refeições ao ar livre — onde cozinhar 3 refeições (Guia VIII.2) engloba 2 refeições + 6 segredos de acampamento (Pesquisador VIII.1) e 1 refeição (Companheiro Av. 9).",
+      "systemRule": "Concluir `AR-020 Fogueiras e Cozinha ao Ar Livre` cozinhando 3 refeições (GU) valida automaticamente 2 refeições (PE), 1 refeição (CO-AV), fogo natural, refletor, na chuva e machadinha.",
+      "levelText": "🟣 Nível 3 + 🔵 Nível 2 (`SPECIALTY_ABSORPTION` / `HIERARCHICAL_SCALE`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ACAMPAMENTO",
+      "specialties": [
+        "AR-020"
+      ],
+      "hierarchicalScale": [
+        {
+          "num": 199,
+          "id": "GUIA_VIII_2",
+          "label": "Planejar, preparar e cozinhar 3 refeições ao ar livre (Guia)",
+          "meals": 3,
+          "rank": 3
+        },
+        {
+          "num": 92,
+          "id": "PESQUISADOR_VIII_1",
+          "label": "6 segredos de acampamento + planejar e cozinhar 2 refeições (Pesquisador)",
+          "meals": 2,
+          "rank": 2
+        },
+        {
+          "num": 69,
+          "id": "COMPANHEIRO_AVANCADO_AV_9",
+          "label": "Preparar 1 refeição em fogueira durante acampamento (Companheiro Av.)",
+          "meals": 1,
+          "rank": 1
+        }
+      ],
+      "requirementsCount": 9,
+      "requirementIds": [
+        "AMIGO_AVANCADO_AV_7",
+        "AMIGO_AVANCADO_AV_8",
+        "COMPANHEIRO_AVANCADO_AV_9",
+        "PESQUISADOR_VIII_1",
+        "PIONEIRO_VIII_1",
+        "PIONEIRO_AVANCADO_AV_5",
+        "PIONEIRO_AVANCADO_AV_6",
+        "PIONEIRO_AVANCADO_AV_10",
+        "GUIA_VIII_2"
+      ]
+    },
+    {
+      "id": "U-38",
+      "code": "U-38",
+      "title": "Acampamento Prático de Fim de Semana, Montagem de Barraca, 3 Tipos de Abrigo e Trilha de Especialidades Campestres (Acampamento I/II, Arte de Acampar, Vida Silvestre e Liderança Campestre)",
+      "fullTitle": "Acampamento Prático de Fim de Semana, Montagem de Barraca, 3 Tipos de Abrigo e Trilha de Especialidades Campestres (Acampamento I/II, Arte de Acampar, Vida Silvestre e Liderança Campestre) — *Unificado (13 em 1)*",
+      "description": "Mesma prática campestre e especialidades de acampamento: planejar e participar de um acampamento de fim de semana com mochila equipada e estrutura de pioneiria (Companheiro VI.2 e VIII.2, Pioneiro VIII.2, Guia VIII.1) armando barraca (Amigo VII.3) e projetando/usando 3 tipos de abrigo (Guia Av. 7), cumprindo em campo Acampamento I (Amigo VIII.2), Arte de Acampar (Amigo Av. 5), Acampamento II (Companheiro V.4b), Vida Silvestre (Excursionista Av. 11), Liderança Campestre (Guia Av. 9) e as especialidades do Mestrado em Vida Campestre (Guia VIII.4d e Guia Av. 6).",
+      "systemRule": "1 Acampamento de fim de semana em pioneiria montando barraca e 3 abrigos cumpre a prática de campo das 6 classes e especialidades campestres.",
+      "levelText": "🔵 Nível 2 + 🟣 Nível 3 (`HIERARCHICAL_SCALE` / `SPECIALTY_ABSORPTION`)",
+      "levels": [
+        "N2",
+        "N3"
+      ],
+      "ruleCode": "HIERARCHICAL_SCALE",
+      "scenario": "strict",
+      "category": "ACAMPAMENTO",
+      "specialties": [],
+      "hierarchicalScale": null,
+      "requirementsCount": 13,
+      "requirementIds": [
+        "AMIGO_VII_3",
+        "AMIGO_VIII_2",
+        "AMIGO_AVANCADO_AV_5",
+        "COMPANHEIRO_V_4",
+        "COMPANHEIRO_VI_2",
+        "COMPANHEIRO_VIII_2",
+        "PIONEIRO_VIII_2",
+        "EXCURSIONISTA_AVANCADO_AV_11",
+        "GUIA_VIII_1",
+        "GUIA_VIII_4",
+        "GUIA_AVANCADO_AV_6",
+        "GUIA_AVANCADO_AV_7",
+        "GUIA_AVANCADO_AV_9"
+      ]
+    },
+    {
+      "id": "U-39",
+      "code": "U-39",
+      "title": "Especialidade em Artes e Habilidades Manuais (HM-031 Modelagem em Gesso / HM-055 Biscuit) + 6 Pegadas e 3 Moldes",
+      "fullTitle": "Especialidade em Artes e Habilidades Manuais (HM-031 Modelagem em Gesso / HM-055 Biscuit) + 6 Pegadas e 3 Moldes — *Unificado (4 em 1)*",
+      "description": "Mesma área de especialidade + requisito prático: uma oficina de Modelagem em Gesso (HM-031) ou Biscuit (HM-055) cumpre a especialidade de Artes e Habilidades Manuais de Amigo (IX.1), Companheiro (IX.1) e Pesquisador (IX.1) e já confecciona os 3 moldes de pegadas exigidos em Pesquisador Av. 7 (ID 102).",
+      "systemRule": "Oficina de `HM-031 Modelagem em Gesso` ou `HM-055 Biscuit` cumpre Artes Manuais (AM/CO/PE IX.1) e produz os 3 moldes de pegadas (PE-AV 7).",
+      "levelText": "🟣 Nível 3 + 🟡 Nível 4 (`SPECIALTY_ABSORPTION` / `SHARED_EVENT`)",
+      "levels": [
+        "N3",
+        "N4"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "ESPECIALIDADES",
+      "specialties": [
+        "HM-031",
+        "HM-055"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 4,
+      "requirementIds": [
+        "AMIGO_IX_1",
+        "COMPANHEIRO_IX_1",
+        "PESQUISADOR_IX_1",
+        "PESQUISADOR_AVANCADO_AV_7"
+      ]
+    },
+    {
+      "id": "U-40",
+      "code": "U-40",
+      "title": "Oficina de Especialidades Eletivas (Missão AM / Agrícolas AA / Saúde CS / Domésticas HD / Profissionais AP / Recreativas AR) + Códigos + Ensino pelo Guia",
+      "fullTitle": "Oficina de Especialidades Eletivas (Missão AM / Agrícolas AA / Saúde CS / Domésticas HD / Profissionais AP / Recreativas AR) + Códigos + Ensino pelo Guia — *Unificado (9 em 1)*",
+      "description": "Mesmo grupo de especialidades + ensino cruzado: ministrar especialidades eletivas como Código Semafórico (AP-046), Código Morse (AP-047), Língua de Sinais (AM-014) ou Braile (AM-034) com o auxílio instrutivo do Guia (VI.3 - ensinar 2 requisitos de uma especialidade) cumpre o envio/recebimento de mensagem em código de Pesquisador Av. 10 (ID 105) e as vagas eletivas de Amigo Av. 9, Companheiro Av. 12, Pesquisador Av. 11, Pioneiro IX.1 e Av. 8, Excursionista IX.1 e Guia IX.1.",
+      "systemRule": "Oficina de `AP-046 Código Semafórico` / `AM-014 Libras` / `AM-034 Braile` (com Guia ensinando 2 itens - GU VI.3) cumpre os códigos (PE-AV 10 / PI-AV 7) e as vagas eletivas das 6 classes.",
+      "levelText": "🟣 Nível 3 + 🟡 Nível 4 (`SPECIALTY_ABSORPTION` / `SHARED_EVENT`)",
+      "levels": [
+        "N3",
+        "N4"
+      ],
+      "ruleCode": "SPECIALTY_ABSORPTION",
+      "scenario": "strict",
+      "category": "ESPECIALIDADES",
+      "specialties": [
+        "AP-046",
+        "AM-014",
+        "AM-034",
+        "AP-047"
+      ],
+      "hierarchicalScale": null,
+      "requirementsCount": 9,
+      "requirementIds": [
+        "AMIGO_AVANCADO_AV_9",
+        "COMPANHEIRO_AVANCADO_AV_12",
+        "PESQUISADOR_AVANCADO_AV_10",
+        "PESQUISADOR_AVANCADO_AV_11",
+        "PIONEIRO_IX_1",
+        "PIONEIRO_AVANCADO_AV_8",
+        "EXCURSIONISTA_IX_1",
+        "GUIA_VI_3",
+        "GUIA_IX_1"
+      ]
     }
   ],
   "classes": [
@@ -233,7 +1484,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-01",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -251,7 +1502,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-MEMBRO-ATIVO",
+          "equivalence_group": "U-02",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -270,7 +1521,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-05",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -289,7 +1540,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "EQ-CURSO-LEITURA",
+          "equivalence_group": "U-04",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -327,7 +1578,7 @@
             "reuniao_clube",
             "igreja"
           ],
-          "equivalence_group": "EQ-CLASSE-BIBLICA",
+          "equivalence_group": "U-03",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -346,7 +1597,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-06",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -436,7 +1687,7 @@
           "tags": [
             "comunidade"
           ],
-          "equivalence_group": "EQ-SERVICO-COMUNITARIO-HORAS",
+          "equivalence_group": "U-16",
           "selection_rule": "ESCOLHER_2",
           "sub_items": [
             {
@@ -468,7 +1719,7 @@
             "reuniao_clube",
             "em_casa"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -487,7 +1738,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -506,7 +1757,7 @@
             "reuniao_clube",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-20",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -526,7 +1777,7 @@
             "ar_livre",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-26",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -563,7 +1814,7 @@
             "debate_apresentacao",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -594,7 +1845,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-25",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -613,7 +1864,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "EQ-CAMINHADA-EXCURSIONISMO",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -692,7 +1943,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -712,7 +1963,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -789,7 +2040,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -809,7 +2060,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -828,7 +2079,7 @@
             "ar_livre",
             "orientacao_bussola"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-35",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -847,7 +2098,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
+          "equivalence_group": "U-39",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -868,7 +2119,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-20",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -923,7 +2174,7 @@
             "igreja",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-15",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -942,7 +2193,7 @@
             "reuniao_clube",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -962,7 +2213,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -981,7 +2232,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-32",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1001,7 +2252,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1021,7 +2272,7 @@
             "ar_livre",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1040,7 +2291,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1082,7 +2333,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-01",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1100,7 +2351,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-MEMBRO-ATIVO",
+          "equivalence_group": "U-02",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1119,7 +2370,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-05",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1138,7 +2389,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "EQ-CURSO-LEITURA",
+          "equivalence_group": "U-04",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1176,7 +2427,7 @@
             "reuniao_clube",
             "igreja"
           ],
-          "equivalence_group": "EQ-CLASSE-BIBLICA",
+          "equivalence_group": "U-03",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1195,7 +2446,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-07",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -1282,7 +2533,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "EQ-SERMAO-DA-MONTANHA",
+          "equivalence_group": "U-08",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1317,7 +2568,7 @@
           "tags": [
             "comunidade"
           ],
-          "equivalence_group": "EQ-SERVICO-COMUNITARIO-HORAS",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1336,7 +2587,7 @@
             "comunidade",
             "igreja"
           ],
-          "equivalence_group": "EQ-PROJETO-COMUNITARIO",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1355,7 +2606,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1374,7 +2625,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-26",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1393,7 +2644,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-26",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1411,7 +2662,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1431,7 +2682,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1478,7 +2729,7 @@
             "acampamento",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1497,7 +2748,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-14",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1516,7 +2767,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-32",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1568,7 +2819,7 @@
             "em_casa",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-06",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1588,7 +2839,7 @@
             "orientacao_bussola",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-35",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1607,7 +2858,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "EQ-ACAMPAMENTO-PRATICO",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1627,7 +2878,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -1683,7 +2934,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
+          "equivalence_group": "U-39",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -1704,7 +2955,7 @@
             "reuniao_clube",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-20",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1724,7 +2975,7 @@
             "leitura",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-13",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1743,7 +2994,7 @@
             "comunidade",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1762,7 +3013,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-22",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1781,7 +3032,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "EQ-CAMINHADA-EXCURSIONISMO",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1800,7 +3051,7 @@
             "reuniao_clube",
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1840,7 +3091,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-32",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1859,7 +3110,7 @@
             "igreja",
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-CERIMONIAS-E-EVENTOS",
+          "equivalence_group": "U-28",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -1892,7 +3143,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1911,7 +3162,7 @@
             "reuniao_clube",
             "nos_e_amarras"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1932,7 +3183,7 @@
             "caminhada",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -1951,7 +3202,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2001,7 +3252,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-01",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2019,7 +3270,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-MEMBRO-ATIVO",
+          "equivalence_group": "U-02",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2038,7 +3289,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-05",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2070,7 +3321,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "EQ-CURSO-LEITURA",
+          "equivalence_group": "U-04",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2108,7 +3359,7 @@
             "reuniao_clube",
             "igreja"
           ],
-          "equivalence_group": "EQ-CLASSE-BIBLICA",
+          "equivalence_group": "U-03",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2209,7 +3460,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-09",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2248,7 +3499,7 @@
           "tags": [
             "comunidade"
           ],
-          "equivalence_group": "EQ-PROJETO-COMUNITARIO",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2267,7 +3518,7 @@
             "igreja",
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2286,7 +3537,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-21",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2305,7 +3556,7 @@
             "comunidade",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-18",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2324,7 +3575,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2372,7 +3623,7 @@
             "reuniao_clube",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-03",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2391,7 +3642,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-13",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2411,7 +3662,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-32",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2452,7 +3703,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "EQ-ACAMPAMENTO-PRATICO",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2472,7 +3723,7 @@
             "acampamento",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-27",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2501,7 +3752,7 @@
             "orientacao_bussola",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-35",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2520,7 +3771,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-ESP-ARTES-MANUAIS",
+          "equivalence_group": "U-39",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -2541,7 +3792,7 @@
             "reuniao_clube",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-20",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2561,7 +3812,7 @@
             "leitura",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-12",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2580,7 +3831,7 @@
             "igreja",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-15",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2612,7 +3863,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2640,7 +3891,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "EQ-CAMINHADA-EXCURSIONISMO",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2659,7 +3910,7 @@
             "igreja",
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-CERIMONIAS-E-EVENTOS",
+          "equivalence_group": "U-28",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2691,7 +3942,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-39",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2711,7 +3962,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "EQ-MOVEL-ACAMPAMENTO",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2731,7 +3982,7 @@
             "acampamento",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-25",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2750,7 +4001,7 @@
             "reuniao_clube",
             "orientacao_bussola"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2786,7 +4037,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -2836,7 +4087,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-01",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2854,7 +4105,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-MEMBRO-ATIVO",
+          "equivalence_group": "U-02",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2892,7 +4143,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "EQ-CURSO-LEITURA",
+          "equivalence_group": "U-04",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -2930,7 +4181,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "EQ-SERMAO-DA-MONTANHA",
+          "equivalence_group": "U-08",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3049,7 +4300,7 @@
             "igreja",
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-15",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3087,7 +4338,7 @@
             "comunidade",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3105,7 +4356,7 @@
           "tags": [
             "comunidade"
           ],
-          "equivalence_group": "EQ-PROJETO-COMUNITARIO",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3124,7 +4375,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-21",
           "selection_rule": "ESCOLHER_2",
           "sub_items": [
             {
@@ -3160,7 +4411,7 @@
             "reuniao_clube",
             "em_casa"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-26",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3179,7 +4430,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-24",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3198,7 +4449,7 @@
             "igreja",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3225,7 +4476,7 @@
           "tags": [
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-30",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3244,7 +4495,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-06",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3264,7 +4515,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "EQ-ESP-NATUREZA-LIVRE",
+          "equivalence_group": "U-33",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3284,7 +4535,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3303,7 +4554,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "EQ-ACAMPAMENTO-PRATICO",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3323,7 +4574,7 @@
             "ar_livre",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-27",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3342,7 +4593,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3377,7 +4628,7 @@
             "reuniao_clube",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3397,7 +4648,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3416,7 +4667,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "EQ-CAMINHADA-EXCURSIONISMO",
+          "equivalence_group": "U-26",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3465,7 +4716,7 @@
             "ar_livre",
             "orientacao_bussola"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-35",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3485,7 +4736,7 @@
             "ar_livre",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3505,7 +4756,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3525,7 +4776,7 @@
             "ar_livre",
             "orientacao_bussola"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-33",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3566,7 +4817,7 @@
             "ar_livre",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3585,7 +4836,7 @@
             "ar_livre",
             "em_casa"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-32",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -3627,7 +4878,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -3660,7 +4911,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-01",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3678,7 +4929,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-MEMBRO-ATIVO",
+          "equivalence_group": "U-02",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3716,7 +4967,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "EQ-CURSO-LEITURA",
+          "equivalence_group": "U-04",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3754,7 +5005,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-10",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -3826,7 +5077,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-10",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3845,7 +5096,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-11",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3864,7 +5115,7 @@
             "reuniao_clube",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-14",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3901,7 +5152,7 @@
           "tags": [
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-15",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3919,7 +5170,7 @@
           "tags": [
             "comunidade"
           ],
-          "equivalence_group": "EQ-PROJETO-COMUNITARIO",
+          "equivalence_group": "U-16",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -3938,7 +5189,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-19",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -3974,7 +5225,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-21",
           "selection_rule": "ESCOLHER_2",
           "sub_items": [
             {
@@ -4010,7 +5261,7 @@
             "comunidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-18",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4029,7 +5280,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4048,7 +5299,7 @@
             "igreja",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-29",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4066,7 +5317,7 @@
           "tags": [
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-30",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4086,7 +5337,7 @@
             "igreja",
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4105,7 +5356,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-09",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4125,7 +5376,7 @@
             "reuniao_clube",
             "ar_livre"
           ],
-          "equivalence_group": "EQ-ESP-NATUREZA-LIVRE",
+          "equivalence_group": "U-33",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4145,7 +5396,7 @@
             "ar_livre",
             "caminhada"
           ],
-          "equivalence_group": "EQ-CAMINHADA-EXCURSIONISMO",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4166,7 +5417,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4185,7 +5436,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -4224,7 +5475,7 @@
             "debate_apresentacao",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-07",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4243,7 +5494,7 @@
             "comunidade",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4263,7 +5514,7 @@
             "igreja",
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4283,7 +5534,7 @@
             "ar_livre",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-14",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4303,7 +5554,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4322,7 +5573,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-14",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -4358,7 +5609,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-33",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4378,7 +5629,7 @@
             "acampamento",
             "primeiros_socorros"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-27",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4398,7 +5649,7 @@
             "caminhada",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-34",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4418,7 +5669,7 @@
             "reuniao_clube",
             "civismo_ordem_unida"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-20",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4438,7 +5689,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         }
@@ -4471,7 +5722,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-01",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4489,7 +5740,7 @@
           "tags": [
             "reuniao_clube"
           ],
-          "equivalence_group": "EQ-MEMBRO-ATIVO",
+          "equivalence_group": "U-02",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4527,7 +5778,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "EQ-CURSO-LEITURA",
+          "equivalence_group": "U-04",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4565,7 +5816,7 @@
             "reuniao_clube",
             "memorizacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-11",
           "selection_rule": "TODOS",
           "sub_items": [
             {
@@ -4681,7 +5932,7 @@
             "leitura",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-12",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4718,7 +5969,7 @@
           "tags": [
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-16",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -4751,7 +6002,7 @@
             "comunidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-17",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4770,7 +6021,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-22",
           "selection_rule": "ESCOLHER_2",
           "sub_items": [
             {
@@ -4806,7 +6057,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-24",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4826,7 +6077,7 @@
             "ar_livre",
             "especialidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -4862,7 +6113,7 @@
             "reuniao_clube",
             "igreja"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-29",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4914,7 +6165,7 @@
             "especialidade",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -4983,7 +6234,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "EQ-ACAMPAMENTO-PRATICO",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5003,7 +6254,7 @@
             "ar_livre",
             "fogueira_cozinha"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-37",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5023,7 +6274,7 @@
             "ar_livre",
             "nos_e_amarras"
           ],
-          "equivalence_group": "EQ-MOVEL-ACAMPAMENTO",
+          "equivalence_group": "U-36",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5043,7 +6294,7 @@
             "ar_livre",
             "acampamento"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -5079,7 +6330,7 @@
             "especialidade",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-40",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -5118,7 +6369,7 @@
             "igreja",
             "reuniao_clube"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-31",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5137,7 +6388,7 @@
             "em_casa",
             "leitura"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-08",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5156,7 +6407,7 @@
             "igreja",
             "comunidade"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-15",
           "selection_rule": "ESCOLHER_1",
           "sub_items": [
             {
@@ -5184,7 +6435,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-15",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5239,7 +6490,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5258,7 +6509,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5277,7 +6528,7 @@
             "reuniao_clube",
             "debate_apresentacao"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-23",
           "selection_rule": "ESCOLHER_2",
           "sub_items": [
             {
@@ -5318,7 +6569,7 @@
             "acampamento",
             "ar_livre"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-38",
           "selection_rule": "TODOS",
           "sub_items": []
         },
@@ -5338,7 +6589,7 @@
             "reuniao_clube",
             "em_casa"
           ],
-          "equivalence_group": "",
+          "equivalence_group": "U-31",
           "selection_rule": "TODOS",
           "sub_items": []
         }

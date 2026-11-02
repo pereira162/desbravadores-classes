@@ -43,6 +43,13 @@ const {
   processMcpChatCommand,
   handleMcpJsonRpcRequest,
 } = require('./mcpHandler');
+const {
+  getEffectiveUnifications,
+  computeAbsorptionRecommendations,
+  applyAbsorptionApprovals,
+  updateUnification,
+  resetUnifications,
+} = require('./unificationsHandler');
 
 initDatabase();
 initAutoBackup({ prodDb, testDb });
@@ -3251,6 +3258,111 @@ app.delete('/api/equivalences/:code', requireAuth, (req, res) => {
 
   schedulePdfWarmup(db);
   res.json({ success: true });
+});
+
+// ============================================================================
+// 10.2.1. UNIFICATIONS SUITE (40 OFFICIAL ACTIVITIES & ABSORPTION RECOMMENDATIONS)
+// ============================================================================
+app.get('/api/unifications', (req, res) => {
+  try {
+    const data = getEffectiveUnifications(db);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao obter unificações: ${err.message}` });
+  }
+});
+
+app.put('/api/unifications/:code', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role) && !perms.can_edit_equivalences) {
+    return res.status(403).json({ error: 'Apenas líderes autorizados podem editar unificações de classes.' });
+  }
+
+  try {
+    const result = updateUnification(db, req.params.code, req.body || {}, req.user);
+    schedulePdfWarmup(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao atualizar unificação: ${err.message}` });
+  }
+});
+
+app.post('/api/unifications', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role) && !perms.can_edit_equivalences) {
+    return res.status(403).json({ error: 'Apenas líderes autorizados podem criar novas unificações de classes.' });
+  }
+
+  const { code, title, ...rest } = req.body || {};
+  if (!code || !title) {
+    return res.status(400).json({ error: 'Código e título são obrigatórios.' });
+  }
+
+  try {
+    const cleanCode = String(code).trim().toUpperCase();
+    const result = updateUnification(db, cleanCode, { title, isCustom: true, ...rest }, req.user);
+    schedulePdfWarmup(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao criar unificação: ${err.message}` });
+  }
+});
+
+app.delete('/api/unifications/:code', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role) && !perms.can_edit_equivalences) {
+    return res.status(403).json({ error: 'Sem permissão para remover unificações.' });
+  }
+
+  try {
+    const cleanCode = String(req.params.code || '').trim().toUpperCase();
+    const result = updateUnification(db, cleanCode, { enabled: false, deleted: true, requirementIds: [] }, req.user);
+    schedulePdfWarmup(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao desativar unificação: ${err.message}` });
+  }
+});
+
+app.post('/api/unifications/reset', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Apenas Diretoria/Gestor pode restaurar unificações para o padrão oficial.' });
+  }
+
+  try {
+    const result = resetUnifications(db, req.user);
+    schedulePdfWarmup(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao restaurar unificações: ${err.message}` });
+  }
+});
+
+app.get('/api/unifications/absorption-recommendations', requireAuth, (req, res) => {
+  try {
+    const pathfinderId = req.query.pathfinder_id ? parseInt(req.query.pathfinder_id, 10) : null;
+    const recommendations = computeAbsorptionRecommendations(db, pathfinderId);
+    res.json({ recommendations, count: recommendations.length });
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao calcular recomendações de absorção: ${err.message}` });
+  }
+});
+
+app.post('/api/unifications/apply-absorptions', requireAuth, (req, res) => {
+  const perms = getUserPermissions(req.user);
+  if (!['ADMIN', 'GESTOR', 'DIRETOR', 'INSTRUTOR'].includes(req.user.role) && !perms.can_approve_requirements) {
+    return res.status(403).json({ error: 'Sem permissão para aprovar requisitos.' });
+  }
+
+  const { approvals = [] } = req.body || {};
+  try {
+    const result = applyAbsorptionApprovals(db, approvals, req.user);
+    schedulePdfWarmup(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao aprovar requisitos por absorção: ${err.message}` });
+  }
 });
 
 // ============================================================================
