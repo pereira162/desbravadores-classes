@@ -337,6 +337,7 @@ function ensureAuthAndEmailColumnsOn(targetDb, isTestDb = false) {
   addColumnIfNotExistsOn(targetDb, 'progress_records', 'review_notes', "TEXT DEFAULT ''");
 
   addColumnIfNotExistsOn(targetDb, 'units', 'age_range', "TEXT DEFAULT ''");
+  addColumnIfNotExistsOn(targetDb, 'mcp_api_keys', 'api_key_plain', "TEXT DEFAULT ''");
 
   if (isTestDb) {
     targetDb.prepare("UPDATE users SET is_demo = 1 WHERE email LIKE '%@clube.org'").run();

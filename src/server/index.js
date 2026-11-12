@@ -3482,9 +3482,21 @@ app.get('/api/mcp/keys', requireAuth, (req, res) => {
   if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Apenas Diretor e Gestor podem gerenciar chaves MCP.' });
   }
+
+  // Se houver chaves antigas criadas antes da coluna api_key_plain existir, gera chave visível permanente automaticamente
+  const legacyRows = db
+    .prepare("SELECT id FROM mcp_api_keys WHERE api_key_plain IS NULL OR api_key_plain = ''")
+    .all();
+  for (const leg of legacyRows) {
+    const rawKey = `sgc_mcp_${crypto.randomBytes(18).toString('base64url')}`;
+    db.prepare(
+      'UPDATE mcp_api_keys SET api_key_plain = ?, api_key_hash = ?, api_key_prefix = ? WHERE id = ?'
+    ).run(rawKey, hashMcpApiKey(rawKey), `${rawKey.slice(0, 12)}...`, leg.id);
+  }
+
   const rows = db
     .prepare(
-      `SELECT k.id, k.name, k.user_id, k.api_key_prefix, k.allowed_tools_json, k.scope_json,
+      `SELECT k.id, k.name, k.user_id, k.api_key_plain, k.api_key_prefix, k.allowed_tools_json, k.scope_json,
               k.active, k.last_used_at, k.created_at, u.name as user_name, u.email as user_email,
               u.role as user_role, u.custom_role_title
        FROM mcp_api_keys k
@@ -3494,6 +3506,7 @@ app.get('/api/mcp/keys', requireAuth, (req, res) => {
     .all()
     .map((r) => ({
       ...r,
+      api_key: r.api_key_plain || '',
       active: Boolean(r.active),
       allowed_tools: JSON.parse(r.allowed_tools_json || '["*"]'),
       scope: JSON.parse(r.scope_json || '{}'),
@@ -3521,12 +3534,13 @@ app.post('/api/mcp/keys', requireAuth, (req, res) => {
 
   db.prepare(`
     INSERT INTO mcp_api_keys (
-      id, name, user_id, api_key_hash, api_key_prefix, allowed_tools_json, scope_json, active, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+      id, name, user_id, api_key_plain, api_key_hash, api_key_prefix, allowed_tools_json, scope_json, active, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
   `).run(
     id,
     String(name || `MCP — ${targetUser.name}`).trim(),
     targetUserId,
+    rawKey,
     keyHash,
     keyPrefix,
     JSON.stringify(Array.isArray(allowed_tools) ? allowed_tools : ['*']),

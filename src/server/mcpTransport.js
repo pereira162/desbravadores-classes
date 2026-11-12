@@ -367,6 +367,18 @@ function createMcpRouter(deps) {
     express.urlencoded({ extended: false }),
     (req, res) => {
       const b = { ...(req.body || {}) };
+
+      // Extrai client_secret do body ou do header Authorization: Basic base64(client_id:client_secret)
+      let reqClientSecret = b.client_secret || '';
+      const authH = req.headers.authorization || '';
+      if (!reqClientSecret && authH.startsWith('Basic ')) {
+        try {
+          const decoded = Buffer.from(authH.slice(6), 'base64').toString('utf8');
+          const colonIdx = decoded.indexOf(':');
+          if (colonIdx !== -1) reqClientSecret = decoded.slice(colonIdx + 1);
+        } catch {}
+      }
+
       if (b.grant_type === 'refresh_token' && b.refresh_token) {
         return res.json({
           access_token: b.refresh_token,
@@ -384,8 +396,14 @@ function createMcpRouter(deps) {
         return res.status(400).json({ error: 'invalid_grant', error_description: 'PKCE verification failed' });
       }
 
-      const tok = info?.key || `mcp_${crypto.randomBytes(24).toString('hex')}`;
-      issuedTokens.set(tok, { key: info?.key || null, createdAt: Date.now() });
+      // Se o usuário preencheu a chave sgc_mcp_... como Chave secreta do cliente no Gemini, vincula ao líder da chave!
+      const boundKey =
+        info?.key ||
+        (reqClientSecret && String(reqClientSecret).startsWith('sgc_mcp_') ? reqClientSecret : null) ||
+        (req.query?.key && String(req.query.key).startsWith('sgc_mcp_') ? req.query.key : null);
+
+      const tok = boundKey || `mcp_${crypto.randomBytes(24).toString('hex')}`;
+      issuedTokens.set(tok, { key: boundKey || null, createdAt: Date.now() });
       res.status(200).json({
         access_token: tok,
         token_type: 'Bearer',
