@@ -40,6 +40,10 @@ const db = new Proxy(prodDb, {
   },
 });
 
+function isTestModeActive() {
+  return Boolean(dbStorage.getStore()?.isTestMode);
+}
+
 function dbContextMiddleware(req, _res, next) {
   const isTestMode =
     req.headers['x-test-mode'] === 'true' || req.query?.teste === '1';
@@ -1041,6 +1045,7 @@ module.exports = {
   prodDb,
   testDb,
   dbContextMiddleware,
+  isTestModeActive,
   initDatabase,
   loadCardsMetadata,
   recordAudit,

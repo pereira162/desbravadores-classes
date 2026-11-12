@@ -52,26 +52,26 @@ const CLASS_COLORS = {
 const LEVEL_BADGES = {
   N1: {
     label: '🟢 Nível 1: Equivalência Direta (100% Iguais)',
-    short: '🟢 N1: Equivalência Direta',
-    color: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
+    short: 'N1: Direta',
+    color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
     desc: 'Baixa automática bidirecional nas classes participantes.',
   },
   N2: {
     label: '🔵 Nível 2: Escalonamento Hierárquico',
-    short: '🔵 N2: Hierárquico',
-    color: 'bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400',
+    short: 'N2: Hierárquico',
+    color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
     desc: 'Baixa em cascata descendente (>=). Meta maior engloba as menores.',
   },
   N3: {
     label: '🟣 Nível 3: Absorção por Especialidade / Texto',
-    short: '🟣 N3: Especialidade',
-    color: 'bg-purple-500/10 text-purple-700 border-purple-500/30 dark:text-purple-400',
+    short: 'N3: Especialidade',
+    color: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
     desc: 'Completar a especialidade gatilho resolve os requisitos práticos.',
   },
   N4: {
     label: '🟡 Nível 4: Agrupamento de Turma / Evento Conjunto',
-    short: '🟡 N4: Evento Conjunto',
-    color: 'bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400',
+    short: 'N4: Evento Conjunto',
+    color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
     desc: 'Mesma aula ou evento, com validação individual da entrega.',
   },
 };
@@ -251,10 +251,10 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
       {/* Toast Feedback */}
       {toastMessage && (
         <div
-          className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium transition-all ${
+          className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border text-sm font-medium transition-all backdrop-blur-xl ${
             toastMessage.type === 'error'
-              ? 'bg-rose-900/90 text-rose-100 border-rose-700'
-              : 'bg-emerald-900/90 text-emerald-100 border-emerald-700'
+              ? 'bg-rose-500/90 text-white border-rose-400'
+              : 'bg-emerald-600/95 text-white border-emerald-400'
           }`}
         >
           {toastMessage.type === 'error' ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 shrink-0" />}
@@ -262,36 +262,36 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
         </div>
       )}
 
-      {/* Cabeçalho com Métricas Executivas */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-blue-800/50">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Cabeçalho com Métricas Executivas - Estilo Apple Health / Dashboard */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-black/[0.06] dark:border-white/[0.08] relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30 text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+          <div className="space-y-2.5 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
               Especificação Oficial DSA • 212 Requisitos
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Gerenciamento de Unificações & Equivalências
             </h1>
-            <p className="text-blue-100/90 text-sm sm:text-base leading-relaxed">
-              Organização estratégica dos 212 requisitos oficiais em <strong>40 Atividades Unificadas</strong> com 4 níveis técnicos (Equivalência Direta, Escalonamento Hierárquico, Absorção por Especialidade e Evento Conjunto), reduzindo até <strong>64,6% de esforço no calendário</strong> e automatizando aprovações por absorção.
+            <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+              Organização estratégica dos 212 requisitos oficiais em <strong className="text-slate-900 dark:text-white">40 Atividades Unificadas</strong> com 4 níveis técnicos (Equivalência Direta, Escalonamento Hierárquico, Absorção por Especialidade e Evento Conjunto), reduzindo até <strong className="text-emerald-600 dark:text-emerald-400">64,6% de esforço no calendário</strong> e automatizando aprovações por absorção.
             </p>
           </div>
 
-          {/* Seletor de Cenário */}
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 flex flex-col gap-2 shrink-0">
-            <span className="text-xs font-semibold text-blue-200 uppercase tracking-wider">
-              Cenário de Planejamento:
+          {/* Seletor de Cenário Apple Segmented Control */}
+          <div className="bg-slate-50 dark:bg-[#252528] rounded-2xl p-3.5 border border-black/[0.04] dark:border-white/[0.06] flex flex-col gap-2 shrink-0">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Cenário de Planejamento
             </span>
-            <div className="flex items-center bg-black/30 rounded-lg p-1 border border-white/10">
+            <div className="inline-flex p-1 bg-slate-200/70 dark:bg-[#151516] rounded-full border border-black/[0.04] dark:border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => setScenario('strict')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   scenario === 'strict'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-blue-200 hover:text-white'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Cenário 1: Estrito (75 Unidades)
@@ -299,16 +299,16 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
               <button
                 type="button"
                 onClick={() => setScenario('integrated')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   scenario === 'integrated'
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-blue-200 hover:text-white'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Cenário 2: Integrado (55 Unidades)
               </button>
             </div>
-            <span className="text-[11px] text-blue-200/80">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
               {scenario === 'strict'
                 ? '✓ 40 unificações estritas com atividades conjuntas integrais (-64,6% esforço).'
                 : '✓ 41 atividades integradas com sobreposições bíblicas e especialidades (-74,1% esforço).'}
@@ -316,41 +316,41 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
           </div>
         </div>
 
-        {/* Grade de Estatísticas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
-          <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-            <div className="text-2xl font-black text-white">212</div>
-            <div className="text-xs text-blue-200 font-medium">Requisitos Oficiais</div>
+        {/* Grade de Estatísticas - Apple Health Style */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-white/[0.08]">
+          <div className="bg-slate-50/80 dark:bg-[#252528] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.04] transition-all hover:border-black/[0.08] dark:hover:border-white/[0.08]">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">212</div>
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Requisitos Oficiais</div>
           </div>
-          <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-            <div className="text-2xl font-black text-emerald-400">177 (83,5%)</div>
-            <div className="text-xs text-blue-200 font-medium">Requisitos Unificados</div>
+          <div className="bg-emerald-500/[0.06] dark:bg-emerald-500/[0.1] rounded-2xl p-4 border border-emerald-500/20 dark:border-emerald-500/30 transition-all">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">177 <span className="text-xs font-semibold opacity-75">(83,5%)</span></div>
+            <div className="text-xs font-medium text-emerald-700/80 dark:text-emerald-300/80 mt-1">Requisitos Unificados</div>
           </div>
-          <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-            <div className="text-2xl font-black text-blue-300">40 Atividades</div>
-            <div className="text-xs text-blue-200 font-medium">Unidades Finais no Calendário</div>
+          <div className="bg-blue-500/[0.06] dark:bg-blue-500/[0.1] rounded-2xl p-4 border border-blue-500/20 dark:border-blue-500/30 transition-all">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">40 Atividades</div>
+            <div className="text-xs font-medium text-blue-700/80 dark:text-blue-300/80 mt-1">Unidades no Calendário</div>
           </div>
-          <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-            <div className="text-2xl font-black text-amber-300">35 Itens</div>
-            <div className="text-xs text-blue-200 font-medium">Requisitos Exclusivos / Isolados</div>
+          <div className="bg-amber-500/[0.06] dark:bg-amber-500/[0.1] rounded-2xl p-4 border border-amber-500/20 dark:border-amber-500/30 transition-all">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-amber-600 dark:text-amber-400">35 Itens</div>
+            <div className="text-xs font-medium text-amber-700/80 dark:text-amber-300/80 mt-1">Requisitos Exclusivos</div>
           </div>
         </div>
       </div>
 
-      {/* Navegação por Abas */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800 pb-2">
+      {/* Navegação por Abas - Apple Segmented Bar */}
+      <div className="bg-slate-100/90 dark:bg-[#1c1c1e] p-1.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] flex items-center gap-1 overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab('unifications')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition-all ${
             activeTab === 'unifications'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <GitMerge className="w-4 h-4" />
+          <GitMerge className="w-3.5 h-3.5 text-blue-500" />
           40 Atividades Unificadas
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-white/20 text-white">
+          <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-200/80 dark:bg-[#3a3a3c] text-slate-700 dark:text-slate-200">
             {filteredUnifications.length}
           </span>
         </button>
@@ -358,16 +358,16 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
         <button
           type="button"
           onClick={() => setActiveTab('absorptions')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition-all ${
             activeTab === 'absorptions'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Zap className="w-4 h-4 text-amber-300" />
+          <Zap className="w-3.5 h-3.5 text-amber-500" />
           Recomendações de Absorção
           {recStats.total > 0 && (
-            <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-amber-400 text-slate-950 font-black animate-pulse">
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold">
               {recStats.total}
             </span>
           )}
@@ -376,15 +376,15 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
         <button
           type="button"
           onClick={() => setActiveTab('isolated')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition-all ${
             activeTab === 'isolated'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Shield className="w-4 h-4" />
+          <Shield className="w-3.5 h-3.5 text-slate-500" />
           35 Requisitos Exclusivos
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+          <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-200/80 dark:bg-[#3a3a3c] text-slate-700 dark:text-slate-200">
             35
           </span>
         </button>
@@ -392,26 +392,26 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
         <button
           type="button"
           onClick={() => setActiveTab('events')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition-all ${
             activeTab === 'events'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Calendar className="w-4 h-4" />
+          <Calendar className="w-3.5 h-3.5 text-blue-500" />
           9 Eventos-Âncora
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('crossings')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition-all ${
             activeTab === 'crossings'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <BookOpen className="w-4 h-4" />
+          <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
           Conexões Bíblicas & Especialidades
         </button>
       </div>
@@ -419,8 +419,8 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
       {/* ABA 1: 40 ATIVIDADES UNIFICADAS */}
       {activeTab === 'unifications' && (
         <div className="space-y-4">
-          {/* Barra de Ferramentas e Filtros */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Barra de Ferramentas e Filtros Apple Style */}
+          <div className="bg-white dark:bg-[#1c1c1e] p-3.5 sm:p-4 rounded-2xl shadow-xs border border-black/[0.06] dark:border-white/[0.08] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 flex-1">
               {/* Campo de Busca */}
               <div className="relative min-w-[240px] flex-1">
@@ -430,7 +430,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                   placeholder="Buscar por código, título, requisito ou especialidade..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all font-medium"
                 />
               </div>
 
@@ -438,7 +438,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
               <select
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium"
+                className="px-3.5 py-2 text-xs rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               >
                 <option value="ALL">Todos os Níveis Técnicos</option>
                 <option value="N1">🟢 Nível 1: Equivalência Direta (100% Iguais)</option>
@@ -451,7 +451,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium"
+                className="px-3.5 py-2 text-xs rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               >
                 <option value="ALL">Todas as Áreas</option>
                 <option value="GERAIS">Ideais e Gerais (U-01 a U-05)</option>
@@ -472,7 +472,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                 type="button"
                 onClick={handleResetToOfficial}
                 disabled={actionLoading}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-full text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#2c2c2e] hover:bg-slate-200 dark:hover:bg-[#3a3a3c] transition-all cursor-pointer border border-black/[0.04] dark:border-white/[0.06] active:scale-95"
                 title="Restaura unificações para o padrão oficial da DSA"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -495,7 +495,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                   });
                   setIsCreatingNew(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs cursor-pointer active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 Nova Unificação
@@ -503,7 +503,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
             </div>
           </div>
 
-          {/* Lista de Cards de Unificação */}
+          {/* Lista de Cards de Unificação - Apple Inset Cards */}
           <div className="space-y-3">
             {filteredUnifications.map((u) => {
               const isExpanded = !!expandedCards[u.code];
@@ -514,53 +514,53 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
               return (
                 <div
                   key={u.code}
-                  className={`bg-white dark:bg-slate-900 rounded-xl border transition-all ${
+                  className={`bg-white dark:bg-[#1c1c1e] rounded-2xl border transition-all ${
                     isEnabled
-                      ? 'border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-400 dark:hover:border-blue-600'
-                      : 'border-slate-200/60 dark:border-slate-800/60 opacity-60 bg-slate-50/50 dark:bg-slate-900/50'
+                      ? 'border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md'
+                      : 'border-black/[0.04] dark:border-white/[0.04] opacity-50 bg-slate-50/50 dark:bg-[#1c1c1e]/50'
                   }`}
                 >
                   <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      {/* Código da Atividade */}
-                      <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-black text-sm flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                      {/* Código da Atividade com Squircle */}
+                      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-sm flex items-center justify-center shrink-0 border border-blue-500/20">
                         {u.code}
                       </div>
 
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 truncate">
+                          <h3 className="font-bold text-base text-slate-900 dark:text-white tracking-tight truncate">
                             {u.title}
                           </h3>
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${badge.color}`}>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.color}`}>
                             {badge.short}
                           </span>
                           {u.requirementsCount > 0 && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-[#2c2c2e] text-slate-600 dark:text-slate-300">
                               {u.requirementsCount} requisitos
                             </span>
                           )}
                           {!isEnabled && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                               Desativada
                             </span>
                           )}
                         </div>
 
-                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                           {u.pedagogicalDetails || u.description}
                         </p>
 
                         {/* Especialidades vinculadas */}
                         {u.specialties && u.specialties.length > 0 && (
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1">
-                              <Award className="w-3 h-3" /> Especialidade(s) Gatilho:
+                            <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                              <Award className="w-3 h-3" /> Gatilho:
                             </span>
                             {u.specialties.map((s) => (
                               <span
                                 key={s}
-                                className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
                               >
                                 {s}
                               </span>
@@ -572,15 +572,15 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
 
                     {/* Ações do Card */}
                     <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                      {/* Switch Ativado / Desativado */}
+                      {/* Switch Ativado / Desativado Apple Pill */}
                       <button
                         type="button"
                         onClick={() => handleToggleUnification(u)}
                         disabled={actionLoading}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 active:scale-95 cursor-pointer ${
                           isEnabled
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
-                            : 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:bg-slate-200'
+                            ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300 hover:bg-emerald-500/20'
+                            : 'bg-slate-100 text-slate-500 border-black/[0.06] dark:bg-[#2c2c2e] dark:text-slate-400 dark:border-white/[0.08] hover:bg-slate-200'
                         }`}
                         title={isEnabled ? 'Clique para desativar esta unificação' : 'Clique para ativar esta unificação'}
                       >
@@ -594,16 +594,16 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                           setEditingUnif(u);
                           setIsCreatingNew(false);
                         }}
-                        className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="p-2 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer active:scale-95"
                         title="Editar unificação"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5" />
                       </button>
 
                       <button
                         type="button"
                         onClick={() => toggleCard(u.code)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#2c2c2e] hover:bg-slate-200 dark:hover:bg-[#3a3a3c] transition-all cursor-pointer active:scale-95"
                       >
                         {isExpanded ? 'Ocultar' : 'Detalhes'}
                         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -611,24 +611,24 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                     </div>
                   </div>
 
-                  {/* Conteúdo Expansível */}
+                  {/* Conteúdo Expansível Apple Inset */}
                   {isExpanded && (
-                    <div className="px-5 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 space-y-4">
+                    <div className="px-5 pb-5 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#252528]/50 space-y-3.5 rounded-b-2xl">
                       {/* Regra de Sistema */}
-                      <div className="bg-blue-50/80 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-200">
-                        <strong>Comportamento no Sistema & Calendário:</strong> {u.systemRule}
+                      <div className="bg-blue-500/[0.06] dark:bg-blue-500/[0.1] p-3.5 rounded-xl border border-blue-500/20 text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
+                        <strong className="text-blue-700 dark:text-blue-300">Comportamento no Sistema & Calendário:</strong> {u.systemRule}
                       </div>
 
                       {/* Escala Hierárquica se Nível 2 */}
                       {u.hierarchicalScale && u.hierarchicalScale.length > 0 && (
                         <div className="space-y-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                             <Layers className="w-3.5 h-3.5 text-blue-500" /> Régua de Escalonamento Hierárquico (Cascata Descendente &gt;=)
                           </span>
-                          <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-[#1c1c1e] rounded-xl border border-black/[0.04] dark:border-white/[0.06]">
                             {u.hierarchicalScale.map((item, idx) => (
                               <React.Fragment key={item.id || idx}>
-                                <div className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 text-xs font-semibold border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-500/20">
                                   <span>{item.label}</span>
                                 </div>
                                 {idx < u.hierarchicalScale.length - 1 && (
@@ -642,7 +642,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
 
                       {/* Requisitos Vinculados */}
                       <div className="space-y-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                           Requisitos Originais Vinculados ({u.requirements?.length || 0}):
                         </span>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -651,12 +651,12 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                             return (
                               <div
                                 key={r.id || rIdx}
-                                className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-start gap-2.5"
+                                className="p-3 bg-white dark:bg-[#1c1c1e] rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-start gap-2.5 shadow-2xs"
                               >
-                                <span className={`px-2 py-0.5 rounded text-[11px] font-bold border shrink-0 ${badgeColor}`}>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${badgeColor}`}>
                                   {r.class_name} • {r.code}
                                 </span>
-                                <div className="text-xs text-slate-700 dark:text-slate-300 line-clamp-3">
+                                <div className="text-xs text-slate-700 dark:text-slate-300 line-clamp-3 leading-relaxed">
                                   {r.text}
                                 </div>
                               </div>
@@ -676,16 +676,17 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
       {/* ABA 2: RECOMENDAÇÕES DE ABSORÇÃO INTELIGENTE */}
       {activeTab === 'absorptions' && (
         <div className="space-y-4">
-          <div className="bg-gradient-to-r from-emerald-900/90 to-slate-900 text-white p-6 rounded-2xl border border-emerald-700/50 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider">
-                <Zap className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+          <div className="bg-white dark:bg-[#1c1c1e] p-6 sm:p-7 rounded-3xl border border-emerald-500/20 shadow-[0_4px_24px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="space-y-2 max-w-2xl relative z-10">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider">
+                <Zap className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
                 Motor Inteligente de Absorções DSA
               </div>
-              <h2 className="text-xl sm:text-2xl font-black">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Recomendações de Conclusão por Absorção
               </h2>
-              <p className="text-emerald-100/90 text-sm">
+              <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
                 O sistema identificou desbravadores matriculados que já cumpriram metas superiores (ex.: caminhada de 20 km ou 10 km, resumo de 1 página do curso de leitura, 3 refeições, idade mínima ou especialidades gatilho) e que possuem requisitos menores equivalentes pendentes prontos para serem absorvidos.
               </p>
             </div>
@@ -695,14 +696,14 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                 type="button"
                 onClick={handleApproveAllAbsorptions}
                 disabled={actionLoading}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-sm shadow-xl transition-all shrink-0 hover:scale-[1.02]"
+                className="flex items-center gap-2 px-5 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer active:scale-95 z-10"
               >
-                <CheckCheck className="w-5 h-5" />
-                Aprovar Todas as Recomendações ({recommendations.length})
+                <CheckCheck className="w-4 h-4" />
+                Aprovar Todas ({recommendations.length})
               </button>
             ) : (
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-emerald-200 text-sm font-semibold shrink-0">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-100 dark:bg-[#252528] text-emerald-600 dark:text-emerald-400 text-xs font-semibold shrink-0 z-10 border border-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4" />
                 Tudo em dia! Nenhuma absorção pendente.
               </div>
             )}
@@ -710,36 +711,36 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
 
           {/* Cards de Recomendações */}
           {recommendations.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {recommendations.map((rec) => (
                 <div
                   key={rec.id}
-                  className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500 dark:hover:border-emerald-600 transition-all flex flex-col justify-between gap-4"
+                  className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-5 border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between gap-4"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                           {rec.unitName}
                         </span>
-                        <h4 className="font-extrabold text-base text-slate-900 dark:text-slate-100">
+                        <h4 className="font-bold text-base text-slate-900 dark:text-white tracking-tight">
                           {rec.pathfinderName}
                         </h4>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         {rec.ruleLabel}
                       </span>
                     </div>
 
                     {/* Explicação da Absorção */}
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700 text-xs space-y-2">
-                      <div className="text-slate-700 dark:text-slate-300 font-medium">
+                    <div className="p-3.5 bg-slate-50 dark:bg-[#252528] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-xs space-y-2">
+                      <div className="text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
                         {rec.reason}
                       </div>
-                      <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                        <span className="text-slate-500 dark:text-slate-400">Requisito a Aprovar:</span>
+                      <div className="flex items-center gap-2 pt-1 border-t border-black/[0.04] dark:border-white/[0.06] text-[11px]">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">Requisito a Aprovar:</span>
                         <span
-                          className={`px-2 py-0.5 rounded font-bold border ${
+                          className={`px-2 py-0.5 rounded-md font-bold border ${
                             CLASS_COLORS[rec.targetClassName] || 'bg-slate-100 text-slate-800 border-slate-300'
                           }`}
                         >
@@ -749,7 +750,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between pt-2 border-t border-black/[0.04] dark:border-white/[0.06]">
                     <span className="text-xs font-mono font-semibold text-slate-400">
                       Regra: {rec.unificationCode}
                     </span>
@@ -757,7 +758,7 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
                       type="button"
                       onClick={() => handleApproveSingleAbsorption(rec)}
                       disabled={actionLoading}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all active:scale-95 cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" />
                       Aprovar por Absorção
@@ -767,12 +768,12 @@ export default function UnificationsManagementView({ user, catalog, pathfinders,
               ))}
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 p-12 rounded-xl text-center border border-slate-200 dark:border-slate-800 space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-              <h3 className="font-extrabold text-lg text-slate-900 dark:text-slate-100">
+            <div className="bg-white dark:bg-[#1c1c1e] p-12 rounded-3xl text-center border border-black/[0.06] dark:border-white/[0.08] space-y-3 shadow-xs">
+              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
                 Nenhuma Recomendação Pendente no Momento
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                 À medida que os desbravadores forem concluindo caminhadas maiores, resumos do curso de leitura, refeições ou especialidades, novas recomendações automáticas de absorção aparecerão aqui.
               </p>
             </div>
@@ -1050,67 +1051,74 @@ function UnificationEditModal({ unif, isNew, catalog, onClose, onSave }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-3xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-3xl max-w-2xl w-full border border-black/[0.08] dark:border-white/[0.12] shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <GitMerge className="w-5 h-5 text-blue-600" />
-            <h3 className="font-extrabold text-lg text-slate-900 dark:text-slate-100">
-              {isNew ? 'Criar Nova Unificação' : `Editar Unificação ${unif.code}`}
-            </h3>
+        <div className="px-6 py-4.5 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+              <GitMerge className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white tracking-tight">
+                {isNew ? 'Criar Nova Unificação' : `Editar Unificação ${unif.code}`}
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Configure as equivalências e regras de baixa automática
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Formulário */}
         <div className="p-6 overflow-y-auto space-y-4 flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">
-                Código:
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                Código
               </label>
               <input
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 disabled={!isNew}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono font-bold"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">
-                Título da Atividade:
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                Título da Atividade
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex: Expedição de Caminhada Escalonada"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">
-                Nível Técnico & Regra:
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                Nível Técnico & Regra
               </label>
               <select
                 value={ruleCode}
                 onChange={(e) => setRuleCode(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               >
                 <option value="AUTO_EQUAL">🟢 Nível 1: Equivalência Direta (100% Iguais)</option>
                 <option value="HIERARCHICAL_SCALE">🔵 Nível 2: Escalonamento Hierárquico (&gt;=)</option>
@@ -1119,13 +1127,13 @@ function UnificationEditModal({ unif, isNew, catalog, onClose, onSave }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">
-                Status no Clube:
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                Status no Clube
               </label>
               <select
                 value={enabled ? 'true' : 'false'}
                 onChange={(e) => setEnabled(e.target.value === 'true')}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               >
                 <option value="true">Ativada (Participa das automações e calendário)</option>
                 <option value="false">Desativada (Ignorada)</option>
@@ -1134,28 +1142,28 @@ function UnificationEditModal({ unif, isNew, catalog, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">
-              Detalhamento Pedagógico & Justificativa:
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              Detalhamento Pedagógico & Justificativa
             </label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explique como os requisitos se conectam e a regra pedagógica adotada."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
 
           {/* Seleção de Requisitos */}
-          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div className="space-y-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase text-slate-600 dark:text-slate-400">
-                Requisitos Vinculados ({selectedReqIds.size} selecionados):
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Requisitos Vinculados ({selectedReqIds.size} selecionados)
               </label>
               <select
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}
-                className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                className="px-2.5 py-1 text-xs rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] text-slate-800 dark:text-slate-200 font-semibold"
               >
                 <option value="ALL">Todas as Classes</option>
                 <option value="amigo">Amigo</option>
@@ -1173,16 +1181,16 @@ function UnificationEditModal({ unif, isNew, catalog, onClose, onSave }) {
               </select>
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 dark:bg-[#252528]/50 rounded-2xl border border-black/[0.04] dark:border-white/[0.06]">
               {filteredReqs.map((r) => {
                 const isSelected = selectedReqIds.has(r.id);
                 return (
                   <label
                     key={r.id}
-                    className={`flex items-start gap-2.5 p-2 rounded cursor-pointer transition-colors text-xs ${
+                    className={`flex items-start gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all text-xs ${
                       isSelected
-                        ? 'bg-blue-50 dark:bg-blue-950/60 border border-blue-300 dark:border-blue-800'
-                        : 'hover:bg-white dark:hover:bg-slate-800 border border-transparent'
+                        ? 'bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30'
+                        : 'hover:bg-white dark:hover:bg-[#252528] border border-transparent'
                     }`}
                   >
                     <input
@@ -1209,19 +1217,19 @@ function UnificationEditModal({ unif, isNew, catalog, onClose, onSave }) {
           </div>
         </div>
 
-        {/* Rodapé */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 rounded-b-2xl flex items-center justify-end gap-3">
+        {/* Rodapé Apple Sheet */}
+        <div className="p-4 border-t border-black/[0.06] dark:border-white/[0.08] bg-slate-50/50 dark:bg-[#252528]/50 flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
+            className="px-4 py-2 text-xs font-semibold rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer active:scale-95"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors"
+            className="px-5 py-2 text-xs font-semibold rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer active:scale-95"
           >
             Salvar Unificação
           </button>

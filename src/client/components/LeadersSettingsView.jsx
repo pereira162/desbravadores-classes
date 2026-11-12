@@ -25,8 +25,11 @@ import {
   Eye,
   EyeOff,
   Bot,
-  Palette,
   Image as ImageIcon,
+  CheckSquare,
+  Clock,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 import { ROLE_CONFIG } from '../constants';
 import DateInput from './DateInput';
@@ -105,6 +108,9 @@ export default function LeadersSettingsView({
   onTestSmtp,
   onOpenMcpModal,
 }) {
+  // Aba ativa: 'leaders' | 'club' | 'backups'
+  const [activeTab, setActiveTab] = useState('leaders');
+
   // Estado das Configurações do Clube + Logo + Cor + SMTP + Google
   const [clubName, setClubName] = useState(settings?.club_name || '');
   const [clubRegion, setClubRegion] = useState(settings?.club_region || '');
@@ -188,7 +194,6 @@ export default function LeadersSettingsView({
   useModalDismiss(leaderModalOpen, () => setLeaderModalOpen(false), 'ModalLider');
   useModalDismiss(Boolean(restoreModalFile), () => setRestoreModalFile(null), 'ModalRestaurarBackup');
   useModalDismiss(cloneModalOpen, () => setCloneModalOpen(false), 'ModalClonarTeste');
-
 
   const fetchServerBackups = async () => {
     if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(currentUser?.role)) return;
@@ -556,392 +561,473 @@ export default function LeadersSettingsView({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Cabeçalho Apple System Settings */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Shield className="w-6 h-6 text-indigo-600" />
-            Liderança, Cargos Personalizados, Permissões & Configurações
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
+            <Shield className="w-6 h-6 text-[#0071e3]" />
+            Ajustes & Liderança
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Cadastre líderes, crie cargos personalizados da diretoria, conceda poderes extras e configure identidade visual, Gmail SMTP e IA/MCP.
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+            Gerencie os membros da diretoria, cargos, poderes granulares, identidade visual e cópias de segurança.
           </p>
         </div>
 
         {canManageLeaders && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
             {onOpenMcpModal && (
               <button
                 type="button"
                 onClick={onOpenMcpModal}
-                className="px-3.5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/50 text-amber-900 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
+                className="apple-press inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25 transition cursor-pointer"
               >
-                <Bot className="w-4 h-4 text-amber-600" />
-                Assistente IA & Servidor MCP
+                <Bot className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                Servidor MCP
               </button>
             )}
             <button
+              type="button"
               onClick={openCreateLeader}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+              className="apple-press inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-sm transition cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" />
-              Convidar / Cadastrar Líder
+              <UserPlus className="w-3.5 h-3.5" />
+              Novo Líder
             </button>
           </div>
         )}
       </div>
 
-      {/* Grid Principal: Lista de Líderes + Configurações do Clube & SMTP */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Coluna 1 e 2: Contas de Líderes */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-extrabold text-slate-900">
-                Líderes Cadastrados ({leaders.length})
-              </h2>
-              <span className="text-xs text-slate-500">
-                Por padrão cada membro acessa seu próprio escopo (expansível pelo Diretor/Gestor)
-              </span>
-            </div>
+      {/* Apple Segmented Control Tab Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="inline-flex p-1 rounded-2xl bg-black/5 dark:bg-white/10 self-start">
+          <button
+            type="button"
+            onClick={() => setActiveTab('leaders')}
+            className={`apple-press flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition cursor-pointer ${
+              activeTab === 'leaders'
+                ? 'bg-white dark:bg-[#1c1c1e] text-neutral-900 dark:text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-[#0071e3]" />
+            <span>Líderes & Poderes</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
+              {leaders.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('club')}
+            className={`apple-press flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition cursor-pointer ${
+              activeTab === 'club'
+                ? 'bg-white dark:bg-[#1c1c1e] text-neutral-900 dark:text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 text-amber-500" />
+            <span>Identidade & E-mail</span>
+            {settings?.smtp_pass_configured && (
+              <span className="w-2 h-2 rounded-full bg-[#34c759]" title="SMTP Ativo" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('backups')}
+            className={`apple-press flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition cursor-pointer ${
+              activeTab === 'backups'
+                ? 'bg-white dark:bg-[#1c1c1e] text-neutral-900 dark:text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Backups & Time Machine</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
+              {serverBackups.length}
+            </span>
+          </button>
+        </div>
 
-            <div className="flex items-center gap-1.5 bg-slate-200/80 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setLeadersViewMode('CARDS')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  leadersViewMode === 'CARDS'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                Cartões
-              </button>
-              <button
-                type="button"
-                onClick={() => setLeadersViewMode('MATRIX')}
-                data-tour="btn-permissions-matrix-mode"
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  leadersViewMode === 'MATRIX'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5 text-amber-600" />
-                Matriz de Poderes
-              </button>
-            </div>
-          </div>
-
-          {leadersViewMode === 'MATRIX' ? (
-            <div className="overflow-x-auto matrix-scroll" data-tour="leaders-permissions-table">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead>
-                  <tr className="bg-slate-900 text-white border-b border-slate-800">
-                    <th className="sticky left-0 z-20 bg-slate-900 px-4 py-3 min-w-[200px] font-extrabold uppercase tracking-wider border-r border-slate-800">
-                      Membro da Diretoria
-                    </th>
-                    {EXTRA_PERMISSIONS_OPTIONS.map((opt) => (
-                      <th
-                        key={opt.key}
-                        className="px-3 py-3 text-center min-w-[125px] font-bold border-r border-slate-800 text-[11px] align-bottom"
-                        title={opt.desc}
-                      >
-                        <div className="line-clamp-2">{opt.label}</div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {leaders.map((ld) => {
-                    const isTotalPower = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(ld.role);
-                    const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
-                    return (
-                      <tr key={ld.id} className="hover:bg-slate-50/80 transition group">
-                        <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 border-r border-slate-200">
-                          <div className="font-bold text-slate-900 leading-tight">
-                            {ld.name}
-                          </div>
-                          <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                            <span className={`px-1.5 py-0.5 rounded font-semibold ${rCfg.badgeClass}`}>
-                              {ld.custom_role_title || rCfg.label}
-                            </span>
-                            <span>{ld.email}</span>
-                          </div>
-                        </td>
-                        {EXTRA_PERMISSIONS_OPTIONS.map((opt) => {
-                          const hasPerm = isTotalPower || Boolean(ld.permissions?.[opt.key]);
-                          return (
-                            <td
-                              key={opt.key}
-                              className="px-3 py-3 text-center border-r border-slate-100 align-middle"
-                            >
-                              {isTotalPower ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]" title="Poder nativo total da função">
-                                  <Check className="w-3 h-3 text-emerald-600" />
-                                  Total
-                                </span>
-                              ) : (
-                                <label className="inline-flex items-center justify-center cursor-pointer p-1">
-                                  <input
-                                    type="checkbox"
-                                    checked={hasPerm}
-                                    disabled={!canManageLeaders}
-                                    onChange={() => handleToggleLeaderPermissionQuick(ld, opt.key)}
-                                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer disabled:opacity-50"
-                                  />
-                                </label>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-          <div className="divide-y divide-slate-100">
-            {leaders.map((ld) => {
-              const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
-              const inviteUrl = inviteLinksMap[ld.id];
-              const activePerms = Object.entries(ld.permissions || {}).filter(
-                ([, val]) => Boolean(val)
-              );
-              return (
-                <div
-                  key={ld.id}
-                  className="p-4 hover:bg-slate-50/80 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900">
-                        {ld.name}
-                      </span>
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${rCfg.badgeClass}`}
-                      >
-                        {ld.custom_role_title || rCfg.label}
-                      </span>
-                      {ld.custom_role_title && (
-                        <span className="text-[10px] font-semibold text-slate-500">
-                          (Base: {rCfg.label})
-                        </span>
-                      )}
-                      {ld.is_demo ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                          CONTA DEMO
-                        </span>
-                      ) : ld.has_pending_invite ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                          CONVITE PENDENTE
-                        </span>
-                      ) : ld.email_verified ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          E-MAIL VERIFICADO
-                        </span>
-                      ) : null}
-                      {!ld.active && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800">
-                          INATIVO
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-slate-500 font-mono">
-                      {ld.email}
-                    </div>
-
-                    {/* Escopo do Conselheiro ou Instrutor */}
-                    {(ld.role === 'CONSELHEIRO' || ld.unit_id) && (
-                      <div className="text-xs text-rose-800 font-medium">
-                        Unidade vinculada: <strong>{ld.unit_name || 'Todas'}</strong>
-                      </div>
-                    )}
-                    {(ld.assigned_classes || []).length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 pt-1">
-                        <span className="text-[10px] font-bold text-slate-500">Classes:</span>
-                        {(ld.assigned_classes || []).map((slug) => (
-                          <span
-                            key={slug}
-                            className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200"
-                          >
-                            {slug}
-                          </span>
-                        ))}
-                        {Array.isArray(ld.assigned_pathfinders) &&
-                          ld.assigned_pathfinders.length > 0 && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
-                              Turma: {ld.assigned_pathfinders.length} desbravador(es)
-                            </span>
-                          )}
-                      </div>
-                    )}
-
-                    {/* Poderes extras concedidos pelo Diretor / Gestor */}
-                    {activePerms.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 pt-1">
-                        <span className="text-[10px] font-extrabold text-amber-800">
-                          Poderes Extras:
-                        </span>
-                        {activePerms.map(([pKey]) => {
-                          const opt = EXTRA_PERMISSIONS_OPTIONS.find(
-                            (o) => o.key === pKey
-                          );
-                          return (
-                            <span
-                              key={pKey}
-                              className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300"
-                            >
-                              + {opt ? opt.label : pKey}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {inviteUrl && (
-                      <div className="mt-2 p-2 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-indigo-900 font-mono truncate">
-                          {inviteUrl}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyInviteLink(ld.id, inviteUrl)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer ${
-                            copiedLeaderId === ld.id
-                              ? 'bg-emerald-600 text-white shadow-sm scale-105'
-                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                          }`}
-                        >
-                          {copiedLeaderId === ld.id ? (
-                            <>
-                              <Check className="w-3 h-3" />
-                              ✓ Copiado!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              Copiar Link
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {canManageLeaders && (
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={sendingInviteId === ld.id}
-                        onClick={() => handleSendInviteClick(ld)}
-                        className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-xs font-bold text-amber-900 flex items-center gap-1.5 cursor-pointer"
-                        title="Envia um e-mail com link para o líder definir a própria senha ou entrar com Google"
-                      >
-                        <Send className="w-3.5 h-3.5 text-amber-700" />
-                        {sendingInviteId === ld.id
-                          ? 'Enviando...'
-                          : ld.has_pending_invite
-                          ? 'Reenviar Convite'
-                          : 'Enviar Convite'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => openEditLeader(ld)}
-                        className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        Editar / Poderes
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {activeTab === 'leaders' && (
+          <div className="inline-flex p-1 rounded-xl bg-black/5 dark:bg-white/10 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setLeadersViewMode('CARDS')}
+              className={`apple-press flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                leadersViewMode === 'CARDS'
+                  ? 'bg-white dark:bg-[#1c1c1e] text-neutral-900 dark:text-white shadow-xs'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              Cartões
+            </button>
+            <button
+              type="button"
+              onClick={() => setLeadersViewMode('MATRIX')}
+              className={`apple-press flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                leadersViewMode === 'MATRIX'
+                  ? 'bg-white dark:bg-[#1c1c1e] text-neutral-900 dark:text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Shield className="w-3 h-3 text-amber-500" />
+              Matriz de Poderes
+            </button>
           </div>
         )}
       </div>
 
-        {/* Coluna 3: Configurações Gerais, Logo, Cor, Gmail SMTP e Login Google */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Settings className="w-5 h-5 text-slate-700" />
-              <h2 className="text-sm font-extrabold text-slate-900">
-                Identidade Visual, Parâmetros & E-mail
-              </h2>
-            </div>
-
-            <form onSubmit={handleSettingsSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nome Oficial do Clube
-                </label>
-                <input
-                  type="text"
-                  disabled={!canManageLeaders}
-                  value={clubName}
-                  onChange={(e) => setClubName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Campo / Associação / Região
-                </label>
-                <input
-                  type="text"
-                  disabled={!canManageLeaders}
-                  value={clubRegion}
-                  onChange={(e) => setClubRegion(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+      {/* ABA 1: LÍDERES & PODERES */}
+      {activeTab === 'leaders' && (
+        <div className="space-y-4">
+          {leadersViewMode === 'MATRIX' ? (
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Ano Eclesiástico
+                  <h2 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    Matriz Geral de Poderes e Permissões
+                  </h2>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Ajuste rapidamente os poderes da liderança com um clique por membro da diretoria.
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto matrix-scroll">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="bg-neutral-50/80 dark:bg-neutral-900/80 border-b border-black/5 dark:border-white/10">
+                      <th className="sticky left-0 z-20 bg-neutral-50 dark:bg-neutral-900 px-5 py-3.5 min-w-[220px] font-bold text-neutral-900 dark:text-white border-r border-black/5 dark:border-white/10">
+                        Membro da Diretoria
+                      </th>
+                      {EXTRA_PERMISSIONS_OPTIONS.map((opt) => (
+                        <th
+                          key={opt.key}
+                          className="px-3 py-3.5 text-center min-w-[130px] font-semibold text-neutral-600 dark:text-neutral-300 border-r border-black/5 dark:border-white/10 text-[11px]"
+                          title={opt.desc}
+                        >
+                          <div className="line-clamp-2">{opt.label}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                    {leaders.map((ld) => {
+                      const isTotalPower = ['ADMIN', 'GESTOR', 'DIRETOR'].includes(ld.role);
+                      const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
+                      return (
+                        <tr key={ld.id} className="hover:bg-neutral-50/50 dark:hover:bg-white/[0.02] transition group">
+                          <td className="sticky left-0 z-10 bg-white dark:bg-[#1c1c1e] group-hover:bg-neutral-50 dark:group-hover:bg-neutral-900/50 px-5 py-3.5 border-r border-black/5 dark:border-white/10">
+                            <div className="font-semibold text-neutral-900 dark:text-white">
+                              {ld.name}
+                            </div>
+                            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${rCfg.badgeClass}`}>
+                                {ld.custom_role_title || rCfg.label}
+                              </span>
+                              <span className="font-mono text-[10px]">{ld.email}</span>
+                            </div>
+                          </td>
+                          {EXTRA_PERMISSIONS_OPTIONS.map((opt) => {
+                            const hasPerm = isTotalPower || Boolean(ld.permissions?.[opt.key]);
+                            return (
+                              <td
+                                key={opt.key}
+                                className="px-3 py-3 text-center border-r border-black/5 dark:border-white/10 align-middle"
+                              >
+                                {isTotalPower ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-[10px]"
+                                    title="Poder total nativo do cargo"
+                                  >
+                                    <Check className="w-3 h-3 text-emerald-600" />
+                                    Total
+                                  </span>
+                                ) : (
+                                  <label className="inline-flex items-center justify-center cursor-pointer p-1">
+                                    <input
+                                      type="checkbox"
+                                      checked={hasPerm}
+                                      disabled={!canManageLeaders}
+                                      onChange={() => handleToggleLeaderPermissionQuick(ld, opt.key)}
+                                      className="w-4 h-4 rounded text-[#0071e3] focus:ring-[#0071e3] cursor-pointer disabled:opacity-40"
+                                    />
+                                  </label>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {leaders.map((ld) => {
+                const rCfg = ROLE_CONFIG[ld.role] || ROLE_CONFIG.INSTRUTOR;
+                const inviteUrl = inviteLinksMap[ld.id];
+                const activePerms = Object.entries(ld.permissions || {}).filter(
+                  ([, val]) => Boolean(val)
+                );
+                const initials = ld.name
+                  ? ld.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase()
+                  : 'L';
+
+                return (
+                  <div
+                    key={ld.id}
+                    className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-5 flex flex-col justify-between gap-4 transition hover:shadow-md"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#0071e3]/15 to-[#0071e3]/5 text-[#0071e3] font-bold text-sm flex items-center justify-center shrink-0 border border-[#0071e3]/20">
+                            {initials}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">
+                              {ld.name}
+                            </div>
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">
+                              {ld.email}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${rCfg.badgeClass}`}
+                        >
+                          {ld.custom_role_title || rCfg.label}
+                        </span>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        {ld.is_demo ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                            Conta Demo
+                          </span>
+                        ) : ld.has_pending_invite ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            Convite Pendente
+                          </span>
+                        ) : ld.email_verified ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                            E-mail Verificado
+                          </span>
+                        ) : null}
+                        {!ld.active && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400">
+                            Inativo
+                          </span>
+                        )}
+                        {ld.custom_role_title && (
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                            Base: {rCfg.label}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Escopo de Unidade e Classes */}
+                      <div className="space-y-1.5 pt-1 text-xs">
+                        {(ld.role === 'CONSELHEIRO' || ld.unit_id) && (
+                          <div className="text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                            <span className="text-neutral-500 dark:text-neutral-400">Unidade:</span>
+                            <span className="font-semibold text-neutral-900 dark:text-white">
+                              {ld.unit_name || 'Todas'}
+                            </span>
+                          </div>
+                        )}
+                        {(ld.assigned_classes || []).length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mr-1">
+                              Classes:
+                            </span>
+                            {(ld.assigned_classes || []).map((slug) => (
+                              <span
+                                key={slug}
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+                              >
+                                {slug}
+                              </span>
+                            ))}
+                            {Array.isArray(ld.assigned_pathfinders) && ld.assigned_pathfinders.length > 0 && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
+                                {ld.assigned_pathfinders.length} desbravador(es)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {activePerms.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 mr-1">
+                              Poderes:
+                            </span>
+                            {activePerms.map(([pKey]) => {
+                              const opt = EXTRA_PERMISSIONS_OPTIONS.find((o) => o.key === pKey);
+                              return (
+                                <span
+                                  key={pKey}
+                                  className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-900 dark:text-amber-200"
+                                >
+                                  + {opt ? opt.label : pKey}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {inviteUrl && (
+                        <div className="mt-2 p-2.5 rounded-2xl bg-[#0071e3]/5 border border-[#0071e3]/20 flex items-center justify-between gap-2">
+                          <span className="text-[11px] text-[#0071e3] font-mono truncate">
+                            {inviteUrl}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyInviteLink(ld.id, inviteUrl)}
+                            className={`apple-press px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer ${
+                              copiedLeaderId === ld.id
+                                ? 'bg-[#34c759] text-white'
+                                : 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
+                            }`}
+                          >
+                            {copiedLeaderId === ld.id ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                Copiado
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                Copiar Link
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {canManageLeaders && (
+                      <div className="pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={sendingInviteId === ld.id}
+                          onClick={() => handleSendInviteClick(ld)}
+                          className="apple-press px-3 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/15 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <Send className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                          {sendingInviteId === ld.id
+                            ? 'Enviando...'
+                            : ld.has_pending_invite
+                            ? 'Reenviar Convite'
+                            : 'Enviar Convite'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditLeader(ld)}
+                          className="apple-press px-3.5 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          Editar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ABA 2: DADOS DO CLUBE & E-MAIL */}
+      {activeTab === 'club' && (
+        <form onSubmit={handleSettingsSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1: Identidade Oficial do Clube */}
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-6 space-y-4">
+              <div className="flex items-center gap-2.5 pb-2 border-b border-black/5 dark:border-white/10">
+                <Settings className="w-5 h-5 text-[#0071e3]" />
+                <h2 className="text-base font-bold text-neutral-900 dark:text-white">
+                  Identidade do Clube
+                </h2>
+              </div>
+
+              <div className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Nome Oficial do Clube
                   </label>
                   <input
                     type="text"
                     disabled={!canManageLeaders}
-                    value={clubYear}
-                    onChange={(e) => setClubYear(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    value={clubName}
+                    onChange={(e) => setClubName(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Data da Investidura
-                  </label>
-                  <DateInput
-                    disabled={!canManageLeaders}
-                    value={investitureDate}
-                    onChange={(newDate) => setInvestitureDate(newDate)}
-                    className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
-                  />
-                </div>
-              </div>
 
-              {/* Logo do Clube e Tema de Cores */}
-              <div className="pt-3 border-t border-slate-200 space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-amber-600" />
-                    Logo do Clube (URL ou Upload de Imagem)
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Campo / Associação / Região
                   </label>
-                  <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    disabled={!canManageLeaders}
+                    value={clubRegion}
+                    onChange={(e) => setClubRegion(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Ano Eclesiástico
+                    </label>
+                    <input
+                      type="text"
+                      disabled={!canManageLeaders}
+                      value={clubYear}
+                      onChange={(e) => setClubYear(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Data da Investidura
+                    </label>
+                    <DateInput
+                      disabled={!canManageLeaders}
+                      value={investitureDate}
+                      onChange={(newDate) => setInvestitureDate(newDate)}
+                      className="px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Logo do Clube */}
+                <div className="pt-2">
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
+                    Logo do Clube (URL ou Upload)
+                  </label>
+                  <div className="flex items-center gap-3">
                     {clubLogoUrl && (
                       <img
                         src={clubLogoUrl}
                         alt="Logo"
-                        className="w-9 h-9 rounded-lg object-contain border border-slate-200 bg-slate-50 p-0.5 shrink-0"
+                        className="w-12 h-12 rounded-2xl object-contain border border-black/5 dark:border-white/10 bg-neutral-50 dark:bg-neutral-900 p-1 shrink-0 shadow-xs"
                       />
                     )}
                     <input
@@ -949,14 +1035,15 @@ export default function LeadersSettingsView({
                       disabled={!canManageLeaders}
                       value={clubLogoUrl}
                       onChange={(e) => setClubLogoUrl(e.target.value)}
-                      placeholder="https://... ou envie um arquivo abaixo"
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs"
+                      placeholder="https://... ou faça upload abaixo"
+                      className="flex-1 px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
                     />
                   </div>
+
                   {canManageLeaders && (
-                    <div className="mt-1.5 flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-indigo-700 hover:underline cursor-pointer">
-                        Escolher imagem do computador/celular
+                    <div className="mt-2 flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-[#0071e3] hover:underline cursor-pointer">
+                        Fazer upload de imagem (até 1.5 MB)
                         <input
                           type="file"
                           accept="image/*"
@@ -968,7 +1055,7 @@ export default function LeadersSettingsView({
                         <button
                           type="button"
                           onClick={() => setClubLogoUrl('')}
-                          className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                          className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline font-semibold cursor-pointer"
                         >
                           Remover logo
                         </button>
@@ -976,437 +1063,437 @@ export default function LeadersSettingsView({
                     </div>
                   )}
                 </div>
-
-
               </div>
+            </div>
 
+            {/* Card 2: Políticas, Regras & Login com Google */}
+            <div className="space-y-6">
               {/* Regra de Dupla Checagem Conselheiro -> Instrutor */}
-              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
+              <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-6 space-y-4">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-black/5 dark:border-white/10">
+                  <CheckSquare className="w-5 h-5 text-emerald-500" />
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">
+                    Fluxo de Assinaturas & Visto
+                  </h2>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-neutral-50/70 dark:bg-neutral-900/70 border border-black/5 dark:border-white/10">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-neutral-900 dark:text-white block">
+                      Permitir que Conselheiros assinem &ldquo;APROVADO&rdquo; direto
+                    </span>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      Quando desativado, o Conselheiro marca até <strong>FEITO (Aguardando Visto)</strong>, exigindo a chancela final do Instrutor oficial.
+                    </p>
+                  </div>
+
+                  {/* iOS Switch */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={allowCounselorDirect}
                     disabled={!canManageLeaders}
-                    checked={allowCounselorDirect}
-                    onChange={(e) => setAllowCounselorDirect(e.target.checked)}
-                    className="mt-0.5 rounded text-amber-600"
+                    onClick={() => setAllowCounselorDirect(!allowCounselorDirect)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+                      allowCounselorDirect ? 'bg-[#34c759]' : 'bg-neutral-300 dark:bg-neutral-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        allowCounselorDirect ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Google OAuth Login */}
+                <div className="pt-2 space-y-2">
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Google OAuth Client ID (1-Clique &ldquo;Entrar com Google&rdquo;)
+                  </label>
+                  <input
+                    type="text"
+                    disabled={!canManageLeaders}
+                    value={googleClientId}
+                    onChange={(e) => setGoogleClientId(e.target.value)}
+                    placeholder="1234567890-abc.apps.googleusercontent.com"
+                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white font-mono focus:ring-2 focus:ring-[#0071e3] transition"
                   />
-                  <span className="text-xs font-bold text-amber-950">
-                    Permitir que Conselheiros assinem &ldquo;APROVADO&rdquo; direto
-                  </span>
-                </label>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Quando desmarcado, Conselheiros marcam até <strong>FEITO (Aguardando Visto)</strong>.
-                </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Opcional. Permite que a liderança entre no SGC sem digitar senhas usando a conta Google.
+                  </p>
+                </div>
               </div>
 
-              {/* Seção Gmail SMTP */}
-              <div className="pt-3 border-t border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="w-4 h-4 text-indigo-600" />
-                    <span className="text-xs font-extrabold text-slate-900">
+              {/* Card 3: Envio de E-mails (Gmail SMTP) */}
+              <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <Mail className="w-5 h-5 text-indigo-500" />
+                    <h2 className="text-base font-bold text-neutral-900 dark:text-white">
                       Envio de E-mails (Gmail SMTP)
-                    </span>
+                    </h2>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowSmtpHelp(!showSmtpHelp)}
-                    className="text-[11px] text-indigo-600 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-semibold text-[#0071e3] hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
-                    Como criar Senha de App?
+                    Como configurar?
                   </button>
                 </div>
 
                 {showSmtpHelp && (
-                  <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-[11px] text-indigo-950 space-y-1.5 leading-relaxed">
-                    <div className="font-bold">
-                      Como usar seu Gmail sem expor sua senha pessoal:
+                  <div className="p-3.5 rounded-2xl bg-[#0071e3]/5 border border-[#0071e3]/20 text-[11px] text-neutral-700 dark:text-neutral-300 space-y-2 leading-relaxed">
+                    <div className="font-bold text-neutral-900 dark:text-white">
+                      Como usar o Gmail com segurança sem expor sua senha pessoal:
                     </div>
                     <ol className="list-decimal pl-4 space-y-1">
-                      <li>
-                        Use qualquer conta Gmail (ou crie uma para o clube) com a{' '}
-                        <strong>Verificação em Duas Etapas</strong> ativa.
-                      </li>
+                      <li>Use sua conta Gmail com a <strong>Verificação em 2 Etapas</strong> ativa.</li>
                       <li>
                         Acesse{' '}
                         <a
                           href="https://myaccount.google.com/apppasswords"
                           target="_blank"
                           rel="noreferrer"
-                          className="underline font-bold text-indigo-700 inline-flex items-center gap-0.5"
+                          className="font-bold underline text-[#0071e3] inline-flex items-center gap-0.5"
                         >
                           myaccount.google.com/apppasswords
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </li>
-                      <li>
-                        Crie uma senha chamada <strong>SGC Desbravadores</strong> e cole as{' '}
-                        <strong>16 letras</strong> geradas no campo abaixo.
-                      </li>
+                      <li>Crie uma senha de app chamada <strong>SGC Classes</strong> e cole as 16 letras abaixo.</li>
                     </ol>
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    E-mail Gmail Remetente (envia convites e códigos)
-                  </label>
-                  <input
-                    type="email"
-                    disabled={!canManageLeaders}
-                    value={smtpUser}
-                    onChange={(e) => setSmtpUser(e.target.value)}
-                    placeholder="seuclube@gmail.com"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Senha de App do Google (16 letras)
-                    {settings?.smtp_pass_configured && (
-                      <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
-                        JÁ CONFIGURADA
-                      </span>
-                    )}
-                  </label>
-                  <div className="relative">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      E-mail Gmail Remetente (envio de convites oficiais)
+                    </label>
                     <input
-                      type={showSmtpPass ? 'text' : 'password'}
+                      type="email"
                       disabled={!canManageLeaders}
-                      value={smtpPass}
-                      onChange={(e) => setSmtpPass(e.target.value)}
-                      placeholder={
-                        settings?.smtp_pass_configured
-                          ? '•••••••••••••••• (deixe vazio p/ manter)'
-                          : 'xxxx xxxx xxxx xxxx'
-                      }
-                      className="w-full px-3 pr-9 py-2 rounded-xl border border-slate-300 text-xs font-mono"
+                      value={smtpUser}
+                      onChange={(e) => setSmtpUser(e.target.value)}
+                      placeholder="seuclube@gmail.com"
+                      className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center justify-between">
+                      <span>Senha de App do Google (16 caracteres)</span>
+                      {settings?.smtp_pass_configured && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold">
+                          Configurada
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showSmtpPass ? 'text' : 'password'}
+                        disabled={!canManageLeaders}
+                        value={smtpPass}
+                        onChange={(e) => setSmtpPass(e.target.value)}
+                        placeholder={
+                          settings?.smtp_pass_configured
+                            ? '•••••••••••••••• (deixe vazio para manter)'
+                            : 'xxxx xxxx xxxx xxxx'
+                        }
+                        className="w-full px-3.5 pr-10 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs font-mono text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSmtpPass(!showSmtpPass)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 dark:hover:text-white cursor-pointer"
+                      >
+                        {showSmtpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {canManageLeaders && smtpUser && (
                     <button
                       type="button"
-                      onClick={() => setShowSmtpPass(!showSmtpPass)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
-                      title={showSmtpPass ? 'Ocultar senha' : 'Ver senha'}
+                      disabled={testingSmtp}
+                      onClick={handleTestSmtpClick}
+                      className="apple-press w-full py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border border-indigo-500/25 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                     >
-                      {showSmtpPass ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
+                      <Send className="w-3.5 h-3.5" />
+                      {testingSmtp ? 'Enviando e-mail de teste...' : 'Salvar & Enviar E-mail de Teste'}
                     </button>
-                  </div>
+                  )}
                 </div>
-
-                {canManageLeaders && smtpUser && (
-                  <button
-                    type="button"
-                    disabled={testingSmtp}
-                    onClick={handleTestSmtpClick}
-                    className="w-full py-2 rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    {testingSmtp
-                      ? 'Enviando e-mail de teste...'
-                      : `Salvar e Enviar E-mail de Teste`}
-                  </button>
-                )}
-              </div>
-
-              {/* Seção Login com Google */}
-              <div className="pt-3 border-t border-slate-200 space-y-2">
-                <label className="block text-[11px] font-bold text-slate-700">
-                  Google OAuth Client ID (Opcional — Botão &ldquo;Entrar com Google&rdquo;)
-                </label>
-                <input
-                  type="text"
-                  disabled={!canManageLeaders}
-                  value={googleClientId}
-                  onChange={(e) => setGoogleClientId(e.target.value)}
-                  placeholder="1234567890-abc.apps.googleusercontent.com"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono"
-                />
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Quando preenchido, os líderes cadastrados podem entrar com 1 clique usando a conta Google deles.
-                </p>
-              </div>
-
-              {canManageLeaders && (
-                <button
-                  type="submit"
-                  disabled={savingSettings}
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
-                >
-                  {savingSettings ? 'Salvando...' : 'Salvar Todas as Configurações'}
-                </button>
-              )}
-            </form>
-          </div>
-
-          {/* Card de Backup & Exportação de Dados do Clube */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
-              <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-700">
-                <Database className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  Backup & Exportação de Dados
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Exporte cópias dos dados para segurança ou prestação de contas à Igreja e Associação.
-                </p>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">
-                    Planilha Geral de Investidura (.CSV / Excel)
+          {canManageLeaders && (
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="apple-press px-6 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+              >
+                {savingSettings ? 'Salvando...' : 'Salvar Todas as Configurações'}
+              </button>
+            </div>
+          )}
+        </form>
+      )}
+
+      {/* ABA 3: BACKUPS & TIME MACHINE */}
+      {activeTab === 'backups' && (
+        <div className="space-y-6">
+          {/* Ações Rápidas de Exportação */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-5 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-neutral-900 dark:text-white block">
+                  Planilha de Investidura (.CSV)
+                </span>
+                <span className="text-[11px] text-neutral-500 dark:text-neutral-400 block">
+                  Lista desbravadores, percentual e requisitos completos p/ Excel.
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={downloadingCsv}
+                onClick={handleDownloadCsv}
+                className="apple-press px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                {downloadingCsv ? 'Gerando...' : 'Exportar CSV'}
+              </button>
+            </div>
+
+            {canManageLeaders && (
+              <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-5 flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white block">
+                    Backup Geral do Clube (.JSON)
                   </span>
-                  <span className="text-[11px] text-slate-500 block">
-                    Lista todos os desbravadores, percentual de conclusão e aptidão para investidura.
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 block">
+                    Exporta todas as tabelas, histórico e cartões do clube.
                   </span>
                 </div>
                 <button
                   type="button"
-                  disabled={downloadingCsv}
-                  onClick={handleDownloadCsv}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer disabled:opacity-50 shadow-xs"
+                  disabled={downloadingBackup}
+                  onClick={handleDownloadBackup}
+                  className="apple-press px-4 py-2 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer shadow-xs disabled:opacity-50"
                 >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  {downloadingCsv ? 'Exportando...' : 'Exportar Planilha CSV'}
+                  <Download className="w-3.5 h-3.5" />
+                  {downloadingBackup ? 'Baixando...' : 'Baixar JSON'}
                 </button>
               </div>
+            )}
+          </div>
 
-              {canManageLeaders && (
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block">
-                      Backup Completo do Clube (.JSON)
+          {/* Time Machine: Sistema de Backups Automáticos do Servidor */}
+          {canManageLeaders && (
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/5 dark:border-white/10 shadow-sm p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/5 dark:border-white/10">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20">
+                      <span className="w-2 h-2 rounded-full bg-[#34c759] animate-pulse" />
+                      Time Machine Ativo
                     </span>
-                    <span className="text-[11px] text-slate-500 block">
-                      Cópia de segurança com desbravadores, cartões, unidades, eventos e trilha de auditoria.
-                    </span>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                      Pontos de Restauração SQLite
+                    </h3>
                   </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    Snapshots gerados automaticamente a cada 6 horas e a cada inicialização segura do servidor.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    disabled={downloadingBackup}
-                    onClick={handleDownloadBackup}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer disabled:opacity-50 shadow-xs"
+                    onClick={fetchServerBackups}
+                    disabled={loadingBackups}
+                    className="apple-press px-3 py-1.5 rounded-full border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                   >
-                    <Download className="w-4 h-4" />
-                    {downloadingBackup ? 'Baixando...' : 'Baixar Backup JSON'}
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingBackups ? 'animate-spin text-[#0071e3]' : ''}`} />
+                    Atualizar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateSnapshotNow}
+                    disabled={creatingSnapshot}
+                    className="apple-press px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <HardDrive className="w-3.5 h-3.5" />
+                    {creatingSnapshot ? 'Criando Snapshot...' : 'Criar Ponto Agora'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mensagens de Feedback */}
+              {backupSuccessMsg && (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{backupSuccessMsg}</span>
+                </div>
+              )}
+
+              {backupErrorMsg && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-800 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{backupErrorMsg}</span>
+                </div>
+              )}
+
+              {/* Lista dos Pontos de Restauração */}
+              <div className="rounded-2xl border border-black/5 dark:border-white/10 overflow-hidden divide-y divide-black/5 dark:divide-white/5">
+                {loadingBackups ? (
+                  <div className="p-8 text-center text-xs text-neutral-500">
+                    Carregando snapshots do servidor...
+                  </div>
+                ) : serverBackups.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-neutral-500">
+                    Nenhum ponto de restauração gravado ainda. Clique em &quot;Criar Ponto Agora&quot;.
+                  </div>
+                ) : (
+                  serverBackups.slice(0, 10).map((b) => {
+                    const dateObj = new Date(b.created_at);
+                    const dateFormatted = !isNaN(dateObj)
+                      ? `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                      : b.created_at;
+                    const sizeKb = Math.round((b.size_bytes || 0) / 1024);
+
+                    let triggerBadge = 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
+                    let triggerLabel = b.trigger || 'AUTO';
+                    if (b.trigger === 'STARTUP') {
+                      triggerBadge = 'bg-[#0071e3]/10 text-[#0071e3] border-[#0071e3]/20';
+                      triggerLabel = 'INICIALIZAÇÃO';
+                    } else if (b.trigger === 'SCHEDULED') {
+                      triggerBadge = 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20';
+                      triggerLabel = 'ROTINA 6H';
+                    } else if (b.trigger === 'MANUAL') {
+                      triggerBadge = 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20';
+                      triggerLabel = 'MANUAL';
+                    } else if (b.trigger === 'HISTORICO') {
+                      triggerBadge = 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20';
+                      triggerLabel = 'HISTÓRICO';
+                    } else if (b.trigger === 'EMERGENCY_PRE_RESTORE') {
+                      triggerBadge = 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20';
+                      triggerLabel = 'SEGURANÇA';
+                    }
+
+                    return (
+                      <div
+                        key={b.filename}
+                        className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-neutral-50/50 dark:hover:bg-white/[0.02] transition"
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${triggerBadge}`}>
+                              {triggerLabel}
+                            </span>
+                            <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate" title={b.filename}>
+                              {b.filename}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-mono">
+                              {sizeKb} KB
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                            <span>{dateFormatted}</span>
+                            {b.stats && (
+                              <span className="ml-2 font-medium text-neutral-600 dark:text-neutral-300">
+                                • {b.stats.pathfinders} desbravadores, {b.stats.progress_records} requisitos
+                              </span>
+                            )}
+                            {b.reason && (
+                              <span className="ml-2 text-neutral-400 italic hidden md:inline">
+                                ({b.reason})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadSqlite(b.filename)}
+                            className="apple-press px-3 py-1 rounded-full border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <Download className="w-3 h-3" />
+                            Baixar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRestoreModalFile(b)}
+                            disabled={restoringFilename === b.filename}
+                            className="apple-press px-3 py-1 rounded-full bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            Restaurar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {!isTestMode() && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCloneModalOpen(true)}
+                    className="text-xs text-[#0071e3] hover:underline font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Deseja importar a simulação de exemplo do Modo Teste para este Clube Oficial?
                   </button>
                 </div>
               )}
-
-              {/* Seção Sistema de Backup Automático & Pontos de Restauração (.sqlite) */}
-              {canManageLeaders && (
-                <div className="mt-4 pt-4 border-t border-slate-200 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-extrabold border border-emerald-200">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Backup Automático Ativo
-                      </span>
-                      <span className="text-xs font-bold text-slate-700">
-                        Pontos de Restauração do Servidor (.sqlite)
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={fetchServerBackups}
-                        disabled={loadingBackups}
-                        className="px-2.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
-                        title="Atualizar lista"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${loadingBackups ? 'animate-spin text-amber-500' : ''}`} />
-                        Atualizar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCreateSnapshotNow}
-                        disabled={creatingSnapshot}
-                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
-                      >
-                        <HardDrive className="w-3.5 h-3.5" />
-                        {creatingSnapshot ? 'Criando Snapshot...' : 'Criar Ponto Agora'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    O servidor cria automaticamente um snapshot de segurança antes de cada reinício/manutenção e periodicamente a cada 6 horas. Os dados nunca são perdidos após atualizações.
-                  </p>
-
-                  {/* Feedback Mensagens */}
-                  {backupSuccessMsg && (
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{backupSuccessMsg}</span>
-                    </div>
-                  )}
-
-                  {backupErrorMsg && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                      <span>{backupErrorMsg}</span>
-                    </div>
-                  )}
-
-                  {/* Tabela de Backups do Servidor */}
-                  <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50/50">
-                    {loadingBackups ? (
-                      <div className="p-6 text-center text-xs text-slate-500 font-medium">
-                        Carregando backups do servidor...
-                      </div>
-                    ) : serverBackups.length === 0 ? (
-                      <div className="p-6 text-center text-xs text-slate-500 font-medium">
-                        Nenhum ponto de restauração gravado ainda. Clique em &quot;Criar Ponto Agora&quot;.
-                      </div>
-                    ) : (
-                      <div className="max-h-64 overflow-y-auto divide-y divide-slate-200">
-                        {serverBackups.slice(0, 10).map((b) => {
-                          const dateObj = new Date(b.created_at);
-                          const dateFormatted = !isNaN(dateObj)
-                            ? `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                            : b.created_at;
-                          const sizeKb = Math.round((b.size_bytes || 0) / 1024);
-
-                          let triggerBadge = 'bg-slate-200 text-slate-800';
-                          let triggerLabel = b.trigger || 'AUTO';
-                          if (b.trigger === 'STARTUP') {
-                            triggerBadge = 'bg-blue-100 text-blue-800 border-blue-200';
-                            triggerLabel = 'INICIALIZAÇÃO';
-                          } else if (b.trigger === 'SCHEDULED') {
-                            triggerBadge = 'bg-purple-100 text-purple-800 border-purple-200';
-                            triggerLabel = 'ROTINA 6H';
-                          } else if (b.trigger === 'MANUAL') {
-                            triggerBadge = 'bg-amber-100 text-amber-800 border-amber-200';
-                            triggerLabel = 'MANUAL';
-                          } else if (b.trigger === 'HISTORICO') {
-                            triggerBadge = 'bg-indigo-100 text-indigo-800 border-indigo-200';
-                            triggerLabel = 'HISTÓRICO';
-                          } else if (b.trigger === 'EMERGENCY_PRE_RESTORE') {
-                            triggerBadge = 'bg-rose-100 text-rose-800 border-rose-200';
-                            triggerLabel = 'SEGURANÇA';
-                          }
-
-                          return (
-                            <div
-                              key={b.filename}
-                              className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-white transition"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border ${triggerBadge}`}>
-                                    {triggerLabel}
-                                  </span>
-                                  <span className="text-xs font-bold text-slate-900 truncate" title={b.filename}>
-                                    {b.filename}
-                                  </span>
-                                  <span className="text-[10px] text-slate-500 font-mono">
-                                    {sizeKb} KB
-                                  </span>
-                                </div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">
-                                  <span>{dateFormatted}</span>
-                                  {b.stats && (
-                                    <span className="ml-2 font-medium text-slate-600">
-                                      • {b.stats.pathfinders} desbravadores, {b.stats.progress_records} requisitos
-                                    </span>
-                                  )}
-                                  {b.reason && (
-                                    <span className="ml-2 text-slate-400 italic hidden md:inline">
-                                      ({b.reason})
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadSqlite(b.filename)}
-                                  className="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
-                                  title="Baixar arquivo SQLite"
-                                >
-                                  <Download className="w-3 h-3" />
-                                  Baixar
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setRestoreModalFile(b)}
-                                  disabled={restoringFilename === b.filename}
-                                  className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
-                                  title="Restaurar este ponto de restauração"
-                                >
-                                  <RotateCcw className="w-3 h-3" />
-                                  Restaurar
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Botão de Clonagem do Teste para Produção (Apenas visível se no clube oficial e com permissão) */}
-                  {!isTestMode() && (
-                    <div className="pt-2 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setCloneModalOpen(true)}
-                        className="text-[11px] text-indigo-700 hover:text-indigo-900 font-bold flex items-center gap-1.5 cursor-pointer underline"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Deseja importar os dados de simulação do Modo Teste para este Clube Oficial?
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
-          </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Modal Criar / Editar Líder */}
+      {/* Modal Criar / Editar Líder (Apple Sheet) */}
       {leaderModalOpen && (
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget) setLeaderModalOpen(false);
           }}
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="text-base font-extrabold">
-                {editingLeader
-                  ? 'Editar Líder, Cargo Personalizado & Poderes'
-                  : 'Convidar / Cadastrar Novo Membro da Diretoria'}
-              </h3>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl max-w-2xl w-full shadow-2xl border border-black/10 dark:border-white/15 overflow-hidden max-h-[92vh] flex flex-col">
+            {/* Header Sheet */}
+            <div className="px-6 py-4 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                  {editingLeader
+                    ? 'Editar Membro da Diretoria'
+                    : 'Cadastrar / Convidar Líder'}
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Configure o perfil de acesso, escopos de classe e poderes especiais.
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setLeaderModalOpen(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form
-              onSubmit={handleLeaderSubmit}
-              className="flex-1 overflow-hidden flex flex-col"
-            >
+            <form onSubmit={handleLeaderSubmit} className="flex-1 overflow-hidden flex flex-col">
               <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
                     Nome Completo do Líder *
                   </label>
                   <input
@@ -1414,15 +1501,15 @@ export default function LeadersSettingsView({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Digite o nome completo do líder"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                    placeholder="Digite o nome completo"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      E-mail Real do Líder *
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      E-mail do Líder *
                     </label>
                     <input
                       type="email"
@@ -1430,14 +1517,14 @@ export default function LeadersSettingsView({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="email@gmail.com"
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
                       {editingLeader
                         ? 'Nova Senha (deixe vazio p/ manter)'
-                        : 'Senha Provisória (opcional se enviar convite)'}
+                        : 'Senha Provisória (ou use o convite)'}
                     </label>
                     <div className="relative">
                       <input
@@ -1449,13 +1536,12 @@ export default function LeadersSettingsView({
                             ? '••••••••'
                             : 'O próprio líder criará pelo link'
                         }
-                        className="w-full px-3.5 pr-9 py-2 rounded-xl border border-slate-300 text-xs"
+                        className="w-full px-3.5 pr-10 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-[#0071e3] transition"
                       />
                       <button
                         type="button"
                         onClick={() => setShowLeaderPassword(!showLeaderPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
-                        title={showLeaderPassword ? 'Ocultar senha' : 'Ver senha'}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 dark:hover:text-white cursor-pointer"
                       >
                         {showLeaderPassword ? (
                           <EyeOff className="w-4 h-4" />
@@ -1468,20 +1554,20 @@ export default function LeadersSettingsView({
                 </div>
 
                 {!editingLeader && (
-                  <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200">
-                    <label className="flex items-start gap-2.5 cursor-pointer">
+                  <div className="p-3.5 rounded-2xl bg-[#0071e3]/5 border border-[#0071e3]/20">
+                    <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={sendInvite}
                         onChange={(e) => setSendInvite(e.target.checked)}
-                        className="mt-0.5 rounded text-indigo-600"
+                        className="mt-0.5 rounded text-[#0071e3]"
                       />
                       <div>
-                        <span className="text-xs font-bold text-indigo-950 block">
+                        <span className="text-xs font-bold text-neutral-900 dark:text-white block">
                           Enviar convite por e-mail para o líder criar a própria senha
                         </span>
-                        <span className="text-[11px] text-indigo-800">
-                          O sistema envia o link oficial de ativação para o e-mail dele (e também gera um link copiável caso queira mandar por WhatsApp).
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                          O sistema envia o link oficial de ativação e gera um link direto compartilhável via WhatsApp.
                         </span>
                       </div>
                     </label>
@@ -1490,13 +1576,13 @@ export default function LeadersSettingsView({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Perfil Base de Acesso (RBAC) *
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      Cargo Base (RBAC) *
                     </label>
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs font-semibold text-neutral-900 dark:text-white"
                     >
                       <option value="DIRETOR">DIRETOR(A) — Direção Geral do Clube</option>
                       <option value="GESTOR">GESTOR(A) / TI — Administração Geral</option>
@@ -1507,33 +1593,33 @@ export default function LeadersSettingsView({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
                       Cargo Personalizado da Diretoria (Opcional)
                     </label>
                     <input
                       type="text"
                       value={customRoleTitle}
                       onChange={(e) => setCustomRoleTitle(e.target.value)}
-                      placeholder="Ex: Diretor Associado, Capelão, Instrutor Geral..."
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold"
+                      placeholder="Ex: Diretor Associado, Capelão..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white"
                     />
                   </div>
                 </div>
 
-                {/* Sugestões rápidas de cargos personalizados */}
+                {/* Sugestões de Cargo Personalizado */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-500">
-                    Sugestões de Cargo:
+                  <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mr-1">
+                    Sugestões:
                   </span>
                   {CUSTOM_ROLE_SUGGESTIONS.map((sug) => (
                     <button
                       key={sug}
                       type="button"
                       onClick={() => setCustomRoleTitle(sug)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                      className={`apple-press px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition cursor-pointer ${
                         customRoleTitle === sug
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          ? 'bg-[#0071e3] text-white border-[#0071e3]'
+                          : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-black/5 dark:border-white/10'
                       }`}
                     >
                       {sug}
@@ -1550,17 +1636,17 @@ export default function LeadersSettingsView({
                   )}
                 </div>
 
-                {/* Escopo de Unidades (para Conselheiro ou qualquer líder com escopo de unidade) */}
+                {/* Escopo de Unidades */}
                 {!['DIRETOR', 'GESTOR', 'ADMIN'].includes(role) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
                         Unidade Principal Vinculada
                       </label>
                       <select
                         value={unitId}
                         onChange={(e) => setUnitId(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50 text-xs text-neutral-900 dark:text-white"
                       >
                         <option value="">
                           {role === 'CONSELHEIRO'
@@ -1576,20 +1662,19 @@ export default function LeadersSettingsView({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Unidades Extras Liberadas (Opcional)
+                      <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                        Unidades Extras Liberadas
                       </label>
-                      <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-slate-200 bg-slate-50/50">
+                      <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/50">
                         {units.map((u) => {
-                          const checked =
-                            u.id === unitId || assignedUnits.includes(u.id);
+                          const checked = u.id === unitId || assignedUnits.includes(u.id);
                           return (
                             <label
                               key={u.id}
-                              className={`px-2 py-1 rounded-lg border text-[11px] flex items-center gap-1.5 cursor-pointer ${
+                              className={`apple-press px-2.5 py-1 rounded-lg border text-[11px] flex items-center gap-1.5 cursor-pointer ${
                                 checked
-                                  ? 'bg-indigo-50 border-indigo-300 font-bold text-indigo-900'
-                                  : 'bg-white border-slate-200 text-slate-600'
+                                  ? 'bg-[#0071e3]/10 border-[#0071e3]/30 font-bold text-[#0071e3]'
+                                  : 'bg-white dark:bg-neutral-800 border-black/5 dark:border-white/10 text-neutral-600 dark:text-neutral-300'
                               }`}
                             >
                               <input
@@ -1597,7 +1682,7 @@ export default function LeadersSettingsView({
                                 checked={checked}
                                 disabled={u.id === unitId}
                                 onChange={() => toggleUnitScope(u.id)}
-                                className="rounded text-indigo-600"
+                                className="rounded text-[#0071e3]"
                               />
                               <span>{u.name}</span>
                             </label>
@@ -1611,19 +1696,19 @@ export default function LeadersSettingsView({
                 {/* Escopo de Classes */}
                 {!['DIRETOR', 'GESTOR', 'ADMIN'].includes(role) && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Classes Liberadas para este Membro (visualizar e avaliar):
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                      Classes Liberadas para Avaliar:
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto border border-neutral-200 dark:border-white/10 rounded-2xl p-2.5 bg-neutral-50/50 dark:bg-neutral-900/50">
                       {(catalog.classes || []).map((cls) => {
                         const checked = assignedClasses.includes(cls.slug);
                         return (
                           <label
                             key={cls.slug}
-                            className={`p-2 rounded-lg border text-xs flex items-center gap-2 cursor-pointer ${
+                            className={`apple-press p-2 rounded-xl border text-xs flex items-center gap-2 cursor-pointer ${
                               checked
-                                ? 'bg-emerald-50 border-emerald-400 font-bold'
-                                : 'border-slate-200'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold'
+                                : 'border-black/5 dark:border-white/10 text-neutral-600 dark:text-neutral-400'
                             }`}
                           >
                             <input
@@ -1640,17 +1725,14 @@ export default function LeadersSettingsView({
                   </div>
                 )}
 
-                {/* Poderes Extras / Permissões Granulares (Concedidas pelo Diretor / Gestor) */}
+                {/* Poderes Extras / Permissões Granulares */}
                 {!['DIRETOR', 'GESTOR', 'ADMIN'].includes(role) && (
-                  <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2.5">
-                    <div>
-                      <div className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
-                        <Shield className="w-4 h-4 text-amber-600" />
-                        Conceder Poderes Extras a este Membro da Diretoria
-                      </div>
-                      <p className="text-[11px] text-amber-800">
-                        Por padrão, cada líder acessa apenas sua classe ou unidade. Marque abaixo caso queira dar mais poderes a este membro:
-                      </p>
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                        Conceder Poderes Extras da Diretoria
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1661,8 +1743,8 @@ export default function LeadersSettingsView({
                             key={opt.key}
                             className={`p-2.5 rounded-xl border text-xs flex items-start gap-2 cursor-pointer transition ${
                               checked
-                                ? 'bg-white border-amber-500 shadow-2xs'
-                                : 'bg-white/60 border-amber-200/80 hover:bg-white'
+                                ? 'bg-white dark:bg-[#1c1c1e] border-amber-500/40 shadow-xs'
+                                : 'bg-white/50 dark:bg-white/[0.03] border-black/5 dark:border-white/10'
                             }`}
                           >
                             <input
@@ -1672,10 +1754,10 @@ export default function LeadersSettingsView({
                               className="mt-0.5 rounded text-amber-600"
                             />
                             <div>
-                              <div className="font-bold text-slate-900">
+                              <div className="font-semibold text-neutral-900 dark:text-white">
                                 {opt.label}
                               </div>
-                              <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                              <div className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-tight mt-0.5">
                                 {opt.desc}
                               </div>
                             </div>
@@ -1686,21 +1768,22 @@ export default function LeadersSettingsView({
                   </div>
                 )}
 
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    onChange={(e) => setActive(e.target.checked)}
-                    className="rounded text-indigo-600"
-                  />
-                  Conta Ativa (pode fazer login no sistema)
-                </label>
+                <div className="pt-1 flex items-center justify-between">
+                  <label className="flex items-center gap-2.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={(e) => setActive(e.target.checked)}
+                      className="rounded text-[#0071e3]"
+                    />
+                    <span>Conta Ativa (pode fazer login no sistema)</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
-                {editingLeader &&
-                onDeleteLeader &&
-                editingLeader.id !== currentUser?.id ? (
+              {/* Footer Sheet */}
+              <div className="p-4 px-6 border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-3 bg-neutral-50/50 dark:bg-neutral-900/50 shrink-0">
+                {editingLeader && onDeleteLeader && editingLeader.id !== currentUser?.id ? (
                   <button
                     type="button"
                     onClick={async () => {
@@ -1713,7 +1796,7 @@ export default function LeadersSettingsView({
                         setLeaderModalOpen(false);
                       }
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer"
+                    className="apple-press px-4 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold cursor-pointer"
                   >
                     Excluir Conta
                   </button>
@@ -1721,25 +1804,25 @@ export default function LeadersSettingsView({
                   <div />
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setLeaderModalOpen(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                    className="apple-press px-4 py-2 rounded-full border border-neutral-200 dark:border-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={savingLeader}
-                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
+                    className="apple-press px-5 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold shadow-sm cursor-pointer"
                   >
                     {savingLeader
                       ? 'Salvando...'
                       : editingLeader
                       ? 'Salvar Alterações'
                       : sendInvite
-                      ? 'Cadastrar & Gerar Convite'
+                      ? 'Cadastrar & Convidar'
                       : 'Salvar Líder'}
                   </button>
                 </div>
@@ -1749,123 +1832,119 @@ export default function LeadersSettingsView({
         </div>
       )}
 
-      {/* Modal de Confirmação de Restauração */}
+      {/* Modal Restaurar Backup (Apple Sheet) */}
       {restoreModalFile && (
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget && !restoringFilename) setRestoreModalFile(null);
           }}
-          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-rose-100 text-rose-700">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    Restaurar Ponto de Segurança?
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Confirme para reverter o banco para este estado.
-                  </p>
-                </div>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl max-w-md w-full shadow-2xl border border-black/10 dark:border-white/15 overflow-hidden p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
               </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                  Restaurar Ponto de Segurança?
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  O banco de dados será revertido para o momento exato deste backup.
+                </p>
+              </div>
+            </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 text-slate-700">
-                <div className="font-bold text-slate-900">
-                  Arquivo selecionado:
-                </div>
-                <div className="font-mono text-[11px] text-indigo-700 break-all">
-                  {restoreModalFile.filename}
-                </div>
-                {restoreModalFile.stats && (
-                  <div className="text-[11px] text-slate-600">
-                    Contém: <strong>{restoreModalFile.stats.pathfinders} desbravadores</strong> e <strong>{restoreModalFile.stats.progress_records} requisitos</strong>.
-                  </div>
-                )}
-                <div className="text-[11px] text-emerald-700 font-semibold pt-1 border-t border-slate-200">
-                  🛡️ Proteção Ativa: Um backup de emergência do estado atual será salvo automaticamente antes de aplicar a restauração.
-                </div>
+            <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-black/5 dark:border-white/10 text-xs space-y-1.5 text-neutral-700 dark:text-neutral-300">
+              <div className="font-semibold text-neutral-900 dark:text-white">
+                Arquivo selecionado:
               </div>
+              <div className="font-mono text-[11px] text-[#0071e3] break-all">
+                {restoreModalFile.filename}
+              </div>
+              {restoreModalFile.stats && (
+                <div className="text-[11px] text-neutral-500">
+                  Contém: <strong>{restoreModalFile.stats.pathfinders} desbravadores</strong> e <strong>{restoreModalFile.stats.progress_records} requisitos</strong>.
+                </div>
+              )}
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold pt-1 border-t border-black/5 dark:border-white/5">
+                🛡️ Backup de segurança automático será salvo antes de restaurar.
+              </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setRestoreModalFile(null)}
-                  disabled={Boolean(restoringFilename)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmRestore}
-                  disabled={Boolean(restoringFilename)}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  {restoringFilename ? 'Restaurando...' : 'Sim, Restaurar Banco'}
-                </button>
-              </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setRestoreModalFile(null)}
+                disabled={Boolean(restoringFilename)}
+                className="apple-press px-4 py-2 rounded-full border border-neutral-200 dark:border-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRestore}
+                disabled={Boolean(restoringFilename)}
+                className="apple-press px-4 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                {restoringFilename ? 'Restaurando...' : 'Sim, Restaurar Banco'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal de Confirmação de Clonagem de Dados de Teste */}
+      {/* Modal Clonar Simulação de Teste */}
       {cloneModalOpen && (
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget && !cloningTest) setCloneModalOpen(false);
           }}
-          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-indigo-100 text-indigo-700">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    Importar Simulação para Produção?
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Copia os 7 desbravadores e 213 requisitos do teste para o clube oficial.
-                  </p>
-                </div>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl max-w-md w-full shadow-2xl border border-black/10 dark:border-white/15 overflow-hidden p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#0071e3]/10 border border-[#0071e3]/20 text-[#0071e3] flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-amber-500" />
               </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                  Importar Simulação para Produção?
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Copia 7 desbravadores e 213 requisitos demonstrativos para o clube oficial.
+                </p>
+              </div>
+            </div>
 
-              <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200 text-xs space-y-2 text-indigo-950 leading-relaxed">
-                <div>
-                  Isso preencherá seu Clube Oficial com os <strong>7 desbravadores</strong> de exemplo (todas as 6 classes regulares e avançadas) e seus <strong>213 requisitos assinados</strong>.
-                </div>
-                <div>
-                  Sua conta de Gestor atual será preservada integralmente e um <strong>snapshot de emergência</strong> será salvo no servidor antes da importação.
-                </div>
-              </div>
+            <div className="p-3.5 rounded-2xl bg-[#0071e3]/5 border border-[#0071e3]/20 text-xs space-y-2 text-neutral-700 dark:text-neutral-300 leading-relaxed">
+              <p>
+                Isso preencherá seu Clube Oficial com os desbravadores de exemplo em todas as 6 classes regulares e avançadas.
+              </p>
+              <p className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                Sua conta de diretoria atual será preservada integralmente e um snapshot será gerado automaticamente.
+              </p>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setCloneModalOpen(false)}
-                  disabled={cloningTest}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmCloneTest}
-                  disabled={cloningTest}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {cloningTest ? 'Importando...' : 'Confirmar Importação'}
-                </button>
-              </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setCloneModalOpen(false)}
+                disabled={cloningTest}
+                className="apple-press px-4 py-2 rounded-full border border-neutral-200 dark:border-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCloneTest}
+                disabled={cloningTest}
+                className="apple-press px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {cloningTest ? 'Importando...' : 'Confirmar Importação'}
+              </button>
             </div>
           </div>
         </div>

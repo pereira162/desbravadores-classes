@@ -254,36 +254,39 @@ export default function RequirementDetailModal({
       onClick={(e) => {
         if (e.target === e.currentTarget && !saving) onClose();
       }}
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
     >
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
-        {/* Header colorido conforme a classe */}
-        <div
-          className="px-6 py-4 text-white flex items-start justify-between gap-4 shrink-0"
-          style={{ backgroundColor: classInfo?.color_hex || '#1e293b' }}
-        >
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-black/10 dark:border-white/10 w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
+        {/* Apple Sheet Header */}
+        <div className="px-6 py-4 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-md border-b border-black/5 dark:border-white/10 flex items-start justify-between gap-4 shrink-0 text-slate-900 dark:text-white">
           <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-95 mb-1">
-              <span className="bg-black/25 px-2 py-0.5 rounded">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1">
+              <span
+                className="px-2 py-0.5 rounded-md text-white text-[11px] shadow-2xs font-semibold"
+                style={{ backgroundColor: classInfo?.color_hex || '#0071e3' }}
+              >
                 {classInfo?.name || requirement.class_slug}
               </span>
-              <span>•</span>
-              <span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-500 dark:text-slate-400">
                 {requirement.section_code}. {requirement.section_name}
               </span>
-              <span>•</span>
-              <span className="bg-white/20 px-2 py-0.5 rounded">{ctxInfo.label}</span>
+              <span className="text-slate-400">•</span>
+              <span className="px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[10px]">
+                {ctxInfo.label}
+              </span>
             </div>
-            <h3 className="text-lg font-extrabold leading-snug">
+            <h3 className="text-base font-semibold leading-snug text-slate-900 dark:text-white">
               Requisito {requirement.code} — {requirement.short_title || requirement.title}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-black/20 hover:bg-black/35 text-white transition cursor-pointer"
+            className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+            title="Fechar (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -291,11 +294,11 @@ export default function RequirementDetailModal({
           <form onSubmit={handleSave} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
               {/* Descrição Oficial Completa do Cartão */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
+              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-black/20 border border-black/5 dark:border-white/10">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center justify-between">
                   <span>Texto Oficial do Cartão (DSA)</span>
                   {requirement.selection_rule !== 'TODOS' && (
-                    <span className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-bold">
+                    <span className="text-blue-700 dark:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-full font-semibold">
                       Regra:{' '}
                       {requirement.selection_rule === 'ESCOLHER_1'
                         ? 'Escolher 1 opção'
@@ -303,21 +306,21 @@ export default function RequirementDetailModal({
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
                   {requirement.description}
                 </p>
               </div>
 
               {/* Cabeçalho do Desbravador */}
-              <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20">
                 <div>
-                  <span className="text-[11px] font-bold uppercase text-amber-800 block">
+                  <span className="text-[11px] font-semibold uppercase text-blue-700 dark:text-blue-300 block">
                     {isPathfinderUser ? 'Meu Cartão de Classes' : 'Desbravador(a)'}
                   </span>
-                  <span className="text-base font-extrabold text-slate-900">
+                  <span className="text-base font-semibold text-slate-900 dark:text-white">
                     {pathfinder.name}
                   </span>
-                  <span className="text-xs text-slate-600 ml-2">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
                     ({pathfinder.unit_name || 'Sem Unidade'})
                   </span>
                 </div>
@@ -328,7 +331,7 @@ export default function RequirementDetailModal({
                       onClose();
                       onOpenBulkForRequirement(requirement);
                     }}
-                    className="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-200/70 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/15 hover:bg-blue-500/25 px-3 py-1.5 rounded-full transition cursor-pointer apple-press"
                   >
                     Assinar p/ Vários Desbravadores
                   </button>
@@ -547,13 +550,13 @@ export default function RequirementDetailModal({
                 <div className="space-y-4 pt-1">
                   {/* Aprovação Rápida se o Desbravador enviou ou está aguardando visto */}
                   {(status === 'CONCLUIDO' || hasPathfinderEvidence) && (
-                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5">
                       <div>
-                        <div className="text-xs font-extrabold text-emerald-950">
-                          Avaliação Rápida da Solicitação do Desbravador
+                        <div className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                          Avaliação Rápida da Solicitação
                         </div>
-                        <p className="text-[11px] text-emerald-800">
-                          Aprove e assine imediatamente ou devolva para ajustes com uma orientação abaixo.
+                        <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
+                          Aprove e assine imediatamente ou devolva para ajustes com uma orientação.
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -561,7 +564,7 @@ export default function RequirementDetailModal({
                           type="button"
                           disabled={saving}
                           onClick={() => submitWithStatus('EM_ANDAMENTO')}
-                          className="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-300 border border-amber-500/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer apple-press"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           Pedir Ajustes
@@ -570,7 +573,7 @@ export default function RequirementDetailModal({
                           type="button"
                           disabled={saving}
                           onClick={() => submitWithStatus('APROVADO')}
-                          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          className="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer apple-press"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                           Aprovar e Assinar
@@ -580,7 +583,7 @@ export default function RequirementDetailModal({
                   )}
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                       Status de Cumprimento no Cartão
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -591,10 +594,10 @@ export default function RequirementDetailModal({
                             key={st.code}
                             type="button"
                             onClick={() => setStatus(st.code)}
-                            className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                            className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer apple-press ${
                               active
-                                ? `${st.bgClass} ring-2 ring-offset-1 ring-slate-800`
-                                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+                                ? `${st.cellClass} ring-2 ring-blue-500/40 shadow-xs`
+                                : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5'
                             }`}
                           >
                             <span className={`w-2 h-2 rounded-full ${st.dotClass}`} />
@@ -607,7 +610,7 @@ export default function RequirementDetailModal({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Observação / Registro no Cartão
                       </label>
                       <input
@@ -615,11 +618,11 @@ export default function RequirementDetailModal({
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Ex: Especialidade concluída, visto pelo instrutor..."
-                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 outline-none"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Feedback / Orientação para o Desbravador
                       </label>
                       <input
@@ -627,7 +630,7 @@ export default function RequirementDetailModal({
                         value={reviewNotes}
                         onChange={(e) => setReviewNotes(e.target.value)}
                         placeholder="Visível para o desbravador no cartão dele..."
-                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 outline-none"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -636,12 +639,12 @@ export default function RequirementDetailModal({
 
               {/* Histórico de Assinatura atual se existir */}
               {progressRecord && progressRecord.status !== 'PENDENTE' && (
-                <div className="p-3 rounded-xl bg-slate-100 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
+                <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs text-slate-600 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <UserCheck className="w-3.5 h-3.5 inline mr-1 text-slate-500" />
+                    <UserCheck className="w-3.5 h-3.5 inline mr-1 text-slate-400" />
                     <strong>Marcado por:</strong> {progressRecord.marked_by_name || '—'}
                     {progressRecord.approved_by_name && (
-                      <span className="ml-3 text-emerald-700 font-bold">
+                      <span className="ml-3 text-emerald-600 dark:text-emerald-400 font-semibold">
                         ✓ Assinado por: {progressRecord.approved_by_name}
                       </span>
                     )}
@@ -653,18 +656,18 @@ export default function RequirementDetailModal({
             </div>
 
             {/* Rodapé de Botões Docked */}
-            <div className="p-4 px-6 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-2 shrink-0 z-10">
+            <div className="p-4 px-6 bg-slate-50/80 dark:bg-black/20 border-t border-black/5 dark:border-white/10 flex flex-wrap items-center justify-end gap-2.5 shrink-0 z-10">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                className="px-4 py-2 rounded-full border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer apple-press"
               >
                 Fechar
               </button>
 
               {isPathfinderUser ? (
                 isAlreadyApproved ? (
-                  <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-extrabold">
+                  <span className="px-4 py-2 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
                     ✓ Requisito já Assinado pela Liderança
                   </span>
                 ) : (
@@ -673,7 +676,7 @@ export default function RequirementDetailModal({
                       type="button"
                       disabled={saving}
                       onClick={() => submitWithStatus('EM_ANDAMENTO')}
-                      className="px-4 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold cursor-pointer"
+                      className="px-4 py-2 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-300 border border-amber-500/25 text-xs font-semibold cursor-pointer apple-press"
                     >
                       Salvar em Andamento
                     </button>
@@ -681,7 +684,7 @@ export default function RequirementDetailModal({
                       type="button"
                       disabled={saving}
                       onClick={() => submitWithStatus('CONCLUIDO')}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 apple-press"
                     >
                       <Send className="w-3.5 h-3.5" />
                       {saving
@@ -694,7 +697,7 @@ export default function RequirementDetailModal({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold shadow-sm transition cursor-pointer disabled:opacity-50 apple-press"
                 >
                   {saving ? 'Salvando...' : 'Salvar no Cartão e Auditar'}
                 </button>

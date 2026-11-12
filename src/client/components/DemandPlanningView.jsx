@@ -431,46 +431,46 @@ export default function DemandPlanningView({
   return (
     <div className="space-y-5">
       {/* Cabeçalho da Matriz de Demanda */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 mb-1">
-            <Sparkles className="w-4 h-4" />
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-5 sm:p-6 border border-black/5 dark:border-white/10 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">
+            <Sparkles className="w-3.5 h-3.5" />
             Planejamento Anual Orientado à Demanda Real
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
             O que o Clube ainda precisa fazer este ano?
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Filtre por local (Ao Ar Livre, Acampamento, Igreja, Comunidade), especialidades ou classe e
             veja exatamente <strong>quantos e quais desbravadores</strong> ainda precisam cumprir cada
             atividade.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 no-print">
-          <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+        <div className="flex flex-wrap items-center gap-2.5 relative z-10 no-print">
+          <div className="inline-flex rounded-xl bg-black/5 dark:bg-white/10 p-0.5 border border-black/5 dark:border-white/5">
             <button
               type="button"
               onClick={() => setViewMode('REQUIREMENTS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer apple-press ${
                 viewMode === 'REQUIREMENTS'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <ListFilter className="w-3.5 h-3.5 text-amber-600" />
+              <ListFilter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               Por Atividade ({filteredRequirements.length})
             </button>
             <button
               type="button"
               onClick={() => setViewMode('EQUIVALENCE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer apple-press ${
                 viewMode === 'EQUIVALENCE'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               Unificar entre Classes ({equivalenceGroupsData.length})
             </button>
           </div>
@@ -483,7 +483,7 @@ export default function DemandPlanningView({
                 openCreateEqModal();
               }}
               data-tour="btn-new-unification"
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+              className="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer apple-press"
             >
               <Plus className="w-3.5 h-3.5" />
               Nova Unificação
@@ -501,23 +501,23 @@ export default function DemandPlanningView({
               onlyPending,
             }}
             label={viewMode === 'EQUIVALENCE' ? 'Baixar Unificações (PDF)' : 'Baixar Planejamento (PDF)'}
-            colorScheme="white"
+            colorScheme="gray"
           />
         </div>
       </div>
 
       {/* Pílulas Rápidas de Filtro por Local / Formato (Tags) */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs no-print" data-tour="demand-filters">
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-4 border border-black/5 dark:border-white/10 shadow-xs no-print" data-tour="demand-filters">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-amber-600" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Filtro Rápido por Contexto / Tipo de Atividade:
           </span>
           {tagFilter !== 'ALL' && (
             <button
               type="button"
               onClick={() => setTagFilter('ALL')}
-              className="text-xs font-bold text-amber-700 hover:underline cursor-pointer"
+              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
             >
               Mostrar Todos os Locais/Formatos
             </button>
@@ -527,10 +527,10 @@ export default function DemandPlanningView({
           <button
             type="button"
             onClick={() => setTagFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer apple-press ${
               tagFilter === 'ALL'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-semibold'
+                : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5'
             }`}
           >
             Todas as Tags
@@ -543,20 +543,20 @@ export default function DemandPlanningView({
                 key={tag.id}
                 type="button"
                 onClick={() => setTagFilter(active ? 'ALL' : tag.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition flex items-center gap-1.5 cursor-pointer apple-press ${
                   active
-                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-semibold'
+                    : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5'
                 }`}
               >
                 <span>{tag.label}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
                     active
-                      ? 'bg-black/25 text-white'
+                      ? 'bg-white/20 text-white'
                       : st.reqCount > 0
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-slate-100 text-slate-400'
+                      ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                      : 'bg-black/5 dark:bg-white/5 text-slate-400'
                   }`}
                 >
                   {st.reqCount}
@@ -568,17 +568,17 @@ export default function DemandPlanningView({
       </div>
 
       {/* Barra Completa de Filtros Combinados */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 no-print">
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-4 border border-black/5 dark:border-white/10 shadow-xs space-y-3 no-print">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Busca Livre */}
           <div className="lg:col-span-2 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar requisito, especialidade, nó, verso..."
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-amber-600 outline-none"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -587,15 +587,15 @@ export default function DemandPlanningView({
             <select
               value={baseClassFilter}
               onChange={(e) => setBaseClassFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white outline-none"
+              className="w-full px-3 py-1.5 text-xs font-medium rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-slate-800 dark:text-slate-200 focus:outline-none"
             >
-              <option value="ALL">Todas as Classes (10–15 anos)</option>
-              <option value="amigo">🔵 Amigo (10 anos)</option>
-              <option value="companheiro">🔴 Companheiro (11 anos)</option>
-              <option value="pesquisador">🟢 Pesquisador (12 anos)</option>
-              <option value="pioneiro">⚪ Pioneiro (13 anos)</option>
-              <option value="excursionista">🟣 Excursionista (14 anos)</option>
-              <option value="guia">🟡 Guia (15 anos)</option>
+              <option value="ALL" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">Todas as Classes (10–15 anos)</option>
+              <option value="amigo" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">🔵 Amigo (10 anos)</option>
+              <option value="companheiro" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">🔴 Companheiro (11 anos)</option>
+              <option value="pesquisador" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">🟢 Pesquisador (12 anos)</option>
+              <option value="pioneiro" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">⚪ Pioneiro (13 anos)</option>
+              <option value="excursionista" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">🟣 Excursionista (14 anos)</option>
+              <option value="guia" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">🟡 Guia (15 anos)</option>
             </select>
           </div>
 

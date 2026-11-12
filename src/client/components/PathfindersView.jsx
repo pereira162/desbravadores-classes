@@ -436,14 +436,14 @@ export default function PathfindersView({
         </div>
       ) : (
         /* Cabeçalho Padrão da Diretoria / Líderes */
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4 no-print">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 p-5 shadow-xs space-y-4 no-print">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                <Users className="w-6 h-6 text-indigo-600" />
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 Desbravadores, Unidades & Cartão Virtual Individual
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Gerencie as unidades do clube, cadastre desbravadores, gere links individuais de conta e acompanhe o Cartão Virtual completo.
               </p>
             </div>
@@ -454,9 +454,9 @@ export default function PathfindersView({
                   <button
                     onClick={() => openUnitManagerModal(null)}
                     data-tour="btn-manage-units"
-                    className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer apple-press"
                   >
-                    <FolderPlus className="w-4 h-4 text-indigo-600" />
+                    <FolderPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     Gerenciar Unidades ({units.length})
                   </button>
                 )}
@@ -464,7 +464,7 @@ export default function PathfindersView({
                   <button
                     onClick={openCreatePfModal}
                     data-tour="btn-new-pathfinder"
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    className="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer apple-press"
                   >
                     <UserPlus className="w-4 h-4" />
                     Cadastrar Desbravador
@@ -475,8 +475,8 @@ export default function PathfindersView({
           </div>
 
           {/* Barra Rápida de Unidades (com botões diretos de Editar e Excluir cada unidade) */}
-          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mr-1">
+          <div className="pt-3.5 border-t border-black/5 dark:border-white/10 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mr-1">
               Unidades do Clube:
             </span>
             {units.length === 0 ? (
@@ -489,23 +489,23 @@ export default function PathfindersView({
                 return (
                   <div
                     key={u.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-slate-200 bg-slate-50 text-xs"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-black/5 dark:border-white/10 bg-slate-50/80 dark:bg-black/20 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-2xs"
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: u.color_hex || '#1d4ed8' }}
                     />
-                    <span className="font-bold text-slate-800">{u.name}</span>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="font-semibold text-slate-900 dark:text-white">{u.name}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
                       ({count} {count === 1 ? 'membro' : 'membros'})
                     </span>
                     {canManageUnits && (
-                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-slate-200">
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-black/10 dark:border-white/10">
                         <button
                           type="button"
                           onClick={() => openUnitManagerModal(u)}
                           title={`Editar unidade ${u.name}`}
-                          className="p-1 rounded hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 cursor-pointer"
+                          className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                         >
                           <Edit3 className="w-3 h-3" />
                         </button>
@@ -522,7 +522,7 @@ export default function PathfindersView({
                               }
                             }}
                             title={`Excluir unidade ${u.name}`}
-                            className="p-1 rounded hover:bg-rose-100 text-slate-400 hover:text-rose-600 cursor-pointer"
+                            className="p-1 rounded hover:bg-rose-500/10 text-slate-400 hover:text-rose-600 cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -541,16 +541,16 @@ export default function PathfindersView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Coluna Esquerda: Lista e Filtros de Desbravadores (Oculta quando logado como Desbravador) */}
         {!isPathfinderUser && (
-          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden no-print">
-            <div className="p-4 border-b border-slate-200 space-y-2.5 bg-slate-50/60">
+          <div className="lg:col-span-4 bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 shadow-xs overflow-hidden no-print">
+            <div className="p-3.5 border-b border-black/5 dark:border-white/10 space-y-2.5 bg-slate-50/50 dark:bg-black/20">
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar desbravador..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#2c2c2e] text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -558,11 +558,11 @@ export default function PathfindersView({
                 <select
                   value={unitFilter}
                   onChange={(e) => setUnitFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700"
+                  className="px-2.5 py-1.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#2c2c2e] text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none"
                 >
-                  <option value="ALL">Todas Unidades</option>
+                  <option value="ALL" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">Todas Unidades</option>
                   {units.map((u) => (
-                    <option key={u.id} value={u.id}>
+                    <option key={u.id} value={u.id} className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">
                       {u.name}
                     </option>
                   ))}
@@ -571,11 +571,11 @@ export default function PathfindersView({
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700"
+                  className="px-2.5 py-1.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#2c2c2e] text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none"
                 >
-                  <option value="ALL">Todas Classes</option>
+                  <option value="ALL" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">Todas Classes</option>
                   {(catalog.classes || []).map((c) => (
-                    <option key={c.slug} value={c.slug}>
+                    <option key={c.slug} value={c.slug} className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">
                       {c.name}
                     </option>
                   ))}
@@ -583,7 +583,7 @@ export default function PathfindersView({
               </div>
             </div>
 
-            <div className="divide-y divide-slate-100 max-h-[680px] overflow-y-auto">
+            <div className="divide-y divide-black/5 dark:divide-white/5 max-h-[680px] overflow-y-auto">
               {filteredPathfinders.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-500">
                   Nenhum desbravador encontrado.
@@ -598,42 +598,46 @@ export default function PathfindersView({
                         onSelectPathfinderId(pf.id);
                         setCardSelectedClassSlug('ALL');
                       }}
-                      className={`p-3.5 transition cursor-pointer flex items-center justify-between gap-3 ${
+                      className={`p-3 transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
-                          ? 'bg-indigo-50/90 border-l-4 border-l-indigo-600'
-                          : 'hover:bg-slate-50'
+                          ? 'bg-blue-600 text-white'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 text-slate-900 dark:text-white'
                       }`}
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-sm font-bold text-slate-900 truncate">
+                          <span className="text-xs font-semibold truncate">
                             {pf.name}
                           </span>
                           {pf.age && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                              isSelected ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                            }`}>
                               {pf.age}a
                             </span>
                           )}
                           {pf.has_account && (
                             <span
                               title="Este desbravador já ativou a conta individual"
-                              className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-300"
+                              className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${
+                                isSelected ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              }`}
                             >
                               CONTA ATIVA
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-slate-500 truncate mt-0.5">
+                        <div className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
                           {pf.unit_name || 'Sem Unidade'}
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {pf.byClass.map((bc) => (
                             <span
                               key={bc.slug}
-                              className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
-                              style={{
-                                backgroundColor: bc.classInfo?.color || '#475569',
-                              }}
+                              className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                                isSelected ? 'bg-white/20 text-white' : 'text-white'
+                              }`}
+                              style={isSelected ? {} : { backgroundColor: bc.classInfo?.color || '#475569' }}
                             >
                               {bc.classInfo?.name}: {bc.pct}%
                             </span>
@@ -644,21 +648,23 @@ export default function PathfindersView({
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="text-right">
                           <div
-                            className={`text-sm font-extrabold ${
-                              pf.pct >= 85
-                                ? 'text-emerald-700'
+                            className={`text-xs font-semibold ${
+                              isSelected
+                                ? 'text-white'
+                                : pf.pct >= 85
+                                ? 'text-emerald-600 dark:text-emerald-400'
                                 : pf.pct >= 50
-                                ? 'text-amber-700'
-                                : 'text-rose-700'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-rose-600 dark:text-rose-400'
                             }`}
                           >
                             {pf.pct}%
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className={`text-[10px] ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
                             Faltam {pf.remainingReqs}
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                        <ChevronRight className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
                       </div>
                     </div>
                   );
@@ -675,37 +681,37 @@ export default function PathfindersView({
           } space-y-4`}
         >
           {!activePf ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-500">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 p-10 text-center text-slate-500 dark:text-slate-400">
               Selecione um desbravador na lista ao lado para visualizar seu Cartão Virtual.
             </div>
           ) : (
             <>
               {/* Container Geral do Cartão Virtual Individual */}
               <div id="card-container" className="space-y-4">
-                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 p-5 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-xl font-extrabold text-slate-900">
+                        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                           {activePf.name}
                         </h2>
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
                           {activePf.unit_name || 'Sem Unidade'}
                         </span>
                         {activePf.age && (
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-normal bg-black/5 dark:bg-white/10 text-slate-700 dark:text-slate-300">
                             {activePf.age} anos (Nasc: {formatDateBR(activePf.birth_date)})
                           </span>
                         )}
                         {activePf.has_account && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1 no-print">
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1 no-print">
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            Conta do Desbravador Ativa
+                            Conta Ativa
                           </span>
                         )}
                       </div>
                       {activePf.notes && (
-                        <p className="text-xs text-slate-500 mt-1">{activePf.notes}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{activePf.notes}</p>
                       )}
                     </div>
 
@@ -714,17 +720,17 @@ export default function PathfindersView({
                         <>
                           <button
                             onClick={() => openPathfinderInviteModal(activePf)}
-                            className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-300 text-xs font-bold text-teal-900 flex items-center gap-1.5 cursor-pointer"
+                            className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer apple-press"
                             title="Gerar ou copiar o link individual para este desbravador criar a conta dele"
                           >
-                            <Link2 className="w-3.5 h-3.5 text-teal-700" />
+                            <Link2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                             {activePf.has_account
                               ? 'Conta / Link Individual'
                               : 'Link de Conta Individual'}
                           </button>
                           <button
                             onClick={() => openEditPfModal(activePf)}
-                            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                            className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer apple-press"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                             Editar Matrícula
@@ -734,15 +740,15 @@ export default function PathfindersView({
                       <button
                         type="button"
                         onClick={() => setCompactOnePageMode(!compactOnePageMode)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
+                        className={`px-3.5 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all apple-press ${
                           compactOnePageMode
-                            ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
-                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300'
                         }`}
                         title="Alternar entre a ficha detalhada e o modelo simplificado de 1 página A4"
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        {compactOnePageMode ? 'Ver Ficha Completa' : 'Versão Simplificada (1 Página)'}
+                        {compactOnePageMode ? 'Ficha Completa' : 'Simplificada (1 Pág)'}
                       </button>
 
                       <PdfActionGroup
@@ -752,14 +758,14 @@ export default function PathfindersView({
                           mode: compactOnePageMode ? 'simplified' : 'full',
                           classSlug: cardSelectedClassSlug,
                         }}
-                        label={compactOnePageMode ? 'Baixar PDF (1 Página)' : 'Baixar PDF da Ficha'}
-                        colorScheme="slate"
+                        label={compactOnePageMode ? 'PDF (1 Pág)' : 'PDF da Ficha'}
+                        colorScheme="gray"
                         compact={true}
                       />
                     </div>
                   </div>
 
-                  {/* Resumo por Classe Matriculada */}
+                  {/* Resumo por Classe Matriculada (Apple Health/Fitness Cards) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                     {activePf.byClass.map((bc) => (
                       <div
@@ -769,42 +775,47 @@ export default function PathfindersView({
                             cardSelectedClassSlug === bc.slug ? 'ALL' : bc.slug
                           )
                         }
-                        className={`p-3.5 rounded-xl border transition cursor-pointer ${
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer apple-press ${
                           cardSelectedClassSlug === bc.slug
-                            ? 'ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/20'
-                            : 'border-slate-200 hover:bg-slate-50'
+                            ? 'ring-2 ring-blue-500/40 border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10'
+                            : 'border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 hover:bg-slate-100/50 dark:hover:bg-black/30'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={bc.classInfo?.logo_file}
-                              alt={bc.classInfo?.name}
-                              className="w-7 h-7 object-contain"
-                            />
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 p-1"
+                              style={{ backgroundColor: `${bc.classInfo?.color || '#0071e3'}15` }}
+                            >
+                              <img
+                                src={bc.classInfo?.logo_file}
+                                alt={bc.classInfo?.name}
+                                className="w-7 h-7 object-contain"
+                              />
+                            </div>
                             <div>
-                              <div className="text-xs font-extrabold text-slate-900">
+                              <div className="text-xs font-semibold text-slate-900 dark:text-white">
                                 {bc.classInfo?.name}
                               </div>
-                              <div className="text-[11px] text-slate-500">
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                 {bc.approved} de {bc.total} aprovados (Faltam{' '}
-                                <strong>{bc.remaining}</strong>)
+                                <strong className="font-semibold text-slate-700 dark:text-slate-300">{bc.remaining}</strong>)
                               </div>
                             </div>
                           </div>
                           <span
-                            className="text-sm font-extrabold"
-                            style={{ color: bc.classInfo?.color || '#0f172a' }}
+                            className="text-xs font-semibold"
+                            style={{ color: bc.classInfo?.color || '#0071e3' }}
                           >
                             {bc.pct}%
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mt-2">
+                        <div className="w-full h-1.5 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden mt-2.5">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
                               width: `${bc.pct}%`,
-                              backgroundColor: bc.classInfo?.color || '#4f46e5',
+                              backgroundColor: bc.classInfo?.color || '#0071e3',
                             }}
                           />
                         </div>
@@ -812,36 +823,36 @@ export default function PathfindersView({
                     ))}
                   </div>
 
-                  {/* Barra de Filtro: "O que falta para a Investidura?" */}
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 no-print">
-                    <div className="flex items-center gap-2">
+                  {/* Barra de Filtro: "O que falta para a Investidura?" (Apple Segmented Control) */}
+                  <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 no-print">
+                    <div className="inline-flex rounded-xl bg-black/5 dark:bg-white/10 p-0.5 border border-black/5 dark:border-white/5">
                       <button
                         onClick={() => setCardOnlyPending(false)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer apple-press ${
                           !cardOnlyPending
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs font-semibold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         Cartão Completo ({activePf.totalReqs})
                       </button>
                       <button
                         onClick={() => setCardOnlyPending(true)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 cursor-pointer apple-press ${
                           cardOnlyPending
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
+                            ? 'bg-rose-500 text-white shadow-xs font-semibold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
-                        <Award className="w-3.5 h-3.5" />O que falta para a Investidura? (
-                        {activePf.remainingReqs})
+                        <Award className="w-3.5 h-3.5" />
+                        Falta para Investidura ({activePf.remainingReqs})
                       </button>
                     </div>
 
                     {cardSelectedClassSlug !== 'ALL' && (
                       <button
                         onClick={() => setCardSelectedClassSlug('ALL')}
-                        className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                        className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                       >
                         Mostrar todas as classes matriculadas
                       </button>
@@ -953,33 +964,35 @@ export default function PathfindersView({
                     {activePfRequirementsByClass.map((clsBlock) => (
                       <div
                         key={clsBlock.slug}
-                        className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+                        className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 shadow-xs overflow-hidden"
                       >
-                        <div
-                          className="px-5 py-3 text-white flex items-center justify-between"
-                          style={{
-                            backgroundColor: clsBlock.classInfo?.color || '#334155',
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-extrabold">
+                        <div className="px-5 py-3.5 bg-slate-100/90 dark:bg-[#252528]/95 backdrop-blur-md border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: clsBlock.classInfo?.color || '#0071e3' }}
+                            />
+                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
                               {clsBlock.classInfo?.name}
                             </span>
-                            <span className="text-xs bg-black/25 px-2 py-0.5 rounded-full font-semibold">
-                              {clsBlock.requirements.length} itens exibidos
+                            <span className="text-xs bg-black/5 dark:bg-white/10 text-slate-600 dark:text-slate-400 px-2.5 py-0.5 rounded-full font-medium">
+                              {clsBlock.requirements.length} itens
                             </span>
                           </div>
-                          <span className="text-xs font-bold">
+                          <span
+                            className="text-xs font-semibold"
+                            style={{ color: clsBlock.classInfo?.color || '#0071e3' }}
+                          >
                             Concluído: {clsBlock.pct}%
                           </span>
                         </div>
 
                         {clsBlock.requirements.length === 0 ? (
-                          <div className="p-6 text-center text-xs text-emerald-700 font-semibold">
+                          <div className="p-6 text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                             Parabéns! Todos os requisitos desta classe já foram aprovados!
                           </div>
                         ) : (
-                          <div className="divide-y divide-slate-100">
+                          <div className="divide-y divide-black/5 dark:divide-white/5">
                             {clsBlock.requirements.map((req, rIdx) => {
                               const cfg =
                                 STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDENTE;
@@ -997,38 +1010,44 @@ export default function PathfindersView({
                                   onClick={() =>
                                     onOpenRequirementDetail(activePf, req)
                                   }
-                                  className="p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                  className="p-4 hover:bg-slate-50/80 dark:hover:bg-[#252528]/80 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 apple-press"
                                 >
                                   <div className="space-y-1">
                                     <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-xs font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                                      <span
+                                        className="text-xs font-semibold text-white px-2 py-0.5 rounded-md shadow-2xs"
+                                        style={{
+                                          backgroundColor:
+                                            classesMap[req.class_slug]?.color || '#334155',
+                                        }}
+                                      >
                                         {req.code}
                                       </span>
-                                      <span className="text-[11px] font-bold text-slate-500 uppercase">
+                                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                         {req.section}
                                       </span>
                                       {ctxBadge && (
                                         <span
-                                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
+                                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${ctxBadge.badge}`}
                                         >
                                           {ctxBadge.label}
                                         </span>
                                       )}
                                       {attachCount > 0 && (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 flex items-center gap-1">
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1">
                                           <Paperclip className="w-3 h-3" />
-                                          {attachCount} {attachCount === 1 ? 'anexo/foto' : 'anexos/fotos'}
+                                          {attachCount} {attachCount === 1 ? 'anexo' : 'anexos'}
                                         </span>
                                       )}
                                       {hasSubmissionText && (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex items-center gap-1">
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
                                           <MessageSquare className="w-3 h-3" />
                                           Relato enviado
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
-                                      <strong className="font-bold mr-1">
+                                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-normal">
+                                      <strong className="font-semibold text-slate-950 dark:text-white mr-1">
                                         {req.marker}
                                       </strong>
                                       {req.title}
@@ -1046,10 +1065,10 @@ export default function PathfindersView({
                                           return (
                                             <span
                                               key={sub.key}
-                                              className={`text-[10px] px-2 py-0.5 rounded border ${
+                                              className={`text-[10px] px-2 py-0.5 rounded-md border transition-all ${
                                                 done
-                                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                                                  : 'bg-slate-50 text-slate-600 border-slate-200'
+                                                  ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/25 font-semibold'
+                                                  : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-black/5 dark:border-white/5 font-normal'
                                               }`}
                                             >
                                               {sub.key}) {sub.text}
@@ -1059,22 +1078,22 @@ export default function PathfindersView({
                                       </div>
                                     )}
                                     {hasSubmissionText && (
-                                      <p className="text-[11px] text-teal-800 bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 rounded-lg mt-1">
+                                      <p className="text-[11px] text-teal-800 dark:text-teal-300 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg mt-1">
                                         <strong>Como fez:</strong> &ldquo;{req.progress.submission_text}&rdquo;
                                         {req.progress.completed_at && (
-                                          <span className="ml-1.5 text-slate-500">
+                                          <span className="ml-1.5 text-slate-500 dark:text-slate-400">
                                             (em {formatDateBR(req.progress.completed_at)})
                                           </span>
                                         )}
                                       </p>
                                     )}
                                     {hasReviewNotes && (
-                                      <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg mt-1">
+                                      <p className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg mt-1">
                                         <strong>Feedback do Líder:</strong> &ldquo;{req.progress.review_notes}&rdquo;
                                       </p>
                                     )}
                                     {req.progress?.notes && (
-                                      <p className="text-[11px] text-indigo-700 italic">
+                                      <p className="text-[11px] text-blue-700 dark:text-blue-300 italic">
                                         Obs: &ldquo;{req.progress.notes}&rdquo;
                                       </p>
                                     )}
@@ -1082,7 +1101,7 @@ export default function PathfindersView({
 
                                   <div className="shrink-0 flex sm:flex-col items-end justify-between gap-1.5">
                                     <span
-                                      className={`px-3 py-1 rounded-xl border text-xs font-bold ${cfg.bgClass}`}
+                                      className={`px-3 py-1 rounded-full border text-xs font-semibold ${cfg.bgClass}`}
                                     >
                                       {cfg.label}
                                     </span>

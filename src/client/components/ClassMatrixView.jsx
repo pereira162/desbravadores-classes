@@ -307,7 +307,7 @@ export default function ClassMatrixView({
 
   return (
     <div className="space-y-5">
-      {/* Seletor das Classes Base */}
+      {/* Seletor das Classes Base (Apple Segmented Grid Cards) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 no-print" data-tour="matrix-class-selector">
         {visibleBaseClasses.map((bc) => {
           const isSelected = selectedBaseSlug === bc.baseSlug;
@@ -318,27 +318,28 @@ export default function ClassMatrixView({
                 onSelectBaseSlug(bc.baseSlug);
                 setSectionFilter('ALL');
               }}
-              className={`p-3 rounded-2xl border text-left transition flex items-center gap-3 cursor-pointer ${
+              className={`p-3 rounded-2xl border text-left transition-all flex items-center gap-3 cursor-pointer apple-press ${
                 isSelected
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                  : 'bg-white text-slate-800 border-slate-200 hover:bg-slate-50'
+                  ? 'bg-white dark:bg-[#1c1c1e] text-slate-900 dark:text-white border-blue-500/40 shadow-sm ring-2 ring-blue-500/20'
+                  : 'bg-white/80 dark:bg-[#1c1c1e]/70 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5 hover:bg-white dark:hover:bg-[#1c1c1e]'
               }`}
             >
-              <img
-                src={getAssetUrl(`/data/cartoes-oficiais/logos/logo_${bc.baseSlug}.png`)}
-                alt={bc.label}
-                className="w-9 h-9 object-contain shrink-0"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 p-1"
+                style={{ backgroundColor: `${bc.color}15` }}
+              >
+                <img
+                  src={getAssetUrl(`/data/cartoes-oficiais/logos/logo_${bc.baseSlug}.png`)}
+                  alt={bc.label}
+                  className="w-8 h-8 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
               <div className="min-w-0">
-                <div className="text-xs font-extrabold truncate">{bc.label}</div>
-                <div
-                  className={`text-[11px] font-medium ${
-                    isSelected ? 'text-slate-300' : 'text-slate-500'
-                  }`}
-                >
+                <div className="text-xs font-semibold tracking-tight truncate">{bc.label}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
                   {bc.age} anos
                 </div>
               </div>
@@ -347,32 +348,38 @@ export default function ClassMatrixView({
         })}
       </div>
 
-      {/* Cabeçalho da Classe Selecionada + Links Oficiais + PDFs Separados por Instrutor */}
+      {/* Cabeçalho da Classe Selecionada + Links Oficiais + PDFs */}
       {regularClass && (
-        <div
-          className="rounded-2xl p-5 text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
-          style={{
-            background: `linear-gradient(135deg, ${regularClass.color} 0%, #0f172a 100%)`,
-          }}
-        >
-          <div className="flex items-start gap-4">
-            <img
-              src={regularClass.logo_file}
-              alt={regularClass.name}
-              className="w-14 h-14 object-contain bg-white/95 p-1.5 rounded-2xl shadow-sm shrink-0"
-            />
+        <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/10 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 relative overflow-hidden">
+          {/* Subtle Apple Ambient Glow with class brand color */}
+          <div
+            className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl pointer-events-none opacity-15 dark:opacity-20"
+            style={{ backgroundColor: regularClass.color || '#0071e3' }}
+          />
+
+          <div className="flex items-start gap-4 relative z-10">
+            <div
+              className="w-14 h-14 rounded-2xl p-1.5 flex items-center justify-center shrink-0 shadow-xs border border-black/5 dark:border-white/10"
+              style={{ backgroundColor: `${regularClass.color}15` }}
+            >
+              <img
+                src={regularClass.logo_file}
+                alt={regularClass.name}
+                className="w-11 h-11 object-contain"
+              />
+            </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-extrabold">
-                  Ficha de Controle do Instrutor: {regularClass.name}
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Controle do Instrutor: {regularClass.name}
                   {advancedClass ? ` & ${advancedClass.name}` : ''}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-xs">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/10 text-slate-700 dark:text-slate-300">
                   {regularClass.min_age} anos
                 </span>
               </div>
-              <p className="text-xs text-white/85 mt-1">
-                {enrolledPathfinders.length} desbravadores exibidos •{' '}
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {enrolledPathfinders.length} desbravadores matriculados •{' '}
                 {filteredRequirements.length} requisitos •{' '}
                 {classInstructors.length > 0
                   ? `${classInstructors.length} instrutor(es) vinculado(s)`
@@ -381,7 +388,7 @@ export default function ClassMatrixView({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 no-print" data-tour="matrix-pdf-actions">
+          <div className="flex flex-wrap items-center gap-2 relative z-10 no-print" data-tour="matrix-pdf-actions">
             <PdfActionGroup
               docType="INSTRUCTOR_CONTROL"
               params={{
@@ -391,16 +398,16 @@ export default function ClassMatrixView({
                 instructorId: instructorFilter,
               }}
               label="Controle do Instrutor (1 Pág)"
-              colorScheme="amber"
+              colorScheme="blue"
             />
             {regularClass.source_url && (
               <a
                 href={regularClass.source_url}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold flex items-center gap-1.5 backdrop-blur-xs transition"
+                className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition apple-press"
               >
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-3.5 h-3.5" />
                 Cartão Oficial DSA
               </a>
             )}
@@ -414,17 +421,17 @@ export default function ClassMatrixView({
                 instructorId: instructorFilter,
               }}
               label="PDF da Matriz"
-              colorScheme="white"
+              colorScheme="gray"
             />
           </div>
         </div>
       )}
 
-      {/* Barra de Filtros da Matriz */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 no-print">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Alternador Regular / Avançada / Ambas */}
-          <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+      {/* Barra de Filtros da Matriz (Apple Inset Control Bar) */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 p-3.5 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 no-print">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Alternador Regular / Avançada / Ambas (Apple Segmented Control) */}
+          <div className="inline-flex rounded-xl bg-black/5 dark:bg-white/10 p-0.5 border border-black/5 dark:border-white/5">
             {[
               { id: 'BOTH', label: 'Regular + Avançada' },
               { id: 'REGULAR', label: 'Só Regular' },
@@ -436,10 +443,10 @@ export default function ClassMatrixView({
                   onSelectMode(m.id);
                   setSectionFilter('ALL');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer apple-press ${
                   selectedMode === m.id
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-slate-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {m.label}
@@ -447,17 +454,17 @@ export default function ClassMatrixView({
             ))}
           </div>
 
-          {/* Filtro por Instrutor / Turma (quando houver instrutores na classe) */}
+          {/* Filtro por Instrutor / Turma */}
           {classInstructors.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-slate-800 border border-amber-300 dark:border-slate-700 rounded-xl px-3 py-1.5" data-tour="matrix-instructor-filter">
-              <Users className="w-3.5 h-3.5 text-amber-600" />
+            <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-xl px-3 py-1.5" data-tour="matrix-instructor-filter">
+              <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <select
                 value={instructorFilter}
                 onChange={(e) => setInstructorFilter(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
+                className="bg-transparent text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none"
                 title="Filtrar matriz e PDFs por instrutor da classe"
               >
-                <option value="ALL">
+                <option value="ALL" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">
                   Todos os Instrutores ({allClassPathfinders.length} desbravadores)
                 </option>
                 {classInstructors.map((inst) => {
@@ -465,7 +472,7 @@ export default function ClassMatrixView({
                     allClassPathfinders.some((p) => p.id === id)
                   ).length;
                   return (
-                    <option key={inst.id} value={inst.id}>
+                    <option key={inst.id} value={inst.id} className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">
                       {inst.name} {count > 0 ? `(${count} na turma)` : '(Turma completa)'}
                     </option>
                   );
@@ -476,7 +483,7 @@ export default function ClassMatrixView({
                 <button
                   type="button"
                   onClick={handleOpenDistributionModal}
-                  className="ml-1 px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-extrabold transition cursor-pointer"
+                  className="ml-1 px-2.5 py-0.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-semibold transition cursor-pointer apple-press"
                   title="Dividir desbravadores desta classe entre os instrutores"
                 >
                   Dividir Turmas
@@ -486,16 +493,16 @@ export default function ClassMatrixView({
           )}
 
           {/* Filtro de Seção */}
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+          <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-xl px-3 py-1.5">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={sectionFilter}
               onChange={(e) => setSectionFilter(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none max-w-[220px]"
+              className="bg-transparent text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none max-w-[220px]"
             >
-              <option value="ALL">Todas as Seções ({classRequirements.length})</option>
+              <option value="ALL" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">Todas as Seções ({classRequirements.length})</option>
               {availableSections.map((sec) => (
-                <option key={sec} value={sec}>
+                <option key={sec} value={sec} className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">
                   {sec}
                 </option>
               ))}
@@ -506,11 +513,11 @@ export default function ClassMatrixView({
           <select
             value={unitFilter}
             onChange={(e) => setUnitFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none"
+            className="bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none"
           >
-            <option value="ALL">Todas as Unidades</option>
+            <option value="ALL" className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">Todas as Unidades</option>
             {units.map((u) => (
-              <option key={u.id} value={u.id}>
+              <option key={u.id} value={u.id} className="text-slate-900 dark:bg-[#1c1c1e] dark:text-white">
                 {u.name}
               </option>
             ))}
@@ -524,7 +531,7 @@ export default function ClassMatrixView({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar requisito ou código..."
-              className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 w-52"
+              className="pl-8 pr-3 py-1.5 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
             />
           </div>
         </div>
@@ -533,15 +540,15 @@ export default function ClassMatrixView({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setFastClickMode((v) => !v)}
-            className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer apple-press ${
               fastClickMode
-                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-black/5 dark:bg-white/10 text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/15'
             }`}
             title="Quando ativo, clicar na célula alterna diretamente o status sem abrir a janela de detalhes"
           >
-            <Zap className="w-4 h-4" />
-            Modo Clique Rápido: {fastClickMode ? 'ATIVADO' : 'Desativado'}
+            <Zap className="w-3.5 h-3.5" />
+            Clique Rápido: {fastClickMode ? 'Ativado' : 'Desativado'}
           </button>
         </div>
       </div>
@@ -566,25 +573,25 @@ export default function ClassMatrixView({
         </div>
       </div>
 
-      {/* Tabela Matriz (Requisitos x Desbravadores) */}
+      {/* Tabela Matriz (Requisitos x Desbravadores - Apple Numbers Style) */}
       {enrolledPathfinders.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-500">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 p-10 text-center text-slate-500 dark:text-slate-400">
           Nenhum desbravador matriculado nesta classe para o filtro de unidade selecionado.
         </div>
       ) : (
         <div
           id="matrix-table-container"
           data-tour="matrix-grid-table"
-          className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+          className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/5 dark:border-white/10 shadow-xs overflow-hidden"
         >
           <div className="overflow-auto max-h-[calc(100vh-140px)] matrix-scroll">
             <table className="w-max min-w-full border-collapse text-left">
-              <thead className="sticky top-0 z-30 shadow-xs">
-                <tr className="bg-slate-900 text-white border-b border-slate-800">
-                  <th className="sticky left-0 top-0 z-40 bg-slate-900 px-3 sm:px-4 py-3.5 min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px] text-xs font-extrabold uppercase tracking-wider border-r border-slate-800">
+              <thead className="sticky top-0 z-30 shadow-2xs">
+                <tr className="bg-slate-100/95 dark:bg-[#252528]/95 backdrop-blur-md text-slate-800 dark:text-slate-100 border-b border-black/5 dark:border-white/10">
+                  <th className="sticky left-0 top-0 z-40 bg-slate-100 dark:bg-[#252528] px-3.5 sm:px-4 py-3 min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px] text-xs font-semibold uppercase tracking-wider border-r border-black/5 dark:border-white/10 text-slate-700 dark:text-slate-300">
                     Requisito Oficial
                   </th>
-                  <th className="sticky top-0 z-30 bg-slate-900 px-2 sm:px-2.5 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-slate-800 w-20 sm:w-24 no-print">
+                  <th className="sticky top-0 z-30 bg-slate-100 dark:bg-[#252528] px-2 sm:px-2.5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider border-r border-black/5 dark:border-white/10 w-20 sm:w-24 text-slate-600 dark:text-slate-400 no-print">
                     Lote
                   </th>
                   {enrolledPathfinders.map((pf) => {
@@ -592,26 +599,26 @@ export default function ClassMatrixView({
                     return (
                       <th
                         key={pf.id}
-                        className="sticky top-0 z-30 bg-slate-900 px-2 sm:px-2.5 py-3 text-center min-w-[100px] sm:min-w-[110px] max-w-[130px] border-r border-slate-800 align-bottom"
+                        className="sticky top-0 z-30 bg-slate-100 dark:bg-[#252528] px-2 sm:px-2.5 py-2.5 text-center min-w-[105px] sm:min-w-[115px] max-w-[130px] border-r border-black/5 dark:border-white/10 align-bottom"
                       >
                         <button
                           onClick={() => onSelectPathfinderCard(pf.id)}
-                          className="text-xs font-bold text-white hover:text-amber-300 transition line-clamp-1 cursor-pointer mx-auto"
+                          className="text-xs font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition line-clamp-1 cursor-pointer mx-auto"
                           title={`Abrir Cartão Virtual de ${pf.name}`}
                         >
                           {pf.name.split(' ').slice(0, 2).join(' ')}
                         </button>
-                        <div className="text-[10px] text-slate-400 truncate">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                           {pf.unit_name}
                         </div>
-                        <div className="mt-1.5 flex items-center justify-center gap-1">
+                        <div className="mt-1 flex items-center justify-center">
                           <span
-                            className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                               stat.pct >= 85
-                                ? 'bg-emerald-500/20 text-emerald-300'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                 : stat.pct >= 50
-                                ? 'bg-amber-500/20 text-amber-300'
-                                : 'bg-rose-500/20 text-rose-300'
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
                             }`}
                           >
                             {stat.pct}% ({stat.approved}/{stat.total})
@@ -623,17 +630,17 @@ export default function ClassMatrixView({
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-black/5 dark:divide-white/5">
                 {groupedSections.map((group) => (
                   <React.Fragment key={group.key}>
                     {/* Linha divisória da Seção */}
-                    <tr className="bg-slate-100/95 dark:bg-slate-800/95 border-y border-slate-300 dark:border-slate-700">
+                    <tr className="bg-slate-50/90 dark:bg-[#1a1a1c]/90 border-y border-black/5 dark:border-white/10">
                       <td
                         colSpan={enrolledPathfinders.length + 2}
-                        className="px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200"
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
                       >
                         <span
-                          className={`inline-block px-2 py-0.5 rounded mr-2 text-[10px] text-white ${
+                          className={`inline-block px-2 py-0.5 rounded-md mr-2 text-[10px] font-medium text-white ${
                             group.classType === 'AVANCADA'
                               ? 'bg-amber-600'
                               : 'bg-slate-700'
@@ -650,13 +657,13 @@ export default function ClassMatrixView({
                       return (
                         <tr
                           key={req.id}
-                          className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition group"
+                          className="hover:bg-slate-50/80 dark:hover:bg-[#252528]/80 transition group"
                         >
                           {/* Coluna Fixa: Descrição do Requisito */}
-                          <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-850 px-3 sm:px-4 py-3 border-r border-slate-200 dark:border-slate-800 align-top min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px]">
+                          <td className="sticky left-0 z-10 bg-white dark:bg-[#1c1c1e] group-hover:bg-slate-50/80 dark:group-hover:bg-[#252528]/80 px-3 sm:px-4 py-3 border-r border-black/5 dark:border-white/10 align-top min-w-[180px] sm:min-w-[320px] max-w-[220px] sm:max-w-[400px]">
                             <div className="flex items-start gap-2.5">
                               <span
-                                className="px-2 py-0.5 rounded text-[11px] font-extrabold text-white shrink-0 mt-0.5"
+                                className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-white shrink-0 mt-0.5 shadow-2xs"
                                 style={{
                                   backgroundColor:
                                     classesMap[req.class_slug]?.color || '#334155',
@@ -665,17 +672,17 @@ export default function ClassMatrixView({
                                 {req.code}
                               </span>
                               <div className="min-w-0">
-                                <div className="text-xs text-slate-900 font-medium leading-relaxed">
-                                  <strong className="font-bold text-slate-950 mr-1">
+                                <div className="text-xs text-slate-900 dark:text-slate-100 font-normal leading-relaxed">
+                                  <strong className="font-semibold text-slate-950 dark:text-white mr-1">
                                     {req.marker}
                                   </strong>
                                   {req.title}
                                 </div>
                                 {subCount > 0 && (
-                                  <div className="mt-1 space-y-0.5 text-[10px] text-slate-600 font-normal">
+                                  <div className="mt-1 space-y-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-normal">
                                     {req.subitems.map((s) => (
                                       <div key={s.key} className="leading-snug">
-                                        <strong className="font-bold text-slate-700">{s.key})</strong> {s.text}
+                                        <strong className="font-semibold text-slate-700 dark:text-slate-300">{s.key})</strong> {s.text}
                                       </div>
                                     ))}
                                   </div>
@@ -685,15 +692,15 @@ export default function ClassMatrixView({
                           </td>
 
                           {/* Botão de Aprovar Linha em Lote */}
-                          <td className="px-2 py-2.5 text-center border-r border-slate-200 align-middle no-print">
+                          <td className="px-2 py-2.5 text-center border-r border-black/5 dark:border-white/10 align-middle no-print">
                             <button
                               onClick={() =>
                                 onOpenBulkSign(req, enrolledPathfinders)
                               }
-                              className="px-2 py-1 rounded-lg border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 text-[11px] font-bold text-slate-700 hover:text-emerald-800 inline-flex items-center gap-1 transition cursor-pointer"
+                              className="px-2.5 py-1 rounded-full border border-black/10 dark:border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 transition cursor-pointer apple-press"
                               title="Assinar este requisito para vários desbravadores de uma só vez"
                             >
-                              <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              <CheckSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                               Linha
                             </button>
                           </td>
@@ -707,7 +714,7 @@ export default function ClassMatrixView({
                               return (
                                 <td
                                   key={pf.id}
-                                  className="px-2 py-2 text-center border-r border-slate-100 bg-slate-50/60 text-[10px] text-slate-300"
+                                  className="px-2 py-2 text-center border-r border-black/5 dark:border-white/5 bg-slate-50/40 dark:bg-black/20 text-[10px] text-slate-400 dark:text-slate-600"
                                   title="Desbravador não matriculado nesta modalidade"
                                 >
                                   N/M
@@ -730,18 +737,14 @@ export default function ClassMatrixView({
                             return (
                               <td
                                 key={pf.id}
-                                className="p-1.5 border-r border-slate-100 align-middle text-center"
+                                className="p-1.5 border-r border-black/5 dark:border-white/10 align-middle text-center"
                               >
                                 <button
                                   onClick={() =>
                                     handleCellClick(pf, req, isEnrolledInReqClass)
                                   }
                                   disabled={isBusy}
-                                  className={`w-full py-2 px-1.5 rounded-xl border text-[11px] transition flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
-                                    st === 'PENDENTE'
-                                      ? `${cfg.cellClass} bg-white border-slate-300`
-                                      : cfg.cellClass
-                                  }`}
+                                  className={`w-full py-1.5 px-1.5 rounded-xl border text-[11px] transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer apple-press ${cfg.cellClass}`}
                                   title={`${pf.name} — ${req.code}: ${cfg.label}${
                                     pr?.notes ? `\nObs: ${pr.notes}` : ''
                                   }`}
@@ -769,25 +772,25 @@ export default function ClassMatrixView({
         </div>
       )}
 
-      {/* Modal de Divisão de Desbravadores entre Múltiplos Instrutores da Classe */}
+      {/* Modal de Divisão de Desbravadores entre Múltiplos Instrutores da Classe (Apple Sheet Style) */}
       {distributionModalOpen && (
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget && !savingDistribution) setDistributionModalOpen(false);
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4 animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-fade-in"
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="bg-white dark:bg-[#1c1c1e] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-3.5 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-md flex items-center justify-between border-b border-black/5 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold">
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                     Dividir Turmas • Classe {regularClass?.name || selectedBaseSlug}
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Distribua os desbravadores entre os instrutores desta classe para gerar listas e PDFs separados
                   </p>
                 </div>
@@ -795,14 +798,15 @@ export default function ClassMatrixView({
               <button
                 type="button"
                 onClick={() => setDistributionModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Fechar (Esc)"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSaveDistribution} className="flex-1 overflow-y-auto p-6 space-y-5">
-              <p className="text-xs text-slate-600 dark:text-slate-300">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Selecione abaixo quais desbravadores pertencem à turma de cada instrutor. Se um instrutor ficar sem nenhum desbravador marcado, ele continuará visualizando a classe completa.
               </p>
 
@@ -812,14 +816,14 @@ export default function ClassMatrixView({
                   return (
                     <div
                       key={inst.id}
-                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-3"
+                      className="p-4 rounded-2xl border border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-black/20 space-y-3"
                     >
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                      <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
                         <div>
-                          <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-white">
                             {inst.name}
                           </div>
-                          <div className="text-[11px] text-slate-500">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
                             {inst.custom_role_title || inst.role} • {selectedIds.length} selecionado(s)
                           </div>
                         </div>
@@ -834,7 +838,7 @@ export default function ClassMatrixView({
                                   : allClassPathfinders.map((p) => p.id),
                             }))
                           }
-                          className="text-[11px] font-bold text-amber-600 hover:underline cursor-pointer"
+                          className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                         >
                           {selectedIds.length === allClassPathfinders.length
                             ? 'Limpar todos'
@@ -848,10 +852,10 @@ export default function ClassMatrixView({
                           return (
                             <label
                               key={pf.id}
-                              className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition ${
+                              className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-all apple-press ${
                                 checked
-                                  ? 'bg-amber-50 dark:bg-slate-900 border-amber-400 font-bold text-slate-900 dark:text-white'
-                                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                                  ? 'bg-blue-500/15 border-blue-500/30 text-blue-900 dark:text-blue-200 font-semibold'
+                                  : 'bg-white dark:bg-[#2c2c2e] border-black/5 dark:border-white/10 text-slate-700 dark:text-slate-300'
                               }`}
                             >
                               <div className="flex items-center gap-2">
@@ -859,7 +863,7 @@ export default function ClassMatrixView({
                                   type="checkbox"
                                   checked={checked}
                                   onChange={() => handleToggleInstructorPf(inst.id, pf.id)}
-                                  className="rounded text-amber-500"
+                                  className="rounded text-blue-600 focus:ring-blue-500"
                                 />
                                 <span>{pf.name}</span>
                               </div>
@@ -873,18 +877,18 @@ export default function ClassMatrixView({
                 })}
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex justify-end gap-2 pt-3 border-t border-black/5 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setDistributionModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  className="px-4 py-2 rounded-full text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingDistribution}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-sm cursor-pointer apple-press"
                 >
                   <Save className="w-3.5 h-3.5" />
                   {savingDistribution ? 'Salvando...' : 'Salvar Divisão de Turmas'}

@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
- * Servidor MCP (Model Context Protocol) via Stdio para o SGC Classes • Desbravadores.
+ * Camada Core JSON-RPC + Stdio para o SGC Classes • Desbravadores
+ * (Seguindo a Regra de Ouro da skill `mcp-universal-builder`).
  *
- * Modos de operação:
- * 1. Local direto (SQLite local): quando executado no próprio servidor/workspace.
- * 2. Remoto via HTTPS JSON-RPC: quando SGC_API_URL e SGC_MCP_API_KEY são fornecidos.
+ * - Nunca escreve logs no `stdout` (redireciona `console.log` para `stderr`).
+ * - Ignora resposta em `stdout` para notificações JSON-RPC (`id == null`).
+ * - Opera localmente no SQLite ou remotamente via HTTP (`/mcp`) se `SGC_API_URL` for definido.
  */
+console.log = (...args) => console.error(...args);
+
 const readline = require('node:readline');
 const { prodDb, testDb, initDatabase } = require('../server/db');
 const {
@@ -44,7 +47,6 @@ function resolveLocalAuthContext(targetDb) {
     }
   }
 
-  // Fallback para conta Diretor/Admin local
   const director =
     targetDb
       .prepare("SELECT * FROM users WHERE role IN ('DIRETOR', 'GESTOR', 'ADMIN') AND active = 1 LIMIT 1")
@@ -73,26 +75,31 @@ async function processLine(line) {
     return;
   }
 
-  // Modo Remoto via HTTP JSON-RPC se SGC_API_URL e SGC_MCP_API_KEY estiverem definidos
-  if (SGC_API_URL && SGC_MCP_API_KEY && SGC_API_URL.startsWith('http')) {
+  if (SGC_API_URL && SGC_API_URL.startsWith('http')) {
     try {
-      const endpoint = `${SGC_API_URL.replace(/\/$/, '')}/api/mcp/rpc`;
+      const endpoint = `${SGC_API_URL.replace(/\/$/, '')}/mcp`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-MCP-API-Key': SGC_MCP_API_KEY,
+          ...(SGC_MCP_API_KEY ? { Authorization: `Bearer ${SGC_MCP_API_KEY}`, 'X-MCP-API-Key': SGC_MCP_API_KEY } : {}),
           ...(USE_TEST_DB ? { 'X-Test-Mode': 'true' } : {}),
         },
         body: JSON.stringify(rpcRequest),
       });
+      if (res.status === 204 || rpcRequest.id === undefined || rpcRequest.id === null) {
+        return;
+      }
       const json = await res.json();
-      process.stdout.write(`${JSON.stringify(json)}\n`);
+      if (json !== null && json !== undefined) {
+        process.stdout.write(`${JSON.stringify(json)}\n`);
+      }
       return;
     } catch (err) {
+      if (rpcRequest.id === undefined || rpcRequest.id === null) return;
       const errResp = {
         jsonrpc: '2.0',
-        id: rpcRequest.id || null,
+        id: rpcRequest.id,
         error: { code: -32000, message: `Falha na conexão MCP remota: ${err.message}` },
       };
       process.stdout.write(`${JSON.stringify(errResp)}\n`);
@@ -103,7 +110,7 @@ async function processLine(line) {
   const targetDb = ensureLocalDb();
   const authContext = resolveLocalAuthContext(targetDb);
   const response = await handleMcpJsonRpcRequest(rpcRequest, authContext, targetDb);
-  if (rpcRequest.id !== undefined && rpcRequest.id !== null) {
+  if (response !== null && response !== undefined && rpcRequest.id !== undefined && rpcRequest.id !== null) {
     process.stdout.write(`${JSON.stringify(response)}\n`);
   }
 }

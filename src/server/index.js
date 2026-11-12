@@ -40,9 +40,9 @@ const {
   getEffectiveEquivalenceData,
   computeUnificationAlerts,
   executeMcpTool,
-  processMcpChatCommand,
   handleMcpJsonRpcRequest,
 } = require('./mcpHandler');
+const { createMcpRouter } = require('./mcpTransport');
 const {
   getEffectiveUnifications,
   computeAbsorptionRecommendations,
@@ -3474,10 +3474,7 @@ app.get('/api/feedback', requireAuth, (req, res) => {
 // ============================================================================
 // 10.4. MCP SERVER (MODEL CONTEXT PROTOCOL) & AI ASSISTANT ROUTES
 // ============================================================================
-app.get('/api/mcp/tools', requireAuth, (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Apenas Diretor e Gestor possuem acesso às ferramentas MCP.' });
-  }
+app.get('/api/mcp/tools', (_req, res) => {
   res.json({ tools: MCP_TOOLS });
 });
 
@@ -3563,121 +3560,8 @@ app.delete('/api/mcp/keys/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/mcp/chat', requireAuth, async (req, res) => {
-  if (!['ADMIN', 'GESTOR', 'DIRETOR'].includes(req.user.role)) {
-    return res.status(403).json({
-      error: 'O Assistente de IA e Comandos MCP está disponível exclusivamente para o Diretor e Gestor.',
-    });
-  }
-  try {
-    const { prompt, toolName, toolArgs } = req.body || {};
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.headers['x-forwarded-host'] || req.headers.host || '137.131.209.239.nip.io';
-    const baseUrl = `${proto}://${host}`;
-
-    if (toolName) {
-      const data = await executeMcpTool(
-        toolName,
-        toolArgs || {},
-        { user: req.user, allowedTools: ['*'], baseUrl },
-        db
-      );
-      return res.json({
-        reply: `Ferramenta **${toolName}** executada com sucesso!`,
-        toolUsed: toolName,
-        pdfLinks: toolName === 'get_pdf_link' ? [data] : [],
-        data,
-      });
-    }
-
-    const result = await processMcpChatCommand({
-      prompt,
-      user: req.user,
-      targetDb: db,
-      baseUrl,
-    });
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message || 'Erro ao executar comando IA/MCP.' });
-  }
-});
-
-// Endpoint JSON-RPC 2.0 padrão MCP para agentes externos (Claude Desktop, Cursor, Antigravity, scripts)
-app.post('/api/mcp/rpc', async (req, res) => {
-  try {
-    const apiKeyHeader =
-      req.headers['x-mcp-api-key'] ||
-      (req.headers.authorization?.startsWith('Bearer sgc_mcp_')
-        ? req.headers.authorization.slice(7)
-        : null);
-
-    let authUser = null;
-    let allowedTools = ['*'];
-
-    if (apiKeyHeader) {
-      const keyHash = hashMcpApiKey(apiKeyHeader);
-      const keyRow = db
-        .prepare('SELECT * FROM mcp_api_keys WHERE api_key_hash = ? AND active = 1')
-        .get(keyHash);
-      if (!keyRow) {
-        return res.status(401).json({
-          jsonrpc: '2.0',
-          id: req.body?.id || null,
-          error: { code: -32001, message: 'Chave MCP inválida ou revogada.' },
-        });
-      }
-      db.prepare('UPDATE mcp_api_keys SET last_used_at = ? WHERE id = ?').run(
-        new Date().toISOString(),
-        keyRow.id
-      );
-      const uRow = db.prepare('SELECT * FROM users WHERE id = ? AND active = 1').get(keyRow.user_id);
-      if (!uRow) {
-        return res.status(401).json({
-          jsonrpc: '2.0',
-          id: req.body?.id || null,
-          error: { code: -32001, message: 'Usuário vinculado à chave MCP está inativo.' },
-        });
-      }
-      authUser = formatUser(uRow);
-      allowedTools = JSON.parse(keyRow.allowed_tools_json || '["*"]');
-    } else {
-      const authHeader = req.headers.authorization || '';
-      const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-      const payload = verifyToken(jwt);
-      if (payload?.id) {
-        const uRow = db.prepare('SELECT * FROM users WHERE id = ? AND active = 1').get(payload.id);
-        if (uRow && ['ADMIN', 'GESTOR', 'DIRETOR'].includes(uRow.role)) {
-          authUser = formatUser(uRow);
-        }
-      }
-    }
-
-    if (!authUser) {
-      return res.status(401).json({
-        jsonrpc: '2.0',
-        id: req.body?.id || null,
-        error: { code: -32001, message: 'Forneça o header X-MCP-API-Key válido.' },
-      });
-    }
-
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.headers['x-forwarded-host'] || req.headers.host || '137.131.209.239.nip.io';
-    const baseUrl = `${proto}://${host}`;
-
-    const rpcResponse = await handleMcpJsonRpcRequest(
-      req.body,
-      { user: authUser, allowedTools, baseUrl },
-      db
-    );
-    res.json(rpcResponse);
-  } catch (err) {
-    res.status(500).json({
-      jsonrpc: '2.0',
-      id: req.body?.id || null,
-      error: { code: -32603, message: err.message },
-    });
-  }
-});
+// Gateway MCP universal (skill mcp-universal-builder): /mcp, /sse, /messages, /api/mcp/rpc, OAuth 2.0 + PKCE
+app.use(createMcpRouter({ formatUser }));
 
 // ============================================================================
 // 10.5. ROTAS DE PDF ESTRUTURADO EM CÓDIGO COM CACHE E LINKS SEGUROS

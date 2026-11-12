@@ -1,28 +1,137 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
+  :root {
+    --system-bg: #f5f5f7;
+    --system-card-bg: #ffffff;
+    --system-secondary-card: #f9f9fb;
+    --system-border: rgba(0, 0, 0, 0.07);
+    --system-border-subtle: rgba(0, 0, 0, 0.04);
+    --system-separator: rgba(60, 60, 67, 0.12);
+    --system-label: #1d1d1f;
+    --system-secondary-label: #6e6e73;
+    --system-tertiary-label: #86868b;
+    --apple-blue: #0071e3;
+    --apple-blue-hover: #0077ed;
+  }
+
+  html.dark {
+    --system-bg: #000000;
+    --system-card-bg: #1c1c1e;
+    --system-secondary-card: #2c2c2e;
+    --system-border: rgba(255, 255, 255, 0.08);
+    --system-border-subtle: rgba(255, 255, 255, 0.04);
+    --system-separator: rgba(84, 84, 88, 0.35);
+    --system-label: #f5f5f7;
+    --system-secondary-label: #86868b;
+    --system-tertiary-label: #6e6e73;
+    --apple-blue: #0a84ff;
+    --apple-blue-hover: #409cff;
+  }
+
   body {
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Inter", system-ui, sans-serif;
+    background-color: var(--system-bg);
+    color: var(--system-label);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.011em;
   }
 }
 
-/* Custom Scrollbar for Class Matrix */
-.matrix-scroll::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
-}
-.matrix-scroll::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-.matrix-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-.matrix-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+/* ==========================================
+   APPLE DESIGN SYSTEM MATERIALS & LIQUID GLASS
+   ========================================== */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+html.dark .apple-glass {
+  background: rgba(28, 28, 30, 0.82);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apple-glass-nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+html.dark .apple-glass-nav {
+  background: rgba(18, 18, 20, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apple-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 14px rgba(0, 0, 0, 0.02);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms ease;
+}
+
+html.dark .apple-card {
+  background-color: #1c1c1e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.apple-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+html.dark .apple-card-hover:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+}
+
+/* ==========================================
+   INTERACTIVE FEEDBACK & SPRINGS (WWDC 2018)
+   ========================================== */
+.apple-press {
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.apple-press:active {
+  transform: scale(0.97);
+  opacity: 0.88;
+}
+
+/* Custom Apple Scrollbar */
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Print Styles */
 @media print {
   .no-print {
     display: none !important;
@@ -41,33 +150,33 @@
 }
 
 /* ==========================================
-   TEMAS DE CORES DO CLUBE
+   TEMAS DE CORES DO CLUBE (COM ACENTO REFINADO)
    ========================================== */
 :root,
 .theme-amber {
-  --club-accent: #f59e0b;
-  --club-accent-hover: #d97706;
-  --club-accent-soft: rgba(245, 158, 11, 0.14);
+  --club-accent: #d97706;
+  --club-accent-hover: #b45309;
+  --club-accent-soft: rgba(217, 119, 6, 0.12);
 }
 .theme-blue {
-  --club-accent: #3b82f6;
-  --club-accent-hover: #2563eb;
-  --club-accent-soft: rgba(59, 130, 246, 0.14);
+  --club-accent: #0071e3;
+  --club-accent-hover: #005bb5;
+  --club-accent-soft: rgba(0, 113, 227, 0.12);
 }
 .theme-emerald {
-  --club-accent: #10b981;
-  --club-accent-hover: #059669;
-  --club-accent-soft: rgba(16, 185, 129, 0.14);
+  --club-accent: #059669;
+  --club-accent-hover: #047857;
+  --club-accent-soft: rgba(5, 150, 105, 0.12);
 }
 .theme-crimson {
   --club-accent: #e11d48;
   --club-accent-hover: #be123c;
-  --club-accent-soft: rgba(225, 29, 72, 0.14);
+  --club-accent-soft: rgba(225, 29, 72, 0.12);
 }
 .theme-indigo {
-  --club-accent: #6366f1;
-  --club-accent-hover: #4f46e5;
-  --club-accent-soft: rgba(99, 102, 241, 0.14);
+  --club-accent: #5856d6;
+  --club-accent-hover: #4341b5;
+  --club-accent-soft: rgba(88, 86, 214, 0.12);
 }
 
 .club-accent-bg {
@@ -83,93 +192,28 @@
   border-color: var(--club-accent) !important;
 }
 
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: #f8fafc;
-  color: #0f172a;
-}
-
-/* ==========================================
-   MODO ESCURO GLOBAL (html.dark)
-   ========================================== */
-html.dark body {
-  background-color: #090d16 !important;
-  color: #f8fafc !important;
-}
-
-html.dark .bg-slate-50 {
-  background-color: #0f172a !important;
-}
-html.dark .bg-white {
-  background-color: #111827 !important;
-  color: #f8fafc;
-}
-html.dark .bg-slate-100 {
-  background-color: #0f172a !important;
-}
-html.dark .bg-slate-50\/80,
-html.dark .bg-slate-50\/60,
-html.dark .bg-slate-50\/50 {
-  background-color: rgba(15, 23, 42, 0.75) !important;
-}
-html.dark .border-slate-200,
-html.dark .border-slate-100,
-html.dark .border-slate-300 {
-  border-color: #334155 !important;
-}
-html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
-html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #334155 !important;
-}
-html.dark .text-slate-900,
-html.dark .text-slate-800 {
-  color: #f8fafc !important;
-}
-html.dark .text-slate-700,
-html.dark .text-slate-600 {
-  color: #cbd5e1 !important;
-}
-html.dark .text-slate-500,
-html.dark .text-slate-400 {
-  color: #94a3b8 !important;
-}
+/* Clean Dark Mode Form Inputs */
 html.dark input:not([type="checkbox"]):not([type="radio"]),
 html.dark select,
 html.dark textarea {
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-  border-color: #475569 !important;
+  background-color: #2c2c2e;
+  color: #f5f5f7;
+  border-color: rgba(255, 255, 255, 0.12);
 }
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: #64748b !important;
-}
-html.dark .matrix-scroll::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-html.dark .matrix-scroll::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-html.dark .hover\:bg-slate-50:hover,
-html.dark .hover\:bg-slate-100:hover {
-  background-color: #334155 !important;
+  color: #86868b;
 }
 
-/* ==========================================
-   TRILHA DE ENSINO INTERATIVA (SPOTLIGHT TOUR)
-   ========================================== */
-@keyframes tour-beacon-pulse {
+/* Interactive Tour Ring */
+@keyframes apple-beacon-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75), 0 0 24px rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.6), 0 0 20px rgba(0, 113, 227, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0), 0 0 36px rgba(245, 158, 11, 0.9);
+    box-shadow: 0 0 0 8px rgba(0, 113, 227, 0), 0 0 28px rgba(0, 113, 227, 0.7);
   }
 }
-
 .tour-spotlight-ring {
-  animation: tour-beacon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: apple-beacon-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
-
-
-

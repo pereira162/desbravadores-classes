@@ -7,8 +7,9 @@ const {
   hasUnitAccess,
 } = require('./auth');
 const { resolvePdfRecord, schedulePdfWarmup } = require('./pdfCache');
+const { EXTRA_TOOL_SCHEMAS, EXTRA_TOOL_MAP } = require('./mcpExtraTools');
 
-const MCP_TOOLS = [
+const BASE_MCP_TOOLS = [
   {
     name: 'get_club_summary',
     description:
@@ -265,6 +266,8 @@ const MCP_TOOLS = [
     },
   },
 ];
+
+const MCP_TOOLS = [...BASE_MCP_TOOLS, ...EXTRA_TOOL_SCHEMAS];
 
 function hashMcpApiKey(rawKey) {
   return crypto.createHash('sha256').update(String(rawKey)).digest('hex');
@@ -725,13 +728,12 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
 
     recordAudit({
       user,
-      actionType: 'PROGRESS_UPDATE',
+      action: 'PROGRESS_UPDATE',
       entityType: 'progress_record',
       entityId: `${pf.id}:${req.id}`,
       summary: `[MCP] ${pf.name} • ${req.class_slug.toUpperCase()} ${req.code} → ${effectiveStatus}`,
-      beforeData: existing || { status: 'PENDENTE' },
-      afterData: { status: effectiveStatus, notes: args.notes || '' },
-      targetDb,
+      previousState: existing || { status: 'PENDENTE' },
+      newState: { status: effectiveStatus, notes: args.notes || '' },
     });
 
     if (!args._skipWarmup) {
@@ -990,181 +992,12 @@ async function executeMcpTool(toolName, args = {}, authContext = {}, targetDb = 
     };
   }
 
+  const extra = EXTRA_TOOL_MAP[toolName];
+  if (extra) {
+    return extra.run(args, { user, perms, db: targetDb, baseUrl });
+  }
+
   throw new Error(`Ferramenta MCP desconhecida: ${toolName}`);
-}
-
-/**
- * Assistente IA Integrado: interpreta comandos em linguagem natural da Diretoria/Gestor
- * e aciona automaticamente as ferramentas MCP correspondentes.
- */
-async function processMcpChatCommand({ prompt, user, targetDb = db, baseUrl = '' }) {
-  const text = String(prompt || '').trim();
-  const lower = text.toLowerCase();
-  const authContext = { user, allowedTools: ['*'], baseUrl };
-
-  const slugMap = {
-    amigo: 'amigo',
-    companheiro: 'companheiro',
-    pesquisador: 'pesquisador',
-    pioneiro: 'pioneiro',
-    excursionista: 'excursionista',
-    guia: 'guia',
-  };
-  let detectedSlug = null;
-  for (const [word, slug] of Object.entries(slugMap)) {
-    if (lower.includes(word)) {
-      detectedSlug = slug;
-      break;
-    }
-  }
-
-  // 1. Solicitações de PDF / Download / Link
-  if (lower.includes('pdf') || lower.includes('download') || lower.includes('ficha') || lower.includes('controle') || lower.includes('imprimir')) {
-    if (lower.includes('planejamento') || lower.includes('anual')) {
-      const mode = lower.includes('unifica') || lower.includes('equival') ? 'equivalences' : 'activities';
-      const pdf = await executeMcpTool('get_pdf_link', { docType: 'PLANNING', mode }, authContext, targetDb);
-      return {
-        reply: `Aqui está o PDF atualizado do **Planejamento Anual (${mode === 'equivalences' ? 'Unificações' : 'Por Atividade'})**:`,
-        toolUsed: 'get_pdf_link',
-        pdfLinks: [pdf],
-        data: pdf,
-      };
-    }
-
-    if (lower.includes('ficha') || lower.includes('cartão') || lower.includes('cartao')) {
-      const allPfs = targetDb.prepare('SELECT id, name FROM pathfinders WHERE active = 1').all();
-      const matchedPf =
-        allPfs.find((p) => lower.includes(p.name.toLowerCase().split(' ')[0])) || allPfs[0];
-      const mode = lower.includes('complet') ? 'full' : 'simplified';
-      if (matchedPf) {
-        const pdf = await executeMcpTool(
-          'get_pdf_link',
-          { docType: 'PF_CARD', pathfinderId: matchedPf.id, mode },
-          authContext,
-          targetDb
-        );
-        return {
-          reply: `Gerei o link direto da **Ficha ${mode === 'full' ? 'Completa' : 'Simplificada'}** de **${matchedPf.name}**:`,
-          toolUsed: 'get_pdf_link',
-          pdfLinks: [pdf],
-          data: pdf,
-        };
-      }
-    }
-
-    if (lower.includes('matriz')) {
-      const cls = detectedSlug || 'amigo';
-      const pdf = await executeMcpTool(
-        'get_pdf_link',
-        { docType: 'MATRIX', classSlug: cls },
-        authContext,
-        targetDb
-      );
-      return {
-        reply: `Aqui está o PDF da **Matriz da Classe (${cls.toUpperCase()})**:`,
-        toolUsed: 'get_pdf_link',
-        pdfLinks: [pdf],
-        data: pdf,
-      };
-    }
-
-    const cls = detectedSlug || 'amigo';
-    const pdf = await executeMcpTool(
-      'get_pdf_link',
-      { docType: 'INSTRUCTOR_CONTROL', classSlug: cls },
-      authContext,
-      targetDb
-    );
-    return {
-      reply: `Aqui está o link do **PDF Controle do Instrutor (1 Página)** da classe **${cls.toUpperCase()}**:`,
-      toolUsed: 'get_pdf_link',
-      pdfLinks: [pdf],
-      data: pdf,
-    };
-  }
-
-  // 2. Sincronizar / Aprovar Unificações
-  if (
-    (lower.includes('sincroniz') || lower.includes('aplicar') || lower.includes('aprovar')) &&
-    (lower.includes('unifica') || lower.includes('equival'))
-  ) {
-    const res = await executeMcpTool('apply_unification_sync', {}, authContext, targetDb);
-    return {
-      reply:
-        res.syncedCount > 0
-          ? `Sincronização concluída! **${res.syncedCount} requisito(s) equivalente(s)** foram aprovados automaticamente com base nas atividades já concluídas.`
-          : 'Todos os requisitos equivalentes já estão sincronizados no momento!',
-      toolUsed: 'apply_unification_sync',
-      data: res,
-    };
-  }
-
-  // 3. Consultar oportunidades de unificação
-  if (lower.includes('unifica') || lower.includes('equival') || lower.includes('alerta')) {
-    const res = await executeMcpTool('get_unification_opportunities', {}, authContext, targetDb);
-    return {
-      reply: `Encontrei **${res.alertsCount} oportunidade(s) de unificação automática** prontas para sincronizar e **${res.totalEquivalenceGroups} grupos de equivalência** ativos no clube.`,
-      toolUsed: 'get_unification_opportunities',
-      data: res,
-    };
-  }
-
-  // 4. Cadastrar desbravador via chat (ex: "Cadastrar desbravador João Pedro nascido em 2015-05-10 na classe companheiro")
-  if (lower.startsWith('cadastrar desbravador') || lower.startsWith('adicionar desbravador')) {
-    const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
-    const birthDate = dateMatch ? dateMatch[1] : '2015-05-10';
-    const cleanName = text
-      .replace(/^(cadastrar|adicionar)\s+desbravador(a)?\s+/i, '')
-      .replace(/\s*(nascid[oa].*|na classe.*|\d{4}-\d{2}-\d{2}.*)/i, '')
-      .trim();
-    const cls = detectedSlug ? [detectedSlug, `${detectedSlug}-avancado`] : ['amigo', 'amigo-avancado'];
-    if (cleanName) {
-      const created = await executeMcpTool(
-        'create_pathfinder',
-        { name: cleanName, birth_date: birthDate, class_slugs: cls },
-        authContext,
-        targetDb
-      );
-      return {
-        reply: `Desbravador **${created.name}** cadastrado com sucesso nas classes **${cls.join(', ')}**!`,
-        toolUsed: 'create_pathfinder',
-        data: created,
-      };
-    }
-  }
-
-  // 5. Listar desbravadores
-  if (lower.includes('desbravador') || lower.includes('listar') || lower.includes('quem') || detectedSlug) {
-    const res = await executeMcpTool(
-      'list_pathfinders',
-      { classSlug: detectedSlug || undefined },
-      authContext,
-      targetDb
-    );
-    return {
-      reply: `Listando **${res.count} desbravador(es)**${detectedSlug ? ` da classe **${detectedSlug.toUpperCase()}**` : ''}:`,
-      toolUsed: 'list_pathfinders',
-      data: res,
-    };
-  }
-
-  // 6. Eventos
-  if (lower.includes('evento') || lower.includes('acampamento')) {
-    const res = await executeMcpTool('list_events', {}, authContext, targetDb);
-    return {
-      reply: `O clube possui **${res.count} evento(s)** registrados no calendário:`,
-      toolUsed: 'list_events',
-      data: res,
-    };
-  }
-
-  // Default: Resumo Geral do Clube
-  const summary = await executeMcpTool('get_club_summary', {}, authContext, targetDb);
-  return {
-    reply: `Resumo atual do **${summary.clubName}**: **${summary.totalPathfinders} desbravadores** em **${summary.totalUnits} unidades**, com **${summary.pendingUnificationAlertsCount} alerta(s) de unificação** disponíveis.`,
-    toolUsed: 'get_club_summary',
-    data: summary,
-  };
 }
 
 /**
@@ -1179,20 +1012,38 @@ async function handleMcpJsonRpcRequest(rpcBody, authContext, targetDb = db) {
         jsonrpc,
         id,
         result: {
-          protocolVersion: '2024-11-05',
+          protocolVersion: params.protocolVersion || '2024-11-05',
           capabilities: {
             tools: { listChanged: false },
           },
           serverInfo: {
             name: 'sgc-desbravadores-mcp',
-            version: '2.0.0',
+            version: '3.0.0',
           },
         },
       };
     }
 
-    if (method === 'notifications/initialized' || method === 'ping') {
+    // Notificações JSON-RPC (sem id): nunca respondem corpo (HTTP 204/202 no transporte)
+    if (typeof method === 'string' && method.startsWith('notifications/')) {
+      return null;
+    }
+    if (rpcBody && (rpcBody.id === undefined || rpcBody.id === null) && method !== 'initialize') {
+      return null;
+    }
+
+    if (method === 'ping') {
       return { jsonrpc, id, result: {} };
+    }
+
+    if (method === 'resources/list') {
+      return { jsonrpc, id, result: { resources: [] } };
+    }
+    if (method === 'resources/templates/list') {
+      return { jsonrpc, id, result: { resourceTemplates: [] } };
+    }
+    if (method === 'prompts/list') {
+      return { jsonrpc, id, result: { prompts: [] } };
     }
 
     if (method === 'tools/list') {
@@ -1259,6 +1110,5 @@ module.exports = {
   getEffectiveEquivalenceData,
   computeUnificationAlerts,
   executeMcpTool,
-  processMcpChatCommand,
   handleMcpJsonRpcRequest,
 };

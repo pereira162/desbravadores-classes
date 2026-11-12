@@ -9,11 +9,12 @@ import {
   ArrowRight,
   CheckSquare,
   Calendar,
-  ShieldCheck,
   TrendingUp,
   Layers,
   Filter,
   GitMerge,
+  Check,
+  ChevronRight,
 } from 'lucide-react';
 import { formatDateBR } from '../constants';
 
@@ -150,40 +151,58 @@ export default function DashboardView({
 
     // Progresso por Unidade
     const unitStats = units.map((u) => {
-      const unitPfs = pfSummaries.filter((s) => s.pathfinder.unit_id === u.id);
-      const totalReqs = unitPfs.reduce((acc, s) => acc + s.pfTotalReqs, 0);
-      const approvedReqs = unitPfs.reduce((acc, s) => acc + s.pfApprovedReqs, 0);
+      const members = activePathfinders.filter((p) => p.unit_id === u.id);
+      let totalReqs = 0;
+      let approvedReqs = 0;
+
+      for (const pf of members) {
+        for (const en of pf.enrollments || []) {
+          const reqs = (catalog.requirements || []).filter((r) => r.class_slug === en.class_slug);
+          for (const req of reqs) {
+            totalReqs += 1;
+            if (progressMap[`${pf.id}:${req.id}`]?.status === 'APROVADO') {
+              approvedReqs += 1;
+            }
+          }
+        }
+      }
+
       const pct = totalReqs > 0 ? Math.round((approvedReqs / totalReqs) * 100) : 0;
       return {
         ...u,
-        memberCount: unitPfs.length,
+        memberCount: members.length,
         pct,
-        approvedReqs,
-        totalReqs,
       };
     });
 
-    // Top Gargalos (Requisitos com mais desbravadores pendentes)
-    const bottlenecks = (catalog.requirements || [])
-      .map((req) => {
-        const enrolledPfs = activePathfinders.filter((pf) =>
-          pf.enrollments?.some((e) => e.class_slug === req.class_slug)
-        );
-        const pendingPfs = enrolledPfs.filter((pf) => {
+    // Top 5 Gargalos do Clube (Requisitos que mais desbravadores precisam)
+    const reqNeeds = {};
+    for (const pf of activePathfinders) {
+      for (const en of pf.enrollments || []) {
+        const reqs = (catalog.requirements || []).filter((r) => r.class_slug === en.class_slug);
+        for (const req of reqs) {
           const st = progressMap[`${pf.id}:${req.id}`]?.status || 'PENDENTE';
-          return st !== 'APROVADO';
-        });
-        return {
-          requirement: req,
-          classInfo: classesMap[req.class_slug],
-          pendingCount: pendingPfs.length,
-          enrolledCount: enrolledPfs.length,
-          pendingPfs,
-        };
-      })
-      .filter((b) => b.pendingCount > 0)
+          if (st !== 'APROVADO') {
+            if (!reqNeeds[req.id]) {
+              reqNeeds[req.id] = {
+                requirement: req,
+                classInfo: classesMap[en.class_slug],
+                pendingCount: 0,
+                enrolledCount: 0,
+              };
+            }
+            reqNeeds[req.id].pendingCount += 1;
+          }
+          if (reqNeeds[req.id]) {
+            reqNeeds[req.id].enrolledCount += 1;
+          }
+        }
+      }
+    }
+
+    const bottlenecks = Object.values(reqNeeds)
       .sort((a, b) => b.pendingCount - a.pendingCount)
-      .slice(0, 6);
+      .slice(0, 5);
 
     const clubCompletionPct =
       totalEnrolledReqInstances > 0
@@ -286,7 +305,7 @@ export default function DashboardView({
             requirement_id: item.requirement.id,
           },
         ],
-        `Visto de instrutor no requisito ${item.requirement.code} (${item.pathfinder.name})`
+        `Visto de instrutor: ${item.requirement.code} (${item.pathfinder.name})`
       );
     } finally {
       setApprovingQueue(false);
@@ -294,177 +313,189 @@ export default function DashboardView({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Banner do Clube + Contagem para Investidura */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-700/60 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="space-y-7">
+      {/* Page Header (Apple Clean Style) */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-slate-600 dark:text-neutral-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
+            <Sparkles className="w-3.5 h-3.5 text-[#0071e3] dark:text-[#0a84ff]" />
             Ano Eclesiástico {settings?.club_year || '2026'} • {settings?.club_region || 'DSA'}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.025em] text-slate-900 dark:text-white">
             {settings?.club_name || 'Clube de Desbravadores'}
           </h1>
-          <p className="text-sm text-slate-300 mt-1">
-            Painel estratégico de classes regulares, classes avançadas e planejamento anual de investidura.
+          <p className="text-sm text-slate-500 dark:text-neutral-400 mt-1 font-normal">
+            Painel executivo de classes regulares, avançadas e planejamento anual de investidura.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="bg-slate-800/90 border border-slate-700 rounded-xl px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-amber-400" />
-              Meta de Investidura
+          <div className="apple-card px-4 py-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Calendar className="w-4 h-4" />
             </div>
-            <div className="text-lg font-extrabold text-amber-300 mt-0.5">
-              {formatDateBR(settings?.investiture_date || '2026-11-28')}
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-neutral-500 font-semibold">
+                Meta de Investidura
+              </div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums">
+                {formatDateBR(settings?.investiture_date || '2026-11-28')}
+              </div>
             </div>
           </div>
 
           <button
             onClick={() => onNavigate('DEMAND')}
-            className="px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-md transition flex items-center gap-2 cursor-pointer"
+            className="apple-press px-4 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-medium text-xs shadow-xs transition flex items-center gap-2 cursor-pointer"
           >
             <Layers className="w-4 h-4" />
-            Planejar Demanda do Ano
-            <ArrowRight className="w-4 h-4" />
+            Planejar Demanda
+            <ArrowRight className="w-3.5 h-3.5 opacity-80" />
           </button>
         </div>
       </div>
 
       {/* Guia Rápido de Primeiros Passos quando o Clube está iniciando do zero */}
       {(units.length === 0 || activePathfinders.length === 0) && (
-        <div className="bg-indigo-50/90 border-2 border-indigo-200 rounded-2xl p-5 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="apple-card p-6 bg-gradient-to-r from-blue-50/50 via-indigo-50/30 to-transparent dark:from-blue-950/20 dark:to-transparent border-blue-500/20 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
-            <div className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" />
-              Bem-vindo ao Sistema Oficial do seu Clube!
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0071e3] dark:text-[#0a84ff] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              Início Rápido • Sistema Oficial DSA
             </div>
-            <h2 className="text-base font-extrabold text-slate-900">
-              Seu banco de dados está 100% limpo e pronto para os dados reais do seu clube
+            <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
+              Seu banco de dados está pronto para os desbravadores do seu clube
             </h2>
-            <p className="text-xs text-slate-600">
-              Todo o catálogo oficial da DSA (12 Classes e 212 Requisitos) já está carregado. Comece criando as unidades do seu clube, cadastrando os desbravadores e convidando sua diretoria:
+            <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-2xl">
+              As 12 Classes e 212 Requisitos oficiais da DSA já estão carregados. Cadastre as unidades, matricule os desbravadores e convide sua diretoria para começar.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={() => onNavigate('PATHFINDERS')}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+              className="apple-press px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-medium shadow-xs cursor-pointer"
             >
-              1. Criar Unidades & Cadastrar Desbravadores
+              1. Cadastrar Desbravadores
             </button>
             <button
               onClick={() => onNavigate('LEADERS')}
-              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold cursor-pointer"
+              className="apple-press px-4 py-2 rounded-full bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.06] text-slate-800 dark:text-neutral-200 text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] cursor-pointer"
             >
-              2. Convidar Diretoria / Instrutores
+              2. Convidar Diretoria
             </button>
           </div>
         </div>
       )}
 
-      {/* 4 KPIs Principais */}
+      {/* 4 KPIs Principais (Apple Health / Fitness Card Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="dashboard-summary">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+        {/* Card 1: Desbravadores Ativos */}
+        <div className="apple-card apple-card-hover p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-neutral-400">
               Desbravadores Ativos
             </span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-slate-900 mt-2">
+          <div className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mt-2 tabular-nums">
             {activePathfinders.length}
           </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Distribuídos em <strong>{units.length} unidades</strong> e 12 classes
+          <div className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
+            Distribuídos em <strong className="font-semibold text-slate-700 dark:text-neutral-300">{units.length} unidades</strong> e 12 classes
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+        {/* Card 2: Requisitos Assinados */}
+        <div className="apple-card apple-card-hover p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-neutral-400">
               Requisitos Assinados
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-extrabold text-emerald-700">
+            <span className="text-3xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
               {stats.clubCompletionPct}%
             </span>
-            <span className="text-xs text-slate-500 font-medium">
+            <span className="text-xs text-slate-400 dark:text-neutral-500">
               ({stats.totalApprovedInstances} / {stats.totalEnrolledReqInstances})
             </span>
           </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mt-2">
+          <div className="w-full h-1.5 bg-black/[0.05] dark:bg-white/[0.08] rounded-full overflow-hidden mt-3">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all"
+              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
               style={{ width: `${stats.clubCompletionPct}%` }}
             />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+        {/* Card 3: Prontos p/ Investidura */}
+        <div className="apple-card apple-card-hover p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Prontos p/ Investidura (≥85%)
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-neutral-400">
+              Investidura (≥85%)
             </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Award className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Award className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-extrabold text-slate-900">
+            <span className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white tabular-nums">
               {stats.readyList.length}
             </span>
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
               +{stats.onTrackList.length} no ritmo
             </span>
           </div>
-          <div className="text-xs text-slate-500 mt-1">
+          <div className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
             {stats.atRiskList.length} desbravadores abaixo de 50%
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-sky-200 bg-gradient-to-br from-white to-sky-50/50 shadow-xs">
+        {/* Card 4: Fila de Visto */}
+        <div className="apple-card apple-card-hover p-5 bg-gradient-to-br from-white to-sky-50/30 dark:from-[#1c1c1e] dark:to-sky-950/20">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-sky-800">
-              Fila de Visto do Instrutor
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+              Fila de Visto
             </span>
-            <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-sky-800 mt-2">
+          <div className="text-3xl font-semibold tracking-tight text-sky-700 dark:text-sky-400 mt-2 tabular-nums">
             {stats.totalCompletedAwaitingInstances}
           </div>
-          <div className="text-xs text-sky-700 mt-1">
-            Marcados como <strong>Feito</strong> aguardando assinatura
+          <div className="text-xs text-sky-600 dark:text-sky-300/80 mt-1">
+            Marcados como <strong>Feito</strong> aguardando visto
           </div>
         </div>
       </div>
 
-      {/* Avisos Inteligentes de Unificação Automática (Requisitos Equivalentes Cumpridos) */}
+      {/* Avisos Inteligentes de Unificação Automática (Apple Callout Inset Banner) */}
       {unificationAlerts.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-400/80 shadow-xs overflow-hidden" data-tour="unification-alerts-banner">
-          <div className="p-5 border-b border-amber-200 dark:border-slate-700 bg-amber-50/80 dark:bg-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <GitMerge className="w-5 h-5 text-amber-600" />
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-                  Avisos de Unificação Automática (Requisitos Equivalentes)
-                </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-500 text-slate-950">
-                  {unificationAlerts.length} oportunidade(s)
-                </span>
+        <div className="apple-card overflow-hidden border-amber-500/20 bg-amber-500/[0.04] dark:bg-amber-500/[0.06]" data-tour="unification-alerts-banner">
+          <div className="p-4 sm:p-5 border-b border-amber-500/15 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                <GitMerge className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                Estes desbravadores já cumpriram um requisito equivalente em uma classe e possuem o item correspondente ainda pendente em outra classe matriculada!
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                    Avisos de Unificação Automática
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    {unificationAlerts.length} oportunidade(s)
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
+                  Desbravadores que cumpriram requisitos equivalentes em uma classe com pendência em outra classe matriculada.
+                </p>
+              </div>
             </div>
 
             {canApproveQueue && (
@@ -472,9 +503,9 @@ export default function DashboardView({
                 type="button"
                 onClick={handleSyncAllUnifications}
                 disabled={syncingUnifications}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition cursor-pointer shrink-0"
+                className="apple-press px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition cursor-pointer shrink-0 disabled:opacity-50"
               >
-                <GitMerge className="w-4 h-4" />
+                <GitMerge className="w-3.5 h-3.5" />
                 {syncingUnifications
                   ? 'Sincronizando...'
                   : `Sincronizar Todas (${unificationAlerts.length})`}
@@ -482,33 +513,33 @@ export default function DashboardView({
             )}
           </div>
 
-          <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
+          <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06] max-h-72 overflow-y-auto">
             {unificationAlerts.map((alert) => (
               <div
                 key={alert.id}
-                className="px-5 py-3.5 hover:bg-amber-50/40 dark:hover:bg-slate-800/50 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                className="px-5 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
               >
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => onSelectPathfinderCard(alert.pathfinder_id)}
-                      className="text-sm font-extrabold text-slate-900 dark:text-white hover:text-amber-600 cursor-pointer"
+                      className="text-[13px] font-semibold text-slate-900 dark:text-white hover:text-[#0071e3] transition cursor-pointer"
                     >
                       {alert.pathfinder_name}
                     </button>
-                    <span className="text-xs text-slate-500">• {alert.unit_name}</span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                      Unificação: {alert.equivalence_title}
+                    <span className="text-xs text-slate-400 dark:text-neutral-500">• {alert.unit_name}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-neutral-300 border border-black/[0.04] dark:border-white/[0.06]">
+                      {alert.equivalence_title}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-700 dark:text-slate-300 flex flex-wrap items-center gap-1.5">
-                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                      ✓ Já cumpriu em {alert.completed_class_name} ({alert.completed_requirement_code})
+                  <div className="text-xs text-slate-600 dark:text-neutral-300 flex flex-wrap items-center gap-1.5">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✓ Cumprido em {alert.completed_class_name} ({alert.completed_requirement_code})
                     </span>
-                    <span className="text-slate-400">→</span>
-                    <span className="font-bold text-amber-800 dark:text-amber-300">
-                      Pendente em {alert.pending_class_name} ({alert.pending_requirement_code}: {alert.pending_requirement_title})
+                    <span className="text-slate-300 dark:text-neutral-600">→</span>
+                    <span className="text-slate-800 dark:text-neutral-200">
+                      Pendente em {alert.pending_class_name} ({alert.pending_requirement_code})
                     </span>
                   </div>
                 </div>
@@ -518,10 +549,10 @@ export default function DashboardView({
                     type="button"
                     onClick={() => handleSyncSingleUnification(alert)}
                     disabled={syncingUnifications}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-center"
+                    className="apple-press px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium flex items-center gap-1 shadow-xs transition shrink-0 cursor-pointer disabled:opacity-50"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Aprovar Equivalente
+                    <Check className="w-3.5 h-3.5" />
+                    Aprovar
                   </button>
                 )}
               </div>
@@ -530,32 +561,30 @@ export default function DashboardView({
         </div>
       )}
 
-
-      {/* Fila de Conferência Rápida (Conselheiro marcou CONCLUIDO -> Instrutor/Diretor aprova APROVADO) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* Fila de Visto do Instrutor (Apple Grouped Inset Table) */}
+      <div className="apple-card overflow-hidden" data-tour="approval-queue">
+        <div className="p-4 sm:p-5 border-b border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-sky-600" />
-              <h2 className="text-base font-bold text-slate-900">
-                Fila de Conferência de Instrutores (Aguardando Assinatura)
+              <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                Fila de Visto do Instrutor
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800">
-                {filteredQueue.length} pendentes de visto
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
+                {filteredQueue.length} aguardando visto
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Requisitos marcados como concluídos pelos Conselheiros de Unidade que aguardam validação final do Instrutor ou Diretor.
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
+              Requisitos cumpridos que aguardam assinatura oficial do instrutor ou diretoria.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <select
                 value={queueClassFilter}
                 onChange={(e) => setQueueClassFilter(e.target.value)}
-                className="bg-transparent font-semibold text-slate-700 focus:outline-none"
+                className="bg-transparent font-medium text-slate-700 dark:text-neutral-200 focus:outline-none cursor-pointer"
               >
                 <option value="ALL">Todas as Classes</option>
                 <option value="amigo">Amigo (10 anos)</option>
@@ -571,9 +600,9 @@ export default function DashboardView({
               <button
                 onClick={handleApproveAllFilteredQueue}
                 disabled={approvingQueue}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                className="apple-press px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition cursor-pointer"
               >
-                <CheckSquare className="w-4 h-4" />
+                <CheckSquare className="w-3.5 h-3.5" />
                 {approvingQueue
                   ? 'Assinando...'
                   : `Assinar Todos (${filteredQueue.length})`}
@@ -583,19 +612,19 @@ export default function DashboardView({
         </div>
 
         {filteredQueue.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            Nenhum requisito aguardando assinatura de instrutor neste filtro. Tudo em dia!
+          <div className="p-10 text-center text-slate-400 dark:text-neutral-500 text-xs">
+            Nenhum requisito aguardando assinatura de instrutor. Tudo em dia!
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+          <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06] max-h-80 overflow-y-auto">
             {filteredQueue.map((item) => (
               <div
                 key={`${item.pathfinder.id}:${item.requirement.id}`}
-                className="px-5 py-3.5 hover:bg-slate-50/80 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                className="px-5 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
               >
                 <div className="flex items-start gap-3">
                   <span
-                    className="px-2.5 py-1 rounded-lg text-xs font-extrabold text-white shrink-0 mt-0.5"
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white shrink-0 mt-0.5 shadow-xs"
                     style={{ backgroundColor: item.classInfo?.color || '#334155' }}
                   >
                     {item.requirement.code}
@@ -604,34 +633,29 @@ export default function DashboardView({
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => onSelectPathfinderCard(item.pathfinder.id)}
-                        className="text-sm font-bold text-slate-900 hover:text-indigo-600 cursor-pointer"
+                        className="text-[13px] font-semibold text-slate-900 dark:text-white hover:text-[#0071e3] transition cursor-pointer"
                       >
                         {item.pathfinder.name}
                       </button>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-400 dark:text-neutral-500">
                         • {item.pathfinder.unit_name} • {item.classInfo?.name}
                       </span>
                       {Boolean(item.progress?.submitted_by_pathfinder) && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
                           Enviado pelo Desbravador
                         </span>
                       )}
                       {item.progress?.attachments?.length > 0 && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                          📎 {item.progress.attachments.length} foto(s)/anexo(s)
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20">
+                          📎 {item.progress.attachments.length} anexo(s)
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-700 mt-0.5 line-clamp-1">
+                    <p className="text-xs text-slate-600 dark:text-neutral-300 mt-0.5 line-clamp-1">
                       <strong>{item.requirement.marker}</strong> {item.requirement.title}
                     </p>
-                    {item.progress?.submission_text && (
-                      <p className="text-[11px] text-teal-800 mt-0.5 font-medium">
-                        Relato do Desbravador: &ldquo;{item.progress.submission_text}&rdquo;
-                      </p>
-                    )}
                     {item.progress?.notes && (
-                      <p className="text-[11px] text-sky-700 mt-0.5 italic">
+                      <p className="text-[11px] text-sky-700 dark:text-sky-400 mt-0.5 italic">
                         Evidência: &ldquo;{item.progress.notes}&rdquo;
                       </p>
                     )}
@@ -643,17 +667,15 @@ export default function DashboardView({
                     onClick={() =>
                       onOpenRequirementDetail(item.pathfinder, item.requirement)
                     }
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-slate-700 cursor-pointer"
+                    className="apple-press px-3 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-neutral-200 cursor-pointer"
                   >
-                    {item.progress?.attachments?.length > 0
-                      ? 'Ver Fotos / Detalhes'
-                      : 'Detalhes'}
+                    {item.progress?.attachments?.length > 0 ? 'Ver Anexos' : 'Detalhes'}
                   </button>
                   {canApproveQueue && (
                     <button
                       onClick={() => handleApproveSingleQueueItem(item)}
                       disabled={approvingQueue}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      className="apple-press px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium flex items-center gap-1 shadow-xs transition cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Dar Visto
@@ -666,22 +688,22 @@ export default function DashboardView({
         )}
       </div>
 
-      {/* Progresso por Classe (6 Regulares + 6 Avançadas) e Top Gargalos */}
+      {/* Progresso por Classe e Gargalos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Coluna 1 e 2: Progresso das 12 Classes */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+        <div className="lg:col-span-2 apple-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Progresso das Classes (Regulares e Avançadas)
+              <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                Progresso das Classes (12 Classes Oficiais)
               </h2>
-              <p className="text-xs text-slate-500">
-                Clique em qualquer classe para abrir a Ficha de Controle do Instrutor (Matriz).
+              <p className="text-xs text-slate-500 dark:text-neutral-400">
+                Toque na classe para abrir a Ficha de Controle do Instrutor.
               </p>
             </div>
             <button
               onClick={() => onNavigate('MATRIX')}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+              className="apple-press text-xs font-medium text-[#0071e3] dark:text-[#0a84ff] hover:opacity-80 flex items-center gap-1 cursor-pointer"
             >
               Ver Matriz Completa <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -697,48 +719,48 @@ export default function DashboardView({
                     cls.type === 'AVANCADA' ? 'AVANCADA' : 'REGULAR'
                   )
                 }
-                className="p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs transition cursor-pointer bg-slate-50/40"
+                className="apple-press p-3.5 rounded-xl border border-black/[0.05] dark:border-white/[0.08] hover:border-black/[0.1] dark:hover:border-white/[0.16] transition cursor-pointer bg-black/[0.015] dark:bg-white/[0.03]"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
-                      className="w-3 h-8 rounded-full shrink-0"
+                      className="w-2.5 h-7 rounded-full shrink-0"
                       style={{ backgroundColor: cls.color }}
                     />
                     <div className="truncate">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold text-slate-900 truncate">
+                        <span className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">
                           {cls.name}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                          className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
                             cls.type === 'AVANCADA'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-200 text-slate-700'
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-black/[0.04] dark:bg-white/[0.08] text-slate-600 dark:text-neutral-400'
                           }`}
                         >
                           {cls.type === 'AVANCADA' ? 'Avançada' : `${cls.min_age}a`}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-500">
-                        {cls.enrolledCount} desbravadores • {cls.reqCount} requisitos
+                      <div className="text-[11px] text-slate-400 dark:text-neutral-500">
+                        {cls.enrolledCount} membros • {cls.reqCount} requisitos
                       </div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-extrabold text-slate-900">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums">
                       {cls.pct}%
                     </div>
                     {cls.awaitingCells > 0 && (
-                      <div className="text-[10px] font-semibold text-sky-700">
+                      <div className="text-[10px] font-medium text-sky-600 dark:text-sky-400">
                         +{cls.awaitingCells} p/ visto
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-2.5">
+                <div className="w-full h-1.5 bg-black/[0.04] dark:bg-white/[0.08] rounded-full overflow-hidden mt-2.5">
                   <div
-                    className="h-full rounded-full transition-all"
+                    className="h-full rounded-full transition-all duration-300"
                     style={{
                       width: `${cls.pct}%`,
                       backgroundColor: cls.color,
@@ -750,46 +772,46 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* Coluna 3: Top Gargalos do Clube + Unidades */}
+        {/* Coluna 3: Demandas e Desempenho por Unidade */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+          <div className="apple-card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-rose-600" />
-                <h2 className="text-sm font-bold text-slate-900">
+                <TrendingUp className="w-4 h-4 text-rose-500" />
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Maiores Demandas do Clube
                 </h2>
               </div>
               <button
                 onClick={() => onNavigate('DEMAND')}
-                className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                className="apple-press text-xs font-medium text-[#0071e3] dark:text-[#0a84ff] hover:opacity-80 cursor-pointer"
               >
                 Ver todas
               </button>
             </div>
-            <p className="text-xs text-slate-500 mb-3">
-              Requisitos com o maior número de desbravadores pendentes neste momento:
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mb-3">
+              Requisitos com o maior número de desbravadores pendentes:
             </p>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {stats.bottlenecks.map((b) => (
                 <div
                   key={b.requirement.id}
                   onClick={() => onNavigate('DEMAND')}
-                  className="p-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                  className="apple-press p-2.5 rounded-xl border border-black/[0.05] dark:border-white/[0.06] hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition cursor-pointer"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className="px-2 py-0.5 rounded text-[11px] font-bold text-white"
+                      className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
                       style={{ backgroundColor: b.classInfo?.color || '#475569' }}
                     >
                       {b.requirement.code} • {b.classInfo?.name}
                     </span>
-                    <span className="text-xs font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-medium text-rose-700 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
                       Faltam {b.pendingCount}/{b.enrolledCount}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-700 font-medium mt-1.5 line-clamp-2">
+                  <p className="text-xs text-slate-700 dark:text-neutral-300 font-medium mt-1 line-clamp-1">
                     <strong>{b.requirement.marker}</strong> {b.requirement.title}
                   </p>
                 </div>
@@ -798,25 +820,25 @@ export default function DashboardView({
           </div>
 
           {/* Desempenho por Unidade */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
-            <h2 className="text-sm font-bold text-slate-900 mb-3">
+          <div className="apple-card p-5">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
               Progresso por Unidade
             </h2>
             <div className="space-y-3">
               {stats.unitStats.map((u) => (
                 <div key={u.id}>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-bold text-slate-800">
+                    <span className="font-medium text-slate-800 dark:text-neutral-200">
                       {u.name}{' '}
-                      <span className="text-slate-400 font-normal">
+                      <span className="text-slate-400 dark:text-neutral-500 font-normal">
                         ({u.memberCount} membros)
                       </span>
                     </span>
-                    <span className="font-extrabold text-slate-900">{u.pct}%</span>
+                    <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{u.pct}%</span>
                   </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-black/[0.04] dark:bg-white/[0.08] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-indigo-600 rounded-full"
+                      className="h-full bg-[#0071e3] rounded-full transition-all"
                       style={{ width: `${u.pct}%` }}
                     />
                   </div>
@@ -827,20 +849,20 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Semáforo de Investidura Individual */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      {/* Semáforo de Investidura Individual (Apple Health Style) */}
+      <div className="apple-card p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
               Semáforo de Investidura dos Desbravadores
             </h2>
-            <p className="text-xs text-slate-500">
-              Acompanhamento individual rumo à Cerimônia de Investidura. Clique em um desbravador para abrir seu Cartão Virtual.
+            <p className="text-xs text-slate-500 dark:text-neutral-400">
+              Acompanhamento individual rumo à investidura oficial. Toque no desbravador para abrir o Cartão Virtual.
             </p>
           </div>
           <button
             onClick={() => onNavigate('PATHFINDERS')}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+            className="apple-press text-xs font-medium text-[#0071e3] dark:text-[#0a84ff] hover:opacity-80 flex items-center gap-1 cursor-pointer"
           >
             Gerenciar Desbravadores <ArrowRight className="w-3.5 h-3.5" />
           </button>
@@ -848,19 +870,19 @@ export default function DashboardView({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Coluna Verde: Prontos / Quase Prontos >= 85% */}
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.07] p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 Aptos / Reta Final (≥85%)
               </span>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-200 text-emerald-900">
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
                 {stats.readyList.length}
               </span>
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {stats.readyList.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">
+                <p className="text-xs text-slate-400 dark:text-neutral-500 italic">
                   Nenhum desbravador atingiu 85% ainda.
                 </p>
               ) : (
@@ -868,17 +890,17 @@ export default function DashboardView({
                   <div
                     key={s.pathfinder.id}
                     onClick={() => onSelectPathfinderCard(s.pathfinder.id)}
-                    className="p-2.5 rounded-lg bg-white border border-emerald-200/80 hover:shadow-xs flex items-center justify-between cursor-pointer"
+                    className="apple-press p-2.5 rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/[0.06] hover:shadow-xs flex items-center justify-between cursor-pointer"
                   >
                     <div>
-                      <div className="text-xs font-bold text-slate-900">
+                      <div className="text-xs font-semibold text-slate-900 dark:text-white">
                         {s.pathfinder.name}
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-slate-400 dark:text-neutral-500">
                         {s.primaryClass?.name} • {s.pathfinder.unit_name}
                       </div>
                     </div>
-                    <span className="text-xs font-extrabold text-emerald-700">
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                       {s.regPct}%
                     </span>
                   </div>
@@ -888,13 +910,13 @@ export default function DashboardView({
           </div>
 
           {/* Coluna Âmbar: No Ritmo (50% a 84%) */}
-          <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] dark:bg-amber-500/[0.07] p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 No Ritmo (50% a 84%)
               </span>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-800 dark:text-amber-300">
                 {stats.onTrackList.length}
               </span>
             </div>
@@ -903,17 +925,17 @@ export default function DashboardView({
                 <div
                   key={s.pathfinder.id}
                   onClick={() => onSelectPathfinderCard(s.pathfinder.id)}
-                  className="p-2.5 rounded-lg bg-white border border-amber-200/80 hover:shadow-xs flex items-center justify-between cursor-pointer"
+                  className="apple-press p-2.5 rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/[0.06] hover:shadow-xs flex items-center justify-between cursor-pointer"
                 >
                   <div>
-                    <div className="text-xs font-bold text-slate-900">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
                       {s.pathfinder.name}
                     </div>
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-slate-400 dark:text-neutral-500">
                       {s.primaryClass?.name} • Faltam {s.remainingForInvestiture} itens
                     </div>
                   </div>
-                  <span className="text-xs font-extrabold text-amber-700">
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
                     {s.regPct}%
                   </span>
                 </div>
@@ -922,13 +944,13 @@ export default function DashboardView({
           </div>
 
           {/* Coluna Vermelha: Atenção (< 50%) */}
-          <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-4">
+          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.04] dark:bg-rose-500/[0.07] p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-rose-600" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 Atenção Prioritária (&lt;50%)
               </span>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-200 text-rose-900">
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-800 dark:text-rose-300">
                 {stats.atRiskList.length}
               </span>
             </div>
@@ -937,17 +959,17 @@ export default function DashboardView({
                 <div
                   key={s.pathfinder.id}
                   onClick={() => onSelectPathfinderCard(s.pathfinder.id)}
-                  className="p-2.5 rounded-lg bg-white border border-rose-200/80 hover:shadow-xs flex items-center justify-between cursor-pointer"
+                  className="apple-press p-2.5 rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/[0.06] hover:shadow-xs flex items-center justify-between cursor-pointer"
                 >
                   <div>
-                    <div className="text-xs font-bold text-slate-900">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
                       {s.pathfinder.name}
                     </div>
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-slate-400 dark:text-neutral-500">
                       {s.primaryClass?.name} • Faltam {s.remainingForInvestiture} itens
                     </div>
                   </div>
-                  <span className="text-xs font-extrabold text-rose-700">
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
                     {s.regPct}%
                   </span>
                 </div>

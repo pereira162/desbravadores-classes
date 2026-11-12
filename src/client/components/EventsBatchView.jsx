@@ -17,11 +17,11 @@ import DateInput from './DateInput';
 import { useModalDismiss } from '../utils/modalStack';
 
 const EVENT_TYPES = [
-  { id: 'ACAMPAMENTO', label: 'Acampamento / Pernoite', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  { id: 'CAMINHADA', label: 'Caminhada / Excursionismo', badge: 'bg-lime-100 text-lime-800 border-lime-200' },
-  { id: 'COMUNIDADE', label: 'Projeto Comunitário / Ação Social', badge: 'bg-orange-100 text-orange-800 border-orange-200' },
-  { id: 'IGREJA', label: 'Cerimônia / Culto / Evangelismo', badge: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  { id: 'REUNIAO', label: 'Domingão de Especialidades / Clube', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { id: 'ACAMPAMENTO', label: 'Acampamento / Pernoite', badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' },
+  { id: 'CAMINHADA', label: 'Caminhada / Excursionismo', badge: 'bg-lime-500/10 text-lime-700 dark:text-lime-300 border-lime-500/20' },
+  { id: 'COMUNIDADE', label: 'Projeto Comunitário / Missão', badge: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20' },
+  { id: 'IGREJA', label: 'Cerimônia / Culto / Evangelismo', badge: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20' },
+  { id: 'REUNIAO', label: 'Domingão de Especialidades', badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20' },
 ];
 
 export default function EventsBatchView({
@@ -166,14 +166,14 @@ export default function EventsBatchView({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Cabeçalho Apple Style */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] p-6 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Tent className="w-6 h-6 text-emerald-600" />
-            Eventos do Clube & Aprovação de Requisitos em Lote
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+            <Tent className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            Eventos do Clube & Aprovação em Lote
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-2xl">
             Vincule requisitos de múltiplas classes a um Acampamento, Caminhada ou Projeto Comunitário e aprove todos os desbravadores presentes de uma só vez.
           </p>
         </div>
@@ -181,21 +181,21 @@ export default function EventsBatchView({
         <button
           onClick={handleOpenNewEventModal}
           data-tour="btn-new-event"
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition cursor-pointer shrink-0"
+          className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
         >
           <CalendarPlus className="w-4 h-4" />
-          Agendar Novo Evento Multirrequisito
+          Agendar Novo Evento
         </button>
       </div>
 
       {/* Cards de Eventos */}
       {events.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center space-y-3">
-          <Tent className="w-10 h-10 text-slate-300 mx-auto" />
-          <h3 className="text-base font-extrabold text-slate-800">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] p-12 text-center space-y-3 shadow-xs">
+          <Tent className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
             Nenhum evento agendado ainda
           </h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
             Agende acampamentos, caminhadas ou projetos comunitários do seu clube para assinar os requisitos de vários desbravadores de uma só vez.
           </p>
         </div>
@@ -217,27 +217,27 @@ export default function EventsBatchView({
             return (
               <div
                 key={ev.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between"
+                className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md overflow-hidden flex flex-col justify-between transition-all"
               >
-                <div className="p-5 space-y-3">
+                <div className="p-6 space-y-3.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${typeObj.badge}`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border ${typeObj.badge}`}
                     >
                       {typeObj.label}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 bg-slate-100 dark:bg-[#252528] px-2.5 py-1 rounded-full">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         {formatDateBR(ev.event_date)}
                       </span>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                           ev.status === 'REALIZADO'
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
                             : ev.status === 'PENDENTE_APROVACAO'
-                            ? 'bg-amber-100 text-amber-900 border-amber-400'
-                            : 'bg-blue-100 text-blue-800 border-blue-300'
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
                         }`}
                       >
                         {ev.status === 'REALIZADO'
@@ -250,24 +250,24 @@ export default function EventsBatchView({
                   </div>
 
                   <div>
-                    <h2 className="text-lg font-extrabold text-slate-900">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                       {ev.title}
                     </h2>
                     {ev.description && (
-                      <p className="text-xs text-slate-600 mt-1">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                         {ev.description}
                       </p>
                     )}
                   </div>
 
-                  {/* Lista de Requisitos Cobertos pelo Evento */}
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                  {/* Lista de Requisitos Cobertos pelo Evento Apple Inset */}
+                  <div className="bg-slate-50 dark:bg-[#252528] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
                       <span>
-                        Requisitos Cobertos Simultaneamente ({linkedReqs.length})
+                        Requisitos Cobertos ({linkedReqs.length})
                       </span>
-                      <span className="text-indigo-700">
-                        {eligiblePfs.length} desbravadores elegíveis
+                      <span className="text-blue-600 dark:text-blue-400 font-bold">
+                        {eligiblePfs.length} elegíveis
                       </span>
                     </div>
                     <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
@@ -276,19 +276,19 @@ export default function EventsBatchView({
                         return (
                           <div
                             key={r.id}
-                            className="text-xs bg-white p-2 rounded-lg border border-slate-200 flex items-start gap-2"
+                            className="text-xs bg-white dark:bg-[#1c1c1e] p-2.5 rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-start gap-2 shadow-2xs"
                           >
                             <span
-                              className="px-1.5 py-0.5 rounded text-[10px] font-extrabold text-white shrink-0 mt-0.5"
+                              className="px-1.5 py-0.5 rounded text-[10px] font-bold text-white shrink-0 mt-0.5"
                               style={{ backgroundColor: cls?.color || '#334155' }}
                             >
                               {r.code}
                             </span>
                             <div className="min-w-0">
-                              <span className="font-bold text-slate-800">
+                              <span className="font-bold text-slate-800 dark:text-slate-200">
                                 {cls?.name}:{' '}
                               </span>
-                              <span className="text-slate-600">
+                              <span className="text-slate-600 dark:text-slate-400">
                                 {r.marker} {r.title}
                               </span>
                             </div>
@@ -299,7 +299,7 @@ export default function EventsBatchView({
                   </div>
                 </div>
 
-                <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <div className="px-6 py-4 bg-slate-50/50 dark:bg-[#252528]/50 border-t border-black/[0.04] dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {onDeleteEvent ? (
                       <button
@@ -313,13 +313,13 @@ export default function EventsBatchView({
                             await onDeleteEvent(ev.id);
                           }
                         }}
-                        className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
                       >
                         Excluir Evento
                       </button>
                     ) : (
                       <span className="text-xs text-slate-500">
-                        Pronto para lançamento em lote
+                        Pronto para lançamento
                       </span>
                     )}
                   </div>
@@ -329,7 +329,7 @@ export default function EventsBatchView({
                       <button
                         type="button"
                         onClick={() => onApproveEvent(ev.id)}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         Aprovar Evento
@@ -337,15 +337,15 @@ export default function EventsBatchView({
                     )}
 
                     {ev.status === 'PENDENTE_APROVACAO' ? (
-                      <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-300">
+                      <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
                         Aguardando Aprovação do Diretor
                       </span>
                     ) : (
                       <button
                         onClick={() => openExecuteModal(ev)}
-                        className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
                       >
-                        <CheckSquare className="w-4 h-4 text-emerald-400" />
+                        <CheckSquare className="w-4 h-4 text-emerald-500" />
                         Lançar Presença & Assinar Lote
                       </button>
                     )}
@@ -357,25 +357,35 @@ export default function EventsBatchView({
         </div>
       )}
 
-      {/* Modal Criar Evento */}
+      {/* Modal Criar Evento - Apple Sheet Style */}
       {createOpen && (
         <div
           onClick={(e) => {
-            if (e.target === e.currentTarget && !saving) setCreateOpen(false);
+            if (e.target === e.currentTarget && !savingEvent) setCreateOpen(false);
           }}
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
         >
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="text-base font-extrabold flex items-center gap-2">
-                <CalendarPlus className="w-5 h-5 text-emerald-400" />
-                Agendar Evento do Clube (Multirrequisito)
-              </h3>
+          <div className="bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-3xl max-w-2xl w-full shadow-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden max-h-[88vh] flex flex-col">
+            <div className="px-6 py-4.5 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                  <CalendarPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                    Agendar Evento do Clube
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Vincule requisitos de várias classes para aprovação coletiva
+                  </p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => setCreateOpen(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -383,9 +393,9 @@ export default function EventsBatchView({
               onSubmit={handleCreateSubmit}
               className="p-6 space-y-4 overflow-y-auto"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Título do Evento *
                   </label>
                   <input
@@ -394,31 +404,31 @@ export default function EventsBatchView({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Ex: Acampamento de Instrução de Inverno"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    className="w-full px-3.5 py-2 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Data Prevista *
                   </label>
                   <DateInput
                     required
                     value={eventDate}
                     onChange={(newDate) => setEventDate(newDate)}
-                    className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    className="px-3 py-2 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Tipo de Atividade
                   </label>
                   <select
                     value={eventType}
                     onChange={(e) => setEventType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    className="w-full px-3 py-2 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   >
                     {EVENT_TYPES.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -428,7 +438,7 @@ export default function EventsBatchView({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Descrição / Local
                   </label>
                   <input
@@ -436,23 +446,23 @@ export default function EventsBatchView({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Ex: Chácara Recanto das Águas..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    className="w-full px-3.5 py-2 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
 
               {/* Seletor de Requisitos Vinculados */}
-              <div className="border-t border-slate-200 pt-3 space-y-2">
+              <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-3.5 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="text-xs font-bold text-slate-800">
-                    Requisitos que serão cumpridos neste evento ({selectedReqIds.length} selecionados) *
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Requisitos cobertos ({selectedReqIds.length} selecionados) *
                   </label>
                   <select
                     value={reqTagFilter}
                     onChange={(e) => setReqTagFilter(e.target.value)}
-                    className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700"
+                    className="px-2.5 py-1 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] text-xs font-semibold text-slate-800 dark:text-slate-200"
                   >
-                    <option value="ALL">Filtrar por Tag (Todas)</option>
+                    <option value="ALL">Todas as Tags</option>
                     {(catalog.contextTags || []).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.label}
@@ -468,38 +478,38 @@ export default function EventsBatchView({
                     value={reqSearch}
                     onChange={(e) => setReqSearch(e.target.value)}
                     placeholder="Buscar requisito por palavra-chave (ex: acampar, caminhada, fogueira)..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-slate-50 dark:bg-[#252528] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
 
-                <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+                <div className="max-h-56 overflow-y-auto border border-black/[0.06] dark:border-white/[0.08] rounded-2xl divide-y divide-black/[0.04] dark:divide-white/[0.04] bg-slate-50/50 dark:bg-[#252528]/50">
                   {selectableRequirements.map((r) => {
                     const checked = selectedReqIds.includes(r.id);
                     const cls = classesMap[r.class_slug];
                     return (
                       <label
                         key={r.id}
-                        className={`p-2.5 flex items-start gap-2.5 text-xs cursor-pointer transition ${
-                          checked ? 'bg-emerald-50/70' : 'hover:bg-slate-50'
+                        className={`p-2.5 flex items-start gap-2.5 text-xs cursor-pointer transition-all ${
+                          checked ? 'bg-blue-500/10 dark:bg-blue-500/15' : 'hover:bg-white dark:hover:bg-[#252528]'
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleReqSelection(r.id)}
-                          className="mt-0.5 rounded text-emerald-600"
+                          className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
                         />
                         <span
-                          className="px-1.5 py-0.5 rounded text-[10px] font-extrabold text-white shrink-0"
+                          className="px-1.5 py-0.5 rounded-md text-[10px] font-bold text-white shrink-0"
                           style={{ backgroundColor: cls?.color || '#334155' }}
                         >
                           {r.code}
                         </span>
                         <div className="min-w-0">
-                          <span className="font-bold text-slate-900">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
                             {cls?.name}:{' '}
                           </span>
-                          <span className="text-slate-700">
+                          <span className="text-slate-600 dark:text-slate-400">
                             {r.marker} {r.title}
                           </span>
                         </div>
@@ -509,18 +519,18 @@ export default function EventsBatchView({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setCreateOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer active:scale-95"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingEvent || selectedReqIds.length === 0}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
+                  className="px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold shadow-xs cursor-pointer active:scale-95 transition-all"
                 >
                   {savingEvent ? 'Salvando...' : 'Salvar Evento'}
                 </button>
@@ -536,23 +546,24 @@ export default function EventsBatchView({
           onClick={(e) => {
             if (e.target === e.currentTarget && !runningExecute) setExecutingEvent(null);
           }}
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
         >
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+          <div className="bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full shadow-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden max-h-[88vh] flex flex-col">
+            <div className="px-6 py-4.5 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
               <div>
-                <h3 className="text-base font-extrabold">
-                  Lançar Presença & Assinar Requisitos em Lote
+                <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                  Lançar Presença & Assinar Lote
                 </h3>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  {executingEvent.title} ({formatDateBR(executingEvent.event_date)})
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {executingEvent.title} • {formatDateBR(executingEvent.event_date)}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setExecutingEvent(null)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -560,45 +571,45 @@ export default function EventsBatchView({
               onSubmit={handleExecuteSubmit}
               className="p-6 space-y-4 overflow-y-auto"
             >
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900">
-                Os desbravadores marcados abaixo terão os requisitos deste evento (nas classes em que estão matriculados) atualizados simultaneamente em um único lote auditado.
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3.5 text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                Os desbravadores marcados abaixo terão os requisitos deste evento atualizados simultaneamente em um único lote auditado.
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-800">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Desbravadores Presentes ({selectedPfIds.length})
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2.5">
                     <button
                       type="button"
                       onClick={() =>
                         setSelectedPfIds(activePathfinders.map((p) => p.id))
                       }
-                      className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                     >
                       Marcar Todos
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedPfIds([])}
-                      className="text-[11px] font-bold text-slate-500 hover:underline cursor-pointer"
+                      className="text-xs font-medium text-slate-500 hover:underline cursor-pointer"
                     >
                       Desmarcar
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto border border-slate-200 rounded-xl p-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto border border-black/[0.06] dark:border-white/[0.08] rounded-2xl p-2.5 bg-slate-50/50 dark:bg-[#252528]/50">
                   {activePathfinders.map((pf) => {
                     const checked = selectedPfIds.includes(pf.id);
                     return (
                       <label
                         key={pf.id}
-                        className={`p-2 rounded-lg border text-xs flex items-center gap-2 cursor-pointer ${
+                        className={`p-2 rounded-xl border text-xs flex items-center gap-2 cursor-pointer transition-all active:scale-[0.98] ${
                           checked
-                            ? 'bg-indigo-50 border-indigo-300 font-bold text-slate-900'
-                            : 'border-slate-200 text-slate-600'
+                            ? 'bg-blue-500/10 border-blue-500/30 font-semibold text-slate-900 dark:text-white'
+                            : 'bg-white dark:bg-[#252528] border-black/[0.06] dark:border-white/[0.08] text-slate-600 dark:text-slate-300'
                         }`}
                       >
                         <input
@@ -611,7 +622,7 @@ export default function EventsBatchView({
                                 : [...prev, pf.id]
                             )
                           }
-                          className="rounded text-indigo-600"
+                          className="rounded text-blue-600 focus:ring-blue-500"
                         />
                         <div className="truncate">
                           <div>{pf.name}</div>
@@ -625,45 +636,45 @@ export default function EventsBatchView({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Status a Aplicar
                   </label>
                   <select
                     value={targetStatus}
                     onChange={(e) => setTargetStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                    className="w-full px-3 py-2 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   >
                     <option value="APROVADO">APROVADO (Assinado p/ Investidura)</option>
                     <option value="CONCLUIDO">FEITO (Aguardando Visto)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Registro / Evidência no Cartão
                   </label>
                   <input
                     type="text"
                     value={execNotes}
                     onChange={(e) => setExecNotes(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    className="w-full px-3.5 py-2 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#252528] text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setExecutingEvent(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer"
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#2c2c2e] transition-all cursor-pointer active:scale-95"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={runningExecute || selectedPfIds.length === 0}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
+                  className="px-5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold shadow-xs cursor-pointer active:scale-95 transition-all"
                 >
                   {runningExecute
                     ? 'Processando Lote...'
